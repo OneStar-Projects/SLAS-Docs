@@ -75,127 +75,177 @@
 
 ## 4. 完整流程圖
 
-### 4.1 整體流程（Mermaid）
+本章包含三張流程圖：4.2 整體流程、4.3 非 NSOA 簡化流程、4.4 NSOA 專屬流程。所有流程圖遵循 4.1 中的統一規範。
+
+### 4.1 圖例與閱讀指南
+
+#### 節點形狀
+
+| 形狀 | Mermaid 語法 | 含義 |
+|:-----|:-------------|:-----|
+| 矩形 | `["Name"]` | **人工任務** — 需要審批人手動操作 |
+| 平行四邊形 | `[/"auto: Name"/]` | **系統任務** — Service Task 自動執行，無需用戶操作 |
+| 菱形 | `{Question?}` | **判斷網關** — 根據變量分流，文字以問號結尾 |
+| 圓角 | `(["Name"])` | **流程起點/終點** 或 並行 Fork/Join |
+
+#### 連線類型
+
+| 樣式 | Mermaid 語法 | 含義 |
+|:-----|:-------------|:-----|
+| 實線箭頭 | `-->` | 正向順序流（happy path） |
+| 虛線箭頭 | `-.->` | 超時觸發、退回循環、跨分支依賴 |
+
+#### 節點標籤規範
+
+| 類型 | 格式 | 範例 |
+|:-----|:-----|:-----|
+| 人工任務 | `<編號> <步驟名><br/>(角色名)` | `① Coordinator 審核<br/>(Activity Coordinator)` |
+| 系統任務 | `auto: <行為描述>` | `auto: AI 生成 VP 摘要` |
+| 判斷網關 | 以問號結尾的問句 | `{是否有贊助?}` |
+| 結束點 | `End: <狀態><br/>(<業務含義>)` | `End: APPROVED<br/>(活動已發布)` |
+
+> 流程圖中**不標註**角色組 ID、Delegate 類名、流程變量名等實現細節，以保持簡潔。完整實現信息請參考 [§3 審批角色](#3-審批角色) 與 [§6 任務節點詳細說明](#6-任務節點詳細說明)。
+
+#### 步驟編號
+
+①–⑬ 為人工任務的順序編號，便於跨章節引用。系統任務不參與編號。
+
+| 編號 | 步驟 | 角色 | 階段 |
+|:----:|:-----|:-----|:----:|
+| ① | Coordinator 審核 | Activity Coordinator | Phase 1 |
+| ② | Checker 審核 | Designated Checker | Phase 1 |
+| ③ | Supervisors 審核 | Supervisors（並行） | Phase 2 |
+| ④ | EO 審批 | Estate Office | Phase 3 |
+| ⑤ | 贊助審批 | Sponsorship Approver | Phase 3 |
+| ⑥ | 嘉賓審批 | Guest Approver | Phase 3 |
+| ⑦ | IRG 選組 | IRG Secretary | Phase 4 |
+| ⑧ | IRG 投票 | IRG Members（並行） | Phase 4 |
+| ⑨ | IRG 摘要審核 | IRG Secretary | Phase 4 |
+| ⑩ | VP 選組 | VP Secretary | Phase 4 |
+| ⑪ | VP 投票 | VP Members（並行） | Phase 4 |
+| ⑫ | VP 共識決定 | VP Secretary | Phase 5 |
+| ⑬ | 最終決定 | VP ChairPerson | Phase 6 |
+
+### 4.2 整體流程
 
 ```mermaid
 flowchart TD
-    Start(["Start: Activity Publish Submitted<br/>(ActivityServiceImpl.startActivityApprovalWorkflow)"])
+    Start(["Start: 活動已提交"])
     Start --> Coordinator
 
-    subgraph Phase1["Phase 1: Initial Review"]
-        Coordinator["① Coordinator Review<br/>(Group 140)<br/>Assign Checker"]
-        Coordinator --> CoordGate{Coordinator<br/>Decision}
-        CoordGate -->|"approved=true"| CheckerCheck
-        CoordGate -->|"approved=false"| EndReturned
+    subgraph Phase1["Phase 1: 初審"]
+        Coordinator["① Coordinator 審核<br/>(Activity Coordinator)"]
+        Coordinator --> CoordGate{Coordinator 是否通過?}
+        CoordGate -->|"通過"| CheckerCheck
+        CoordGate -->|"退回"| EndReturned
 
-        CheckerCheck{assignChecker?}
-        CheckerCheck -->|"true"| Checker
-        CheckerCheck -->|"false"| Supervisors
+        CheckerCheck{需要 Checker?}
+        CheckerCheck -->|"是"| Checker
+        CheckerCheck -->|"否"| Supervisors
 
-        Checker["② Checker Review<br/>(Assigned by Coordinator)<br/>checkerUserId"]
-        Checker --> CheckerGate{Checker<br/>Decision}
-        CheckerGate -->|"approved=true"| Supervisors
-        CheckerGate -->|"approved=false"| EndRejected
+        Checker["② Checker 審核<br/>(Designated Checker)"]
+        Checker --> CheckerGate{Checker 是否通過?}
+        CheckerGate -->|"通過"| Supervisors
+        CheckerGate -->|"拒絕"| EndRejected
     end
 
-    subgraph Phase2["Phase 2: Supervisor Review"]
-        Supervisors["③ Supervisors Review<br/>(Parallel Multi-Instance)<br/>Collection: supervisorUserIds"]
-        Supervisors --> SuperAggregate[/"Aggregate Votes<br/>(activitySupervisorAggregateDelegate)"/]
-        SuperAggregate --> SuperGate{Supervisor<br/>Aggregate Decision}
-        SuperGate -->|"RECOMMEND<br/>(supervisorsAllApproved=true)"| EoCheck
-        SuperGate -->|"RETURN<br/>(supvAggregateDecision=RETURN)"| EndReturned
-        SuperGate -->|"REJECT<br/>(supervisorsAllApproved=false)"| EndRejected
+    subgraph Phase2["Phase 2: Supervisor 審核"]
+        Supervisors["③ Supervisors 審核<br/>(Supervisors, 並行)"]
+        Supervisors --> SuperAggregate[/"auto: 聚合 Supervisor 投票"/]
+        SuperAggregate --> SuperGate{聚合結果?}
+        SuperGate -->|"RECOMMEND"| EoCheck
+        SuperGate -->|"RETURN"| EndReturned
+        SuperGate -->|"REJECT"| EndRejected
     end
 
-    subgraph Phase3["Phase 3: EO & Senior Approval"]
-        EoCheck{supvVenueAfterhrs=true?}
-        EoCheck -->|"true"| EO
-        EoCheck -->|"false / null"| SponsorCheck
+    subgraph Phase3["Phase 3: 高級審批"]
+        EoCheck{場地是否課後使用?}
+        EoCheck -->|"是"| EO
+        EoCheck -->|"否"| SponsorCheck
 
-        EO["④ EO Approval<br/>(Group 141)<br/>Venue After-Hours"]
-        EO --> EoGate{EO<br/>Decision}
-        EoGate -->|"approved=true"| SponsorCheck
-        EoGate -->|"approved=false<br/>(return to Supervisors)"| Supervisors
+        EO["④ EO 審批<br/>(Estate Office)"]
+        EO --> EoGate{EO 是否通過?}
+        EoGate -->|"通過"| SponsorCheck
+        EoGate -.->|"退回 (循環)"| Supervisors
 
-        SponsorCheck{hasSponsorship?}
-        SponsorCheck -->|"true"| Sponsor
-        SponsorCheck -->|"false"| GuestCheck
+        SponsorCheck{是否有贊助?}
+        SponsorCheck -->|"是"| Sponsor
+        SponsorCheck -->|"否"| GuestCheck
 
-        Sponsor["⑤ Sponsorship Approval<br/>(Group 142)<br/>candidateStrategy=40"]
-        Sponsor --> SponsorGate{Sponsorship<br/>Decision}
-        SponsorGate -->|"approved=true"| GuestCheck
-        SponsorGate -->|"approved=false"| EndRejected
+        Sponsor["⑤ 贊助審批<br/>(Sponsorship Approver)"]
+        Sponsor --> SponsorGate{是否通過?}
+        SponsorGate -->|"通過"| GuestCheck
+        SponsorGate -->|"拒絕"| EndRejected
 
-        GuestCheck{hasExternalGuest?}
-        GuestCheck -->|"true"| Guest
-        GuestCheck -->|"false"| NsoaCheck
+        GuestCheck{是否有外部嘉賓?}
+        GuestCheck -->|"是"| Guest
+        GuestCheck -->|"否"| NsoaCheck
 
-        Guest["⑥ Guest Approval<br/>(Group 143)<br/>candidateStrategy=40"]
-        Guest --> GuestGate{Guest<br/>Decision}
-        GuestGate -->|"approved=true"| NsoaCheck
-        GuestGate -->|"approved=false"| EndRejected
-
-        NsoaCheck{isNsoa?}
-        NsoaCheck -->|"false"| PublishTask
-        NsoaCheck -->|"true"| ParallelFork
+        Guest["⑥ 嘉賓審批<br/>(Guest Approver)"]
+        Guest --> GuestGate{是否通過?}
+        GuestGate -->|"通過"| NsoaCheck
+        GuestGate -->|"拒絕"| EndRejected
     end
 
-    subgraph Phase4["Phase 4: IRG + VP Parallel Review (NSOA Only)"]
+    subgraph Phase4["Phase 4: NSOA 並行評審 (僅 NSOA)"]
+        NsoaCheck{是否為 NSOA?}
+        NsoaCheck -->|"否"| PublishTask
+        NsoaCheck -->|"是"| ParallelFork
+
         ParallelFork(["Parallel Fork"])
-
         ParallelFork --> IRGSelect
         ParallelFork --> VPSelect
 
-        IRGSelect["⑦ IRG Secretary Select Group<br/>(Role 144)"]
-        IRGSelect --> LoadIRG[/"Load IRG Members<br/>(activityIrgLoadMembersDelegate)<br/>By Role 145"/]
-        LoadIRG --> IRGVote["⑧ IRG Members Vote<br/>(Role 145 candidateGroup)<br/>RECOMMEND / RESERVE / REJECT"]
-        IRGVote --> IRGAiSummary[/"AI Generate IRG Summary<br/>(activityIrgAiSummaryDelegate)"/]
-        IRGAiSummary --> IRGReview["⑨ IRG Secretary Review<br/>(Role 144)"]
-        IRGReview --> IRGCompletion[/"IRG Completion<br/>(activityIrgCompletionDelegate)<br/>irgCompleted=true"/]
+        IRGSelect["⑦ IRG 選組<br/>(IRG Secretary)"]
+        IRGSelect --> LoadIRG[/"auto: 加載 IRG 成員"/]
+        LoadIRG --> IRGVote["⑧ IRG 投票<br/>(IRG Members)"]
+        IRGVote --> IRGAiSummary[/"auto: AI 生成 IRG 摘要"/]
+        IRGAiSummary --> IRGReview["⑨ IRG 摘要審核<br/>(IRG Secretary)"]
+        IRGReview --> IRGCompletion[/"auto: IRG 完成"/]
         IRGCompletion --> ParallelJoin
+        IRGCompletion -.->|"解鎖 VP 投票提交"| VPVote
 
-        VPSelect["⑩ VP Secretary Select Group<br/>(Role 146)<br/>Set vpTimeoutDays"]
-        VPSelect --> LoadVP[/"Load VP Members<br/>(activityVpLoadMembersDelegate)<br/>Role 147, exclude ChairPerson"/]
-        LoadVP --> VPVote["⑪ VP Members Vote<br/>(Role 147 candidateGroup)<br/>APPROVE / REJECT / ABSTAIN"]
-        VPVote -->|"All completed"| VPMerge
-        VPVote -.->|"Timeout at vpVoteDeadline<br/>(activityVpTimeoutDelegate)<br/>Auto-ABSTAIN for non-voters"| VPTimeout[/"VP Timeout Handler"/]
+        VPSelect["⑩ VP 選組<br/>(VP Secretary)"]
+        VPSelect --> LoadVP[/"auto: 加載 VP 成員"/]
+        LoadVP --> VPVote["⑪ VP 投票<br/>(VP Members)"]
+        VPVote -->|"全部投票完成"| VPMerge
+        VPVote -.->|"超時 (自動 ABSTAIN)"| VPTimeout[/"auto: VP 超時處理"/]
         VPTimeout --> VPMerge
-        VPMerge(["VP Branch Merge"]) --> ParallelJoin
+        VPMerge(["VP 分支合併"]) --> ParallelJoin
 
-        ParallelJoin(["Parallel Join<br/>(Both branches complete)"])
+        ParallelJoin(["Parallel Join"])
     end
 
-    subgraph Phase5["Phase 5: VP Consensus (NSOA Only, Max 3 Rounds)"]
-        ParallelJoin --> VPAiSummary
-        VPAiSummary[/"AI Generate VP Summary<br/>(activityVpAiSummaryDelegate)"/]
+    subgraph Phase5["Phase 5: VP 共識 (僅 NSOA, 最多 3 輪)"]
+        ParallelJoin --> VPAiSummary[/"auto: AI 生成 VP 摘要"/]
         VPAiSummary --> VPConsensus
 
-        VPConsensus["⑫ VP Secretary<br/>Review & Decide<br/>(Role 146)"]
-        VPConsensus --> ConsensusGate{Secretary<br/>Decision}
-        ConsensusGate -->|"Escalate to Chair<br/>(vpConsensus=true)"| ChairAI
-        ConsensusGate -->|"Start next round<br/>(vpConsensus=false)"| RoundCheck{vpRoundNumber < 3?}
-        RoundCheck -->|"true"| IncrementRound[/"Increment Round<br/>(activityVpIncrementRoundDelegate)<br/>vpRoundNumber++"/]
-        IncrementRound --> VPSelect
-        RoundCheck -->|"false (max reached)"| ChairAI
+        VPConsensus["⑫ VP 共識決定<br/>(VP Secretary)"]
+        VPConsensus --> ConsensusGate{是否達成共識?}
+        ConsensusGate -->|"是 (提交主席)"| ChairAI
+        ConsensusGate -->|"否 (進入下一輪)"| RoundCheck
+
+        RoundCheck{輪次 < 3?}
+        RoundCheck -->|"是"| IncrementRound[/"auto: 下一輪"/]
+        IncrementRound -.->|"循環回跳"| VPSelect
+        RoundCheck -->|"否 (達到上限)"| ChairAI
     end
 
-    subgraph Phase6["Phase 6: ChairPerson Decision (NSOA Only)"]
-        ChairAI[/"AI Generate Chair Recommendation<br/>(activityChairAiRecommendDelegate)"/]
-        ChairAI --> Chair
-
-        Chair["⑬ VP ChairPerson<br/>Final Decision<br/>(vpChairPersonUserId)"]
-        Chair --> ChairGate{chairDecision?}
+    subgraph Phase6["Phase 6: ChairPerson 決定 (僅 NSOA)"]
+        ChairAI[/"auto: AI 生成主席建議"/]
+        ChairAI --> Chair["⑬ 最終決定<br/>(VP ChairPerson)"]
+        Chair --> ChairGate{Chair 決定?}
         ChairGate -->|"PASS"| PublishTask
         ChairGate -->|"REJECT"| EndRejected
         ChairGate -->|"RETURN"| EndReturned
     end
 
-    PublishTask[/"Publish Activity<br/>(activityPublishDelegate)"/]
+    PublishTask[/"auto: 發布活動"/]
     PublishTask --> EndApproved
 
-    EndApproved(["End - APPROVED<br/>(Activity published)"])
-    EndRejected(["End - REJECTED"])
-    EndReturned(["End - RETURNED<br/>(Applicant can revise & resubmit)"])
+    EndApproved(["End: APPROVED<br/>(活動已發布)"])
+    EndRejected(["End: REJECTED"])
+    EndReturned(["End: RETURNED<br/>(申請人可修改)"])
 
     style Start fill:#4CAF50,color:#fff
     style EndApproved fill:#4CAF50,color:#fff
@@ -209,78 +259,84 @@ flowchart TD
     style Phase6 fill:#FCE4EC,stroke:#AD1457
 ```
 
-### 4.2 非 NSOA 簡化流程
+> 圖中虛線 `-.->` 表示三類非主路徑：① ④ EO 退回時回跳到 ③ Supervisors 重審；② ⑪ VP 投票超時自動 ABSTAIN；③ IRG 完成後解鎖 VP 投票提交（前端約束，詳見 [§6.16](#616-vp-成員投票vpmembersvotetask)）。
+
+### 4.3 非 NSOA 簡化流程
+
+僅展示 `isNsoa=false` 活動的「快樂路徑」（所有審批均通過），用於快速理解主幹流程。完整退回/拒絕分支見 [§4.2](#42-整體流程)。
 
 ```mermaid
 flowchart LR
-    Start(["Start"]) --> A
-
-    A["① Coordinator<br/>(Group 140)"]
-    A --> D{Checker?}
-    D -->|"assignChecker=true"| E["② Checker"]
-    D -->|"skip"| F
-    E --> F["③ Supervisors<br/>(Parallel)"]
-    F --> FA[/"Aggregate"/]
-    FA --> B{EO needed?}
-    B -->|"supvVenueAfterhrs=true"| C["④ EO<br/>(Group 141)"]
-    B -->|"skip"| G
-    C --> G{Sponsorship?}
-    G -->|"hasSponsorship=true"| H["⑤ Sponsorship<br/>(Group 142)"]
-    G -->|"skip"| I
-    H --> I{Guest?}
-    I -->|"hasExternalGuest=true"| J["⑥ Guest<br/>(Group 143)"]
-    I -->|"skip"| Pub
+    Start(["Start"]) --> A["① Coordinator 審核<br/>(Coordinator)"]
+    A --> D{需要 Checker?}
+    D -->|"是"| E["② Checker 審核<br/>(Designated Checker)"]
+    D -->|"否"| F
+    E --> F["③ Supervisors 審核<br/>(Supervisors, 並行)"]
+    F --> FA[/"auto: 聚合投票"/]
+    FA --> B{場地是否課後使用?}
+    B -->|"是"| C["④ EO 審批<br/>(Estate Office)"]
+    B -->|"否"| G
+    C --> G{是否有贊助?}
+    G -->|"是"| H["⑤ 贊助審批<br/>(Sponsorship Approver)"]
+    G -->|"否"| I
+    H --> I{是否有外部嘉賓?}
+    I -->|"是"| J["⑥ 嘉賓審批<br/>(Guest Approver)"]
+    I -->|"否"| Pub
     J --> Pub
-    Pub[/"Publish"/]
-    Pub --> End(["End - APPROVED"])
+    Pub[/"auto: 發布活動"/]
+    Pub --> End(["End: APPROVED"])
 
     style Start fill:#4CAF50,color:#fff
     style End fill:#4CAF50,color:#fff
 ```
 
-### 4.3 NSOA 專屬流程（Phase 4–6）
+### 4.4 NSOA 專屬流程（Phase 4–6）
+
+僅展示 NSOA 活動進入並行評審後的流程細節。前置 Phase 1–3 與非 NSOA 相同，見 [§4.2](#42-整體流程)。
 
 ```mermaid
 flowchart TD
-    Entry(["isNsoa=true<br/>Parallel Fork"])
+    Entry(["進入 Phase 4<br/>(isNsoa=true)"])
+    Entry --> ParallelFork(["Parallel Fork"])
 
-    Entry --> IRGBranch
-    Entry --> VPBranch
+    ParallelFork --> IRGBranch
+    ParallelFork --> VPBranch
 
-    subgraph IRGBranch["IRG Branch"]
-        IRGSelect["⑦ IRG Secretary Select Group<br/>(Role 144)"]
-        IRGSelect --> LoadIRG[/"Load IRG Members<br/>(Role 145)"/]
-        LoadIRG --> IRGVote["⑧ IRG Members Vote<br/>(RECOMMEND / RESERVE / REJECT)"]
-        IRGVote --> IRGSummary[/"AI Summary"/]
-        IRGSummary --> IRGReview["⑨ IRG Secretary Review<br/>(Role 144)"]
-        IRGReview --> IRGDone[/"IRG Completion<br/>irgCompleted=true"/]
+    subgraph IRGBranch["IRG 分支"]
+        IRGSelect["⑦ IRG 選組<br/>(IRG Secretary)"]
+        IRGSelect --> LoadIRG[/"auto: 加載 IRG 成員"/]
+        LoadIRG --> IRGVote["⑧ IRG 投票<br/>(IRG Members)<br/>RECOMMEND / RESERVE / REJECT"]
+        IRGVote --> IRGSummary[/"auto: AI 生成 IRG 摘要"/]
+        IRGSummary --> IRGReview["⑨ IRG 摘要審核<br/>(IRG Secretary)"]
+        IRGReview --> IRGDone[/"auto: IRG 完成"/]
     end
 
-    subgraph VPBranch["VP Branch"]
-        VPSelect["⑩ VP Secretary Select Group<br/>(Role 146)"]
-        VPSelect --> LoadVP[/"Load VP Members<br/>(Role 147, exclude Chair)"/]
-        LoadVP --> VPVote["⑪ VP Members Vote<br/>(APPROVE / REJECT / ABSTAIN)<br/>Submission blocked until irgCompleted"]
-        VPVote --> VPMerge(["Merge normal/timeout"])
+    subgraph VPBranch["VP 分支"]
+        VPSelect["⑩ VP 選組<br/>(VP Secretary)"]
+        VPSelect --> LoadVP[/"auto: 加載 VP 成員"/]
+        LoadVP --> VPVote["⑪ VP 投票<br/>(VP Members)<br/>APPROVE / REJECT / ABSTAIN"]
+        VPVote --> VPMerge(["VP 分支合併"])
     end
 
+    IRGDone -.->|"解鎖 VP 投票提交"| VPVote
     IRGDone --> Join(["Parallel Join"])
     VPMerge --> Join
 
-    Join --> VPSummary[/"AI VP Summary"/]
-    VPSummary --> VPDecide["⑫ VP Secretary Decide<br/>(Role 146)"]
-    VPDecide --> Gate{Secretary<br/>Decision}
-    Gate -->|"Next round<br/>(vpConsensus=false)"| RoundCheck{Round < 3?}
-    RoundCheck -->|"yes"| Increment[/"vpRoundNumber++"/]
-    Increment --> VPSelect
-    RoundCheck -->|"no (forced)"| ChairAI
-    Gate -->|"Escalate to Chair<br/>(vpConsensus=true)"| ChairAI
+    Join --> VPSummary[/"auto: AI 生成 VP 摘要"/]
+    VPSummary --> VPDecide["⑫ VP 共識決定<br/>(VP Secretary)"]
+    VPDecide --> Gate{是否達成共識?}
+    Gate -->|"是 (提交主席)"| ChairAI
+    Gate -->|"否 (進入下一輪)"| RoundCheck{輪次 < 3?}
+    RoundCheck -->|"是"| Increment[/"auto: 下一輪"/]
+    Increment -.->|"循環回跳"| VPSelect
+    RoundCheck -->|"否 (達到上限)"| ChairAI
 
-    ChairAI[/"AI Chair Recommendation"/]
-    ChairAI --> Chair["⑬ VP ChairPerson<br/>Final Decision"]
-    Chair --> FinalGate{chairDecision?}
-    FinalGate -->|"PASS"| EndApproved(["End - APPROVED<br/>(Publish Activity)"])
-    FinalGate -->|"REJECT"| EndRejected(["End - REJECTED"])
-    FinalGate -->|"RETURN"| EndReturned(["End - RETURNED"])
+    ChairAI[/"auto: AI 生成主席建議"/]
+    ChairAI --> Chair["⑬ 最終決定<br/>(VP ChairPerson)"]
+    Chair --> FinalGate{Chair 決定?}
+    FinalGate -->|"PASS"| EndApproved(["End: APPROVED<br/>(發布活動)"])
+    FinalGate -->|"REJECT"| EndRejected(["End: REJECTED"])
+    FinalGate -->|"RETURN"| EndReturned(["End: RETURNED"])
 
     style Entry fill:#2196F3,color:#fff
     style EndApproved fill:#4CAF50,color:#fff
@@ -290,7 +346,23 @@ flowchart TD
     style VPBranch fill:#FFF8E1,stroke:#F57F17
 ```
 
-> **關於 VP 輪次循環**：當 VP Secretary 選擇「開始下一輪」時，流程從 `vpConsensusGate`（位於 Parallel Join 之後）回跳到 `vpSecretarySelectGroupTask`（位於 Parallel Fork 的 VP 分支內）。後續輪次 VP 分支完成後到達 `parallelJoinGateway` 時，IRG 分支已在首輪完成，因此 Parallel Join 可直接通過。
+#### 4.4.1 VP 多輪循環說明
+
+當 VP Secretary 在 ⑫ 選擇「開始下一輪」（`vpConsensus=false`）時：
+
+1. 流程從 ⑫ 後的 `Reach Consensus?` 網關（位於 Parallel Join 之後）回跳到 ⑩ VP Group Selection（位於 VP 分支內）。
+2. 後續輪次只在 VP 分支重新執行 ⑩→⑪。IRG 分支在首輪結束時已完成（`irgCompleted=true`），不會再次觸發。
+3. 第二、第三輪 VP 分支完成後到達 Parallel Join 時，IRG 分支保持已完成狀態，因此 Join 立即通過。
+4. 最多執行 3 輪。第 3 輪結束時，無論共識與否都強制進入 ⑬ ChairPerson 決定（`Round < 3?` 網關走 No 分支）。
+
+#### 4.4.2 跨分支依賴：VP 投票提交鎖
+
+⑪ VP Voting 在 BPMN 上與 IRG 分支獨立並行，但前端會檢查 `irgCompleted` 變量：
+
+- IRG 完成（`auto: IRG Completion` 將 `irgCompleted=true`）**之前**，VP Members 可以查看任務但不能提交投票。
+- IRG 完成後，前端解除提交限制，VP Members 才能正式提交。
+
+這是業務層約束（不希望 VP 在缺少 IRG 摘要參考時投票），實現細節見 [§6.16](#616-vp-成員投票vpmembersvotetask)。圖中以虛線 `IRG Completion -.-> VP Voting` 表達這層依賴。
 
 ---
 
