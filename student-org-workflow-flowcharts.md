@@ -37,27 +37,34 @@ REJECTED_FINAL → 申訴流程 → 通過? → ACTIVE
 
 ## 2. 角色與職責
 
-### 2.1 註冊流程角色
+### 2.1 註冊流程系統角色
 
-| 角色名稱 | 職責 |
-|:---------|:-----|
-| Secretary | 初審；起草拒絕／退回意見；最終提交確認意見 |
-| Admin Checker | 行政審核（由 Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
-| Academic Checker | 學術審核（由 Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
-| Registration Reviewer Group | 提供註冊意見；對起草的拒絕／退回意見並行確認 |
-| Registration Summary Reviewer | 審核已收集的註冊意見；對起草的拒絕／退回意見作審核評論 |
-| Registration Final Approver | 最終批准／拒絕／退回決定 |
-| Registration Final Approver Secretary | 替代終審人,與 Final Approver 享有相同決定權 |
+下表為註冊流程涉及的系統定義角色（`SYSTEM_ROLE.NAME`）：
 
-### 2.2 申訴流程角色
+| 系統角色名稱 | 職責 |
+|:------------|:-----|
+| Student Group Registration Secretary | 初審；指派 Administrative Checker 與 Academic Checker；起草拒絕／退回意見；最終提交確認意見 |
+| Student Group Registration Administrative Checker | 行政審核（由 Registration Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
+| Student Group Registration Academic Checker | 學術審核（由 Registration Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
+| Student Group Registration Reviewer | 提供註冊意見；對起草的拒絕／退回意見並行確認 |
+| Student Group Registration Summary Reviewer | 審核已收集的註冊意見；對起草的拒絕／退回意見作審核評論 |
+| Student Group Registration Approver | 最終批准／拒絕／退回決定 |
+| Student Group Registration Approver Secretary | 替代終審人,與 Registration Approver 享有相同決定權 |
 
-| 角色名稱 | 職責 |
-|:---------|:-----|
-| Appeal Reviewer Group | 提供申訴意見（並行多人） |
-| Appeal Summary Reviewer | 審核已收集的申訴意見；可提交至最終,或退回（結束流程） |
-| Appeal Final Approver | 最終批准／拒絕／退回（有條件批准）決定 |
-| Appeal Final Approver Secretary | 替代終審人,與 Appeal Final Approver 享有相同決定權 |
-| Appeal Initiator（學生） | 發起申訴；在 `APPEAL_RESUBMIT` 狀態時重新提交申訴 |
+### 2.2 申訴流程系統角色
+
+下表為申訴流程涉及的系統定義角色（`SYSTEM_ROLE.NAME`）：
+
+| 系統角色名稱 | 職責 |
+|:------------|:-----|
+| Student Group Appeal Reviewer | 提供申訴意見（並行多人） |
+| Student Group Appeal Summary Reviewer | 審核已收集的申訴意見；可提交至最終,或退回（結束流程） |
+| Student Group Appeal Approver | 最終批准／拒絕／退回（有條件批准）決定 |
+| Student Group Appeal Approver Secretary | 替代終審人,與 Appeal Approver 享有相同決定權 |
+
+> **流程外參與者**：Appeal Initiator（學生）—— 發起申訴；在 `APPEAL_RESUBMIT` 狀態時重新提交申訴。
+>
+> **本文簡稱規則**：為保持流程圖與步驟詳述的可讀性,後續章節省略 `Student Group` 前綴,並在不致歧義的單流程上下文中進一步簡化（例如 `Student Group Registration Secretary` 簡作 `Secretary`；`Student Group Registration Administrative Checker` 簡作 `Admin Checker`；`Student Group Registration Academic Checker` 簡作 `Academic Checker`；`Student Group Registration Reviewer` 簡作 `Registration Reviewer`,以區別於 `Appeal Reviewer`；`Student Group Registration Approver` 簡作 `Registration Approver`,以區別於 `Appeal Approver`）。
 
 ### 2.3 多人並行 / 候選組規則
 
@@ -65,7 +72,7 @@ REJECTED_FINAL → 申訴流程 → 通過? → ACTIVE
 |:----|:----|
 | 意見收集（註冊 ④ / 申訴 ①） | 評審組成員並行提交意見;達到截止時間時系統自動將未提交意見標記為超時 |
 | 拒絕／退回意見確認（註冊 ⑧） | 評審組成員並行確認;達到截止時間時系統自動將未提交意見視為通過 |
-| 最終審批 | Final Approver 與 Final Approver Secretary 享有相同決定權,任一者可作出決定 |
+| 最終審批 | Registration Approver 與 Registration Approver Secretary（申訴流程：Appeal Approver 與 Appeal Approver Secretary）享有相同決定權,任一者可作出決定 |
 
 ---
 
@@ -107,16 +114,16 @@ REJECTED_FINAL → 申訴流程 → 通過? → ACTIVE
 | 註冊 | ① | Secretary 初審 | Secretary |
 |  | ② | Admin 審核 | Admin Checker |
 |  | ③ | Academic 審核 | Academic Checker |
-|  | ④ | 意見收集 | Registration Reviewer Group（並行） |
+|  | ④ | 意見收集 | Registration Reviewer（並行） |
 |  | ⑤ | 摘要審核 | Registration Summary Reviewer |
-|  | ⑥ | 最終審批 | Registration Final Approver |
+|  | ⑥ | 最終審批 | Registration Approver |
 | 註冊<br/>（拒絕子流程） | ⑦ | 起草綜合意見 | Secretary |
-|  | ⑧ | 評審員確認意見 | Registration Reviewer Group（並行） |
+|  | ⑧ | 評審員確認意見 | Registration Reviewer（並行） |
 |  | ⑨ | 審核草擬意見 | Registration Summary Reviewer |
 |  | ⑩ | 最終提交意見 | Secretary |
-| 申訴 | ① | 意見收集 | Appeal Reviewer Group（並行） |
+| 申訴 | ① | 意見收集 | Appeal Reviewer（並行） |
 |  | ② | 摘要審核 | Appeal Summary Reviewer |
-|  | ③ | 最終審批 | Appeal Final Approver |
+|  | ③ | 最終審批 | Appeal Approver |
 
 ---
 
@@ -150,7 +157,7 @@ flowchart TD
 
     subgraph Phase2["Phase 2: 意見收集"]
         InitOpinion[/"auto: 初始化意見收集"/]
-        InitOpinion --> CollectOpinions["④ 意見收集<br/>(Reviewer Group, 並行)"]
+        InitOpinion --> CollectOpinions["④ 意見收集<br/>(Registration Reviewer, 並行)"]
 
         CollectOpinions -->|"全部完成"| SummarizeOpinions
         CollectOpinions -.->|"超時 (中斷型)"| TimeoutHandler[/"auto: 意見超時處理"/]
@@ -169,7 +176,7 @@ flowchart TD
     end
 
     subgraph Phase4["Phase 4: 最終審批"]
-        FinalApproval["⑥ 最終審批<br/>(Final Approver)"]
+        FinalApproval["⑥ 最終審批<br/>(Registration Approver)"]
         FinalApproval --> FinalGate{最終決定?}
         FinalGate -->|"批准"| EndApproved
         FinalGate -->|"拒絕 / 退回"| RejectionSubProcess
@@ -200,11 +207,11 @@ flowchart TD
 
 ### 4.2 註冊拒絕／退回子流程
 
-當 Final Approver（⑥）選擇 **拒絕** 或 **退回** 時,流程進入此子流程,用以起草、傳閱並定稿一份綜合意見。兩條分支共享同一子流程,最終業務狀態由結束時的「退回類型」決定。
+當 Registration Approver（⑥）選擇 **拒絕** 或 **退回** 時,流程進入此子流程,用以起草、傳閱並定稿一份綜合意見。兩條分支共享同一子流程,最終業務狀態由結束時的「退回類型」決定。
 
 ```mermaid
 flowchart TD
-    EntryPoint(["⑥ Final Approver 選擇<br/>拒絕 / 退回"])
+    EntryPoint(["⑥ Registration Approver 選擇<br/>拒絕 / 退回"])
     EntryPoint --> InitRejection[/"auto: 初始化拒絕審核"/]
     InitRejection --> DraftOpinion
 
@@ -212,7 +219,7 @@ flowchart TD
     DraftOpinion --> InitConfirm[/"auto: 初始化評審員確認"/]
     InitConfirm --> ReviewerConfirm
 
-    ReviewerConfirm["⑧ 評審員確認意見<br/>(Reviewer Group, 並行)"]
+    ReviewerConfirm["⑧ 評審員確認意見<br/>(Registration Reviewer, 並行)"]
     ReviewerConfirm -->|"全部確認完成"| SummarizeFeedback
     ReviewerConfirm -.->|"超時 (中斷型)"| ConfirmTimeout[/"auto: 確認超時處理"/]
     ReviewerConfirm -.->|"提醒 (非中斷型)"| ConfirmReminder[/"auto: 發送確認提醒"/]
@@ -260,7 +267,7 @@ flowchart TD
 
     subgraph Phase1["Phase 1: 意見收集"]
         InitOpinion[/"auto: 初始化意見收集"/]
-        InitOpinion --> CollectOpinions["① 意見收集<br/>(Appeal Reviewer Group, 並行)"]
+        InitOpinion --> CollectOpinions["① 意見收集<br/>(Appeal Reviewer, 並行)"]
 
         CollectOpinions -->|"全部完成"| SummarizeOpinions
         CollectOpinions -.->|"超時 (中斷型)"| TimeoutHandler[/"auto: 意見超時處理"/]
@@ -279,7 +286,7 @@ flowchart TD
     end
 
     subgraph Phase3["Phase 3: 最終審批"]
-        FinalApproval["③ 最終審批<br/>(Appeal Final Approver)"]
+        FinalApproval["③ 最終審批<br/>(Appeal Approver)"]
         FinalApproval --> FinalDecision{最終決定?}
         FinalDecision -->|"批准"| EndApproved
         FinalDecision -->|"拒絕"| EndRejected
@@ -358,7 +365,7 @@ flowchart LR
 
 ##### ④ 意見收集（並行）
 
-- **執行人**：所有 Registration Reviewer Group 成員並行
+- **執行人**：所有 Registration Reviewer 成員並行
 - **動作**：每位評審員提交意見
 - **計時器規則**：
   - **提醒**（非中斷型）：到達提醒時間時,系統通知尚未提交的評審員,主任務繼續運行
@@ -379,7 +386,7 @@ flowchart LR
 
 ##### ⑥ 最終審批
 
-- **執行人**：Registration Final Approver（或 Final Approver Secretary）
+- **執行人**：Registration Approver（或 Registration Approver Secretary）
 - **動作**：作出 `批准` / `拒絕` / `退回` 決定
 - **結果**：
   - **批准** → 流程結束（`ACTIVE`）
@@ -387,9 +394,9 @@ flowchart LR
 
 ### 5.2 註冊拒絕／退回子流程步驟
 
-子流程的最終狀態取決於 Final Approver 在 ⑥ 中選的是「拒絕」還是「退回」：
+子流程的最終狀態取決於 Registration Approver 在 ⑥ 中選的是「拒絕」還是「退回」：
 
-| Final Approver 選擇 | 最終狀態 |
+| Registration Approver 選擇 | 最終狀態 |
 |:------------------|:--------|
 | 退回（return） | `PENDING_RESUBMIT` |
 | 拒絕（reject） | `REJECTED_FINAL` |
@@ -402,7 +409,7 @@ flowchart LR
 
 ##### ⑧ 評審員確認意見（並行）
 
-- **執行人**：所有 Registration Reviewer Group 成員並行
+- **執行人**：所有 Registration Reviewer 成員並行
 - **動作**：每位提交確認反饋,選擇 `APPROVE` / `SUGGEST` / `NO_COMMENT`
 - **計時器規則**：
   - **提醒**（非中斷型）：到達提醒時間時,僅通知待提交評審員
@@ -419,13 +426,13 @@ flowchart LR
 
 - **執行人**：Secretary
 - **動作**：可修改最終意見,確認並持久化
-- **結果**：系統自動派發最終通知（行動方:申請人、協作者、Admin Checker、Academic Checker;知會方:Final Approver、Final Approver Secretary、Summary Reviewer、Secretary、Reviewer Group）, 流程結束（依退回類型解析為 `PENDING_RESUBMIT` 或 `REJECTED_FINAL`）
+- **結果**：系統自動派發最終通知（行動方:申請人、協作者、Admin Checker、Academic Checker;知會方:Registration Approver、Registration Approver Secretary、Registration Summary Reviewer、Registration Secretary、Registration Reviewer）, 流程結束（依退回類型解析為 `PENDING_RESUBMIT` 或 `REJECTED_FINAL`）
 
 ### 5.3 申訴流程步驟
 
 ##### ① 意見收集（並行）
 
-- **執行人**：所有 Appeal Reviewer Group 成員並行
+- **執行人**：所有 Appeal Reviewer 成員並行
 - **動作**：每位評審員提交申訴意見
 - **計時器規則**：與註冊 ④ 相同（提醒 + 超時）
 - **結果**：全部完成（或超時觸發後）→ 進入 ②
@@ -440,7 +447,7 @@ flowchart LR
 
 ##### ③ 最終審批
 
-- **執行人**：Appeal Final Approver（或 Final Approver Secretary）
+- **執行人**：Appeal Approver（或 Appeal Approver Secretary）
 - **動作**：作出 `批准` / `拒絕` / `退回` 決定
 - **結果**：
   - **批准** → 流程結束（`ACTIVE`）
@@ -458,22 +465,22 @@ flowchart LR
 | 拒絕點 | 決定 | 最終狀態 | 學生後續可進行 |
 |:-------|:-----|:--------|:--------------|
 | ① Secretary | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
-| ② Admin | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
-| ③ Academic | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
-| ⑤ Summary | 退回 | `PENDING_RESUBMIT` | 重新提交註冊 |
-| ⑥ Final | 批准 | `ACTIVE` | — |
-| ⑥ Final | 拒絕（經拒絕子流程） | `REJECTED_FINAL` | 只能發起申訴 |
-| ⑥ Final | 退回（經拒絕子流程） | `PENDING_RESUBMIT` | 重新提交註冊 |
+| ② Admin Checker | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
+| ③ Academic Checker | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
+| ⑤ Registration Summary Reviewer | 退回 | `PENDING_RESUBMIT` | 重新提交註冊 |
+| ⑥ Registration Approver | 批准 | `ACTIVE` | — |
+| ⑥ Registration Approver | 拒絕（經拒絕子流程） | `REJECTED_FINAL` | 只能發起申訴 |
+| ⑥ Registration Approver | 退回（經拒絕子流程） | `PENDING_RESUBMIT` | 重新提交註冊 |
 
 ### 6.2 申訴結果對照
 
 | 決策點 | 決定 | 最終狀態 | 學生後續可進行 |
 |:-------|:-----|:--------|:--------------|
-| ② Summary | 提交 | （進入 ③ 最終審批） | — |
-| ② Summary | 退回 | `APPEAL_RESUBMIT` | 重新提交申訴 |
-| ③ Final | 批准 | `ACTIVE` | — |
-| ③ Final | 拒絕 | `APPEAL_REJECTED` | 無後續操作（終局） |
-| ③ Final | 退回（有條件批准） | `APPEAL_RESUBMIT` | 重新提交申訴 |
+| ② Appeal Summary Reviewer | 提交 | （進入 ③ 最終審批） | — |
+| ② Appeal Summary Reviewer | 退回 | `APPEAL_RESUBMIT` | 重新提交申訴 |
+| ③ Appeal Approver | 批准 | `ACTIVE` | — |
+| ③ Appeal Approver | 拒絕 | `APPEAL_REJECTED` | 無後續操作（終局） |
+| ③ Appeal Approver | 退回（有條件批准） | `APPEAL_RESUBMIT` | 重新提交申訴 |
 
 ---
 
@@ -484,30 +491,30 @@ flowchart LR
 #### 場景 1：一次通過
 
 ```
-① Secretary(通過,指派 Admin/Academic) → ② Admin(通過) → ③ Academic(通過)
-→ ④ Reviewer Group 全員提交意見 → ⑤ Summary(提交)
-→ ⑥ Final(批准) → ACTIVE ✅
+① Secretary(通過,指派 Admin Checker / Academic Checker) → ② Admin Checker(通過) → ③ Academic Checker(通過)
+→ ④ Registration Reviewer 全員提交意見 → ⑤ Registration Summary Reviewer(提交)
+→ ⑥ Registration Approver(批准) → ACTIVE ✅
 ```
 
 #### 場景 2：早期被退回（任一 Phase 1 步驟拒絕）
 
 ```
-① Secretary(通過) → ② Admin(拒絕) → PENDING_RESUBMIT
+① Secretary(通過) → ② Admin Checker(拒絕) → PENDING_RESUBMIT
 （學生修改後重新提交,啟動新流程）
 ```
 
 #### 場景 3：摘要退回
 
 ```
-① → ② → ③ → ④ → ⑤ Summary(退回) → 通知 Admin/Academic → PENDING_RESUBMIT
+① → ② → ③ → ④ → ⑤ Registration Summary Reviewer(退回) → 通知 Admin Checker / Academic Checker → PENDING_RESUBMIT
 （學生修改後重新提交）
 ```
 
 #### 場景 4：終局拒絕（走完拒絕子流程）
 
 ```
-① → ② → ③ → ④ → ⑤(提交) → ⑥ Final(拒絕)
-→ 拒絕子流程: ⑦ Secretary 起草 → ⑧ Reviewer 確認 → ⑨ Summary 審核 → ⑩ Secretary 最終提交
+① → ② → ③ → ④ → ⑤(提交) → ⑥ Registration Approver(拒絕)
+→ 拒絕子流程: ⑦ Secretary 起草 → ⑧ Registration Reviewer 確認 → ⑨ Registration Summary Reviewer 審核 → ⑩ Secretary 最終提交
 → REJECTED_FINAL
 （學生只能發起申訴）
 ```
@@ -518,20 +525,20 @@ flowchart LR
 
 ```
 （前置: REJECTED_FINAL）
-① 意見收集 → ② Summary(提交) → ③ Final(批准) → ACTIVE ✅
+① 意見收集 → ② Appeal Summary Reviewer(提交) → ③ Appeal Approver(批准) → ACTIVE ✅
 ```
 
 #### 場景 6：申訴被摘要退回
 
 ```
-① 意見收集 → ② Summary(退回) → APPEAL_RESUBMIT
+① 意見收集 → ② Appeal Summary Reviewer(退回) → APPEAL_RESUBMIT
 （學生修改後重新提交申訴）
 ```
 
 #### 場景 7：申訴有條件批准
 
 ```
-① 意見收集 → ② Summary(提交) → ③ Final(退回) → APPEAL_RESUBMIT
+① 意見收集 → ② Appeal Summary Reviewer(提交) → ③ Appeal Approver(退回) → APPEAL_RESUBMIT
 （學生根據意見修改後重新提交申訴）
 ```
 
@@ -542,12 +549,12 @@ flowchart LR
 | 維度 | 註冊 | 申訴 |
 |:-----|:-----|:-----|
 | **進入前置條件** | 新申請或 `PENDING_RESUBMIT` 狀態 | `REJECTED_FINAL`（首次申訴）或 `APPEAL_RESUBMIT`（重新提交申訴） |
-| **前置審核閘** | 3 步順序審核（Secretary → Admin → Academic） | 無——直接進入意見收集 |
-| **意見評審組** | Registration Reviewer Group | Appeal Reviewer Group |
+| **前置審核閘** | 3 步順序審核（Secretary → Admin Checker → Academic Checker） | 無——直接進入意見收集 |
+| **意見評審組** | Registration Reviewer | Appeal Reviewer |
 | **摘要評審員** | Registration Summary Reviewer | Appeal Summary Reviewer |
-| **最終審批人** | Registration Final Approver | Appeal Final Approver |
+| **最終審批人** | Registration Approver | Appeal Approver |
 | **摘要退回行為** | 進入 `PENDING_RESUBMIT`,通知 Admin/Academic Checker | 直接結束流程,進入 `APPEAL_RESUBMIT` |
-| **拒絕子流程** | 有（⑦ Secretary 起草 → ⑧ Reviewer 確認 → ⑨ Summary 審核 → ⑩ Secretary 最終提交） | 無 |
+| **拒絕子流程** | 有（⑦ Secretary 起草 → ⑧ Registration Reviewer 確認 → ⑨ Registration Summary Reviewer 審核 → ⑩ Secretary 最終提交） | 無 |
 | **早期拒絕結果** | `PENDING_RESUBMIT`（任一 Phase 1 步驟拒絕） | 不適用（無早期審核階段） |
 | **最終拒絕結果** | `REJECTED_FINAL`（經拒絕子流程） | `APPEAL_REJECTED`（終局,無後續） |
 | **「退回」的業務含義** | 學生需重新提交註冊 | 「有條件批准」——學生需根據意見修改後重新提交申訴 |
@@ -565,7 +572,7 @@ flowchart LR
 | 項目 | 值 |
 |:-----|:---|
 | 菜單位置 | 管理中心 → 評審員管理 |
-| 允許角色 | Registration Final Approver Secretary |
+| 允許角色 | Registration Approver Secretary |
 
 ### 9.2 工作流程
 

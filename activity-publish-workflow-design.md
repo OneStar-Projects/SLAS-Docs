@@ -31,30 +31,42 @@
 
 ## 2. 角色與職責
 
-### 2.1 角色清單
+### 2.1 系統角色清單
 
-| 角色名稱 | 職責 |
-|:---------|:-----|
-| Activity Coordinator | 初審；判斷是否需要 Checker；指派 Checker |
-| Checker | 對活動內容作詳細審查（由 Coordinator 指定） |
-| Supervisor | 監督審核（多人並行）；確認場地是否涉及課後使用 |
+下表為本流程涉及的系統定義角色（`SYSTEM_ROLE.NAME`）：
+
+| 系統角色名稱 | 職責 |
+|:------------|:-----|
+| Activity Coordinator | 初審；判斷是否需要 Checker；指派 Activity Checker |
+| Activity Checker | 對活動內容作詳細審查（由 Coordinator 指派） |
 | Estate Office | 審批場地課後使用 |
-| Sponsorship Approver | 審批贊助相關內容 |
-| Guest Approver | 審批外部嘉賓 |
+| Head | 與 Dean 同為贊助審批候選人,先到先審 |
+| Dean | 同時為贊助審批與嘉賓審批候選人,先到先審 |
+| Delegate | 與 Dean 同為嘉賓審批候選人,先到先審 |
 | IRG Secretary | 管理 IRG 評審；選組；審核 IRG 摘要 |
 | IRG Member | 對 NSOA 活動進行 IRG 投票 |
 | VP Secretary | 管理 VP 評審；選組；判定是否達成共識 |
-| VP Member | 對 NSOA 活動進行 VP 投票 |
-| VP ChairPerson | 對 NSOA 活動作最終決定 |
+| VP Member | 對 NSOA 活動進行 VP 投票（包含 ChairPerson） |
 
-### 2.2 多人並行 / 候選組規則
+### 2.2 流程中的功能性審批組合
+
+下列審批職責在系統中由若干角色或活動數據共同承擔,而非單一系統角色：
+
+| 功能性審批 | 由誰承擔 |
+|:----------|:--------|
+| Sponsorship Approver | 候選組 = { Head, Dean }（任一者先到先審） |
+| Guest Approver | 候選組 = { Delegate, Dean }（任一者先到先審） |
+| Supervisor | 由活動數據指派的多位用戶（不是系統角色） |
+| VP ChairPerson | 由 VP Secretary 在 ⑩ 選組階段指定的一位 VP Member |
+
+### 2.3 多人並行 / 候選組規則
 
 | 任務 | 規則 |
 |:----|:----|
-| Supervisor 審核 | 所有 Supervisor 並行審核，全部完成後系統按聚合規則得出最終結果（見 §5） |
-| 贊助審批 / 嘉賓審批 | 候選組內任一審批人可認領並審批，採「先到先審」 |
+| Supervisor 審核 | 所有 Supervisor 並行審核,全部完成後系統按聚合規則得出最終結果（見 §5） |
+| 贊助審批 / 嘉賓審批 | 候選組內任一審批人可認領並審批,採「先到先審」 |
 | IRG 投票 | 所有 IRG Member 並行投票 |
-| VP 投票 | 所有 VP Member 並行投票；VP 投票有截止時間，超時自動視為棄權 |
+| VP 投票 | 所有 VP Member 並行投票（不含 ChairPerson）；VP 投票有截止時間,超時自動視為棄權 |
 
 ---
 
@@ -94,16 +106,16 @@
 | 編號 | 步驟 | 角色 | 階段 |
 |:----:|:-----|:-----|:----:|
 | ① | Coordinator 審核 | Activity Coordinator | Phase 1 |
-| ② | Checker 審核 | Designated Checker | Phase 1 |
+| ② | Checker 審核 | Activity Checker | Phase 1 |
 | ③ | Supervisors 審核 | Supervisors（並行） | Phase 2 |
 | ④ | EO 審批 | Estate Office | Phase 3 |
 | ⑤ | 贊助審批 | Sponsorship Approver | Phase 3 |
 | ⑥ | 嘉賓審批 | Guest Approver | Phase 3 |
 | ⑦ | IRG 選組 | IRG Secretary | Phase 4 |
-| ⑧ | IRG 投票 | IRG Members（並行） | Phase 4 |
+| ⑧ | IRG 投票 | IRG Member（並行） | Phase 4 |
 | ⑨ | IRG 摘要審核 | IRG Secretary | Phase 4 |
 | ⑩ | VP 選組 | VP Secretary | Phase 4 |
-| ⑪ | VP 投票 | VP Members（並行） | Phase 4 |
+| ⑪ | VP 投票 | VP Member（並行） | Phase 4 |
 | ⑫ | VP 共識決定 | VP Secretary | Phase 5 |
 | ⑬ | 最終決定 | VP ChairPerson | Phase 6 |
 
@@ -128,7 +140,7 @@ flowchart TD
         CheckerCheck -->|"是"| Checker
         CheckerCheck -->|"否"| Supervisors
 
-        Checker["② Checker 審核<br/>(Designated Checker)"]
+        Checker["② Checker 審核<br/>(Activity Checker)"]
         Checker --> CheckerGate{Checker 是否通過?}
         CheckerGate -->|"通過"| Supervisors
         CheckerGate -->|"拒絕"| EndRejected
@@ -183,7 +195,7 @@ flowchart TD
 
         IRGSelect["⑦ IRG 選組<br/>(IRG Secretary)"]
         IRGSelect --> LoadIRG[/"auto: 加載 IRG 成員"/]
-        LoadIRG --> IRGVote["⑧ IRG 投票<br/>(IRG Members)"]
+        LoadIRG --> IRGVote["⑧ IRG 投票<br/>(IRG Member, 並行)"]
         IRGVote --> IRGAiSummary[/"auto: AI 生成 IRG 摘要"/]
         IRGAiSummary --> IRGReview["⑨ IRG 摘要審核<br/>(IRG Secretary)"]
         IRGReview --> IRGCompletion[/"auto: IRG 完成"/]
@@ -192,7 +204,7 @@ flowchart TD
 
         VPSelect["⑩ VP 選組<br/>(VP Secretary)"]
         VPSelect --> LoadVP[/"auto: 加載 VP 成員"/]
-        LoadVP --> VPVote["⑪ VP 投票<br/>(VP Members)"]
+        LoadVP --> VPVote["⑪ VP 投票<br/>(VP Member, 並行)"]
         VPVote -->|"全部投票完成"| VPMerge
         VPVote -.->|"超時 (自動 ABSTAIN)"| VPTimeout[/"auto: VP 超時處理"/]
         VPTimeout --> VPMerge
@@ -252,9 +264,9 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    Start(["Start"]) --> A["① Coordinator 審核<br/>(Coordinator)"]
+    Start(["Start"]) --> A["① Coordinator 審核<br/>(Activity Coordinator)"]
     A --> D{需要 Checker?}
-    D -->|"是"| E["② Checker 審核<br/>(Designated Checker)"]
+    D -->|"是"| E["② Checker 審核<br/>(Activity Checker)"]
     D -->|"否"| F
     E --> F["③ Supervisors 審核<br/>(Supervisors, 並行)"]
     F --> FA[/"auto: 聚合投票"/]
@@ -290,7 +302,7 @@ flowchart TD
     subgraph IRGBranch["IRG 分支"]
         IRGSelect["⑦ IRG 選組<br/>(IRG Secretary)"]
         IRGSelect --> LoadIRG[/"auto: 加載 IRG 成員"/]
-        LoadIRG --> IRGVote["⑧ IRG 投票<br/>(IRG Members)<br/>RECOMMEND / RESERVE / REJECT"]
+        LoadIRG --> IRGVote["⑧ IRG 投票<br/>(IRG Member, 並行)<br/>RECOMMEND / RESERVE / REJECT"]
         IRGVote --> IRGSummary[/"auto: AI 生成 IRG 摘要"/]
         IRGSummary --> IRGReview["⑨ IRG 摘要審核<br/>(IRG Secretary)"]
         IRGReview --> IRGDone[/"auto: IRG 完成"/]
@@ -299,7 +311,7 @@ flowchart TD
     subgraph VPBranch["VP 分支"]
         VPSelect["⑩ VP 選組<br/>(VP Secretary)"]
         VPSelect --> LoadVP[/"auto: 加載 VP 成員"/]
-        LoadVP --> VPVote["⑪ VP 投票<br/>(VP Members)<br/>APPROVE / REJECT / ABSTAIN"]
+        LoadVP --> VPVote["⑪ VP 投票<br/>(VP Member, 並行)<br/>APPROVE / REJECT / ABSTAIN"]
         VPVote --> VPMerge(["VP 分支合併"])
     end
 
@@ -343,8 +355,8 @@ flowchart TD
 
 ⑪ VP 投票在流程上與 IRG 分支獨立並行,但在業務上：
 
-- IRG 分支完成（即 ⑨ IRG 摘要審核結束）**之前**,VP Members 可以查看任務、暫存草稿,但不能正式提交投票。
-- IRG 完成後,VP Members 才能提交投票。
+- IRG 分支完成（即 ⑨ IRG 摘要審核結束）**之前**,VP Member 可以查看任務、暫存草稿,但不能正式提交投票。
+- IRG 完成後,VP Member 才能提交投票。
 
 業務上不希望 VP 在缺少 IRG 摘要參考時投票，因此設立此鎖。圖中以虛線 `IRG 完成 -.-> VP 投票` 表達此依賴。
 
@@ -364,7 +376,7 @@ flowchart TD
 
 ### ② Checker 審核
 
-- **執行人**：Designated Checker（由 Coordinator 指定）
+- **執行人**：Activity Checker（由 Activity Coordinator 指派）
 - **觸發條件**：① 中決定需要 Checker
 - **動作**：對活動內容作詳細審查
 - **結果**：
@@ -495,7 +507,7 @@ flowchart TD
 **條件**：非 NSOA, 無 Checker, 場地不涉及課後使用, 無贊助, 無外部嘉賓
 
 ```
-① Coordinator → ③ Supervisors → 聚合(RECOMMEND) → 發布 ✅
+① Activity Coordinator → ③ Supervisor → 聚合(RECOMMEND) → 發布 ✅
 ```
 
 ### 場景 2：非 NSOA 完整路徑
@@ -503,7 +515,7 @@ flowchart TD
 **條件**：非 NSOA, 需 Checker, 場地涉及課後使用, 有贊助, 有外部嘉賓
 
 ```
-① Coordinator → ② Checker → ③ Supervisors → 聚合 → ④ EO → ⑤ 贊助 → ⑥ 嘉賓 → 發布 ✅
+① Activity Coordinator → ② Activity Checker → ③ Supervisor → 聚合 → ④ Estate Office → ⑤ Sponsorship Approver → ⑥ Guest Approver → 發布 ✅
 ```
 
 ### 場景 3：非 NSOA + EO 退回
@@ -511,7 +523,7 @@ flowchart TD
 **條件**：場地涉及課後使用, EO 不批准
 
 ```
-① Coordinator → ③ Supervisors → 聚合 → ④ EO(退回) → ③ Supervisors(重新審核) → ...
+① Activity Coordinator → ③ Supervisor → 聚合 → ④ Estate Office(退回) → ③ Supervisor(重新審核) → ...
 ```
 
 ### 場景 4：NSOA 最簡路徑
@@ -519,10 +531,10 @@ flowchart TD
 **條件**：NSOA, 無 Checker, 場地不涉及課後使用, 無贊助, 無外部嘉賓
 
 ```
-① Coordinator → ③ Supervisors → 聚合
+① Activity Coordinator → ③ Supervisor → 聚合
 → 並行: { ⑦ IRG 選組 → ⑧ IRG 投票 → ⑨ IRG 審核 → IRG 完成 }
          { ⑩ VP 選組 → ⑪ VP 投票 }
-→ 並行 Join → VP AI 摘要 → ⑫ VP 共識 → ⑬ 主席決定 → 發布 ✅
+→ 並行 Join → VP AI 摘要 → ⑫ VP 共識 → ⑬ VP ChairPerson 決定 → 發布 ✅
 ```
 
 ### 場景 5：NSOA 完整路徑 + VP 多輪投票
@@ -530,10 +542,10 @@ flowchart TD
 **條件**：所有條件均觸發, VP 共識未達成
 
 ```
-① Coordinator → ② Checker → ③ Supervisors → 聚合 → ④ EO → ⑤ 贊助 → ⑥ 嘉賓
+① Activity Coordinator → ② Activity Checker → ③ Supervisor → 聚合 → ④ Estate Office → ⑤ Sponsorship Approver → ⑥ Guest Approver
 → 並行: { IRG 流程 } + { VP 投票 } → 並行 Join
 → VP AI 摘要 → ⑫ VP 共識(否)
 → ⑩ VP 選組(第 2 輪) → ⑪ VP 投票 → VP AI 摘要 → ⑫ VP 共識(否)
 → ⑩ VP 選組(第 3 輪) → ⑪ VP 投票 → VP AI 摘要 → ⑫ VP 共識(否)
-→ ⑬ 主席決定（強制進入）→ 發布／拒絕／退回
+→ ⑬ VP ChairPerson 決定（強制進入）→ 發布／拒絕／退回
 ```
