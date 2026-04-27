@@ -1,68 +1,128 @@
-# 學生組織註冊與申訴流程圖
+# 學生組織註冊與申訴流程
 
-> **說明**：本文檔反映 **實際運行時行為**，依據 BPMN 定義與 Java 源碼（delegates、controllers、event listeners）共同確定。代碼與 BPMN 設計存在差異之處，以實際代碼行為為準並加以標註。
+> 本文檔描述 SLAS 系統中學生組織的註冊審批與申訴審批兩個業務流程。
 
 ---
 
-## 圖例與閱讀指南
+## 1. 流程概覽
 
-本文檔所有流程圖遵循以下統一規範。
+### 1.1 業務目標
 
-### 節點形狀
+- **註冊流程**：對學生組織提交的註冊申請進行多層審批,通過後組別轉為正式狀態。
+- **申訴流程**：對被終局拒絕的學生組織提供再次評審的機會。
+
+### 1.2 兩個流程的關係
+
+```
+[新申請 / 重新提交] → 註冊流程 → 通過? → ACTIVE
+                                  → 退回 → PENDING_RESUBMIT(可重新提交,回到註冊流程)
+                                  → 終局拒絕 → REJECTED_FINAL(只能進入申訴流程)
+
+REJECTED_FINAL → 申訴流程 → 通過? → ACTIVE
+                          → 退回 → APPEAL_RESUBMIT(可重新提交申訴)
+                          → 拒絕 → APPEAL_REJECTED(終局)
+```
+
+### 1.3 結束狀態總覽
+
+| 狀態 | 業務含義 | 學生後續操作 |
+|:-----|:--------|:-----------|
+| `ACTIVE` | 註冊／申訴通過,組別正式生效 | — |
+| `PENDING_RESUBMIT` | 註冊被退回 | 修改後重新提交註冊 |
+| `REJECTED_FINAL` | 註冊被終局拒絕 | 只能發起申訴 |
+| `APPEAL_RESUBMIT` | 申訴被退回（含「有條件批准」） | 修改後重新提交申訴 |
+| `APPEAL_REJECTED` | 申訴被終局拒絕 | 無後續操作 |
+
+---
+
+## 2. 角色與職責
+
+### 2.1 註冊流程角色
+
+| 角色名稱 | 職責 |
+|:---------|:-----|
+| Secretary | 初審；起草拒絕／退回意見；最終提交確認意見 |
+| Admin Checker | 行政審核（由 Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
+| Academic Checker | 學術審核（由 Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
+| Registration Reviewer Group | 提供註冊意見；對起草的拒絕／退回意見並行確認 |
+| Registration Summary Reviewer | 審核已收集的註冊意見；對起草的拒絕／退回意見作審核評論 |
+| Registration Final Approver | 最終批准／拒絕／退回決定 |
+| Registration Final Approver Secretary | 替代終審人,與 Final Approver 享有相同決定權 |
+
+### 2.2 申訴流程角色
+
+| 角色名稱 | 職責 |
+|:---------|:-----|
+| Appeal Reviewer Group | 提供申訴意見（並行多人） |
+| Appeal Summary Reviewer | 審核已收集的申訴意見；可提交至最終,或退回（結束流程） |
+| Appeal Final Approver | 最終批准／拒絕／退回（有條件批准）決定 |
+| Appeal Final Approver Secretary | 替代終審人,與 Appeal Final Approver 享有相同決定權 |
+| Appeal Initiator（學生） | 發起申訴；在 `APPEAL_RESUBMIT` 狀態時重新提交申訴 |
+
+### 2.3 多人並行 / 候選組規則
+
+| 任務 | 規則 |
+|:----|:----|
+| 意見收集（註冊 ④ / 申訴 ①） | 評審組成員並行提交意見;達到截止時間時系統自動將未提交意見標記為超時 |
+| 拒絕／退回意見確認（註冊 ⑧） | 評審組成員並行確認;達到截止時間時系統自動將未提交意見視為通過 |
+| 最終審批 | Final Approver 與 Final Approver Secretary 享有相同決定權,任一者可作出決定 |
+
+---
+
+## 3. 圖例
+
+本節定義流程圖統一規範,兩份審批流程文檔共用。
+
+### 3.1 節點形狀
 
 | 形狀 | Mermaid 語法 | 含義 |
 |:-----|:-------------|:-----|
-| 矩形 | `["Name"]` | **人工任務** — 需要用戶（評審員、秘書等）操作 |
-| 平行四邊形 | `[/"auto: Name"/]` | **系統任務** — Service Task / Delegate，自動執行 |
-| 菱形 | `{Question?}` | **判斷網關** — 根據變量分流，文字以問號結尾 |
-| 圓角 | `(["Name"])` | **流程起點/終點** 或 並行 Fork/Join |
+| 矩形 | `["Name"]` | **人工任務** — 需要審批人手動操作 |
+| 平行四邊形 | `[/"auto: Name"/]` | **系統任務** — 自動執行,無需用戶操作 |
+| 菱形 | `{Question?}` | **判斷網關** — 根據條件分流,文字以問號結尾 |
+| 圓角 | `(["Name"])` | **流程起點／終點** 或 並行 Fork/Join |
 
-### 連線類型
+### 3.2 連線類型
 
 | 樣式 | Mermaid 語法 | 含義 |
 |:-----|:-------------|:-----|
 | 實線箭頭 | `-->` | 正向順序流（happy path） |
-| 虛線箭頭 | `-.->` | 計時器觸發（超時 / 提醒）、退回循環、跨分支依賴 |
+| 虛線箭頭 | `-.->` | 計時器觸發（超時／提醒）、退回循環、跨分支依賴 |
 
-### 節點標籤格式
+### 3.3 節點標籤格式
 
 | 類型 | 格式 | 範例 |
 |:-----|:-----|:-----|
 | 人工任務 | `<編號> <步驟名><br/>(角色名)` | `① Secretary 初審<br/>(Secretary)` |
 | 系統任務 | `auto: <行為描述>` | `auto: 彙總意見` |
 | 判斷網關 | 以問號結尾的問句 | `{Secretary 是否通過?}` |
-| 結束點 | `End: <狀態碼><br/>(<業務含義>)` | `End: ACTIVE<br/>(註冊通過)` |
+| 結束點 | `End: <狀態><br/>(<業務含義>)` | `End: ACTIVE<br/>(註冊通過)` |
 
-> 流程圖**刻意省略**角色 ID、Delegate 類名、流程變量名等實現細節，以保持可讀性。完整實現信息見 [§1.5 / §2.5 角色匯總](#15-角色匯總註冊)、[§5 流程變量參考](#5-流程變量參考)，以及每張圖周圍的散文說明。
+### 3.4 步驟編號
 
-### 步驟編號
-
-帶圈數字（①、②、…）標註單個流程內人工任務的執行順序，系統任務不參與編號。
-
-- **註冊**（§1.1 主流程 + §1.2 拒絕子流程）：① – ⑩
-- **申訴**（§2.1）：① – ③（申訴為獨立流程，編號重新開始）
+帶圈數字（①、②、…）標註單個流程內人工任務的執行順序。系統任務不參與編號。
 
 | 流程 | 編號 | 步驟 | 角色 |
 |:-----|:----:|:-----|:-----|
-| 註冊 | ① | Secretary 初審 | Secretary (122) |
-|  | ② | Admin 審核 | Admin Checker (136) |
-|  | ③ | Academic 審核 | Academic Checker (132) |
-|  | ④ | 意見收集 | Reviewer Group (123, 並行) |
-|  | ⑤ | 摘要審核 | Summary Reviewer (138) |
-|  | ⑥ | 最終審批 | Final Approver (124 / 134) |
-| 註冊<br/>（拒絕） | ⑦ | 起草綜合意見 | Secretary (122) |
-|  | ⑧ | 評審員確認意見 | Reviewer Group (123, 並行) |
-|  | ⑨ | 審核草擬意見 | Summary Reviewer (138) |
-|  | ⑩ | 最終提交意見 | Secretary (122) |
-| 申訴 | ① | 意見收集 | Appeal Reviewer Group (125, 並行) |
-|  | ② | 摘要審核 | Appeal Summary Reviewer (139) |
-|  | ③ | 最終審批 | Appeal Final Approver (126 / 135) |
+| 註冊 | ① | Secretary 初審 | Secretary |
+|  | ② | Admin 審核 | Admin Checker |
+|  | ③ | Academic 審核 | Academic Checker |
+|  | ④ | 意見收集 | Registration Reviewer Group（並行） |
+|  | ⑤ | 摘要審核 | Registration Summary Reviewer |
+|  | ⑥ | 最終審批 | Registration Final Approver |
+| 註冊<br/>（拒絕子流程） | ⑦ | 起草綜合意見 | Secretary |
+|  | ⑧ | 評審員確認意見 | Registration Reviewer Group（並行） |
+|  | ⑨ | 審核草擬意見 | Registration Summary Reviewer |
+|  | ⑩ | 最終提交意見 | Secretary |
+| 申訴 | ① | 意見收集 | Appeal Reviewer Group（並行） |
+|  | ② | 摘要審核 | Appeal Summary Reviewer |
+|  | ③ | 最終審批 | Appeal Final Approver |
 
 ---
 
-## 1. 學生組織註冊流程（`student_org_registration`）
+## 4. 流程圖
 
-### 1.1 主流程
+### 4.1 註冊主流程
 
 ```mermaid
 flowchart TD
@@ -117,11 +177,11 @@ flowchart TD
 
     NotifyReturn --> EndRejected
 
-    RejectionSubProcess["拒絕子流程<br/>(見 §1.2)"]
+    RejectionSubProcess["拒絕子流程<br/>(見 §4.2)"]
     RejectionSubProcess --> EndRejected
 
     EndApproved(["End: ACTIVE<br/>(註冊通過)"])
-    EndRejected(["End: 流程結束<br/>(見 §1.4 結果對照表)"])
+    EndRejected(["End: 流程結束<br/>(見 §6.1 結果對照表)"])
 
     style Start fill:#4CAF50,color:#fff
     style EndApproved fill:#4CAF50,color:#fff
@@ -134,13 +194,13 @@ flowchart TD
     style Phase4 fill:#F3E5F5,stroke:#6A1B9A
 ```
 
-> **Phase 2** 中的虛線箭頭代表計時器事件：`超時` 為中斷型（取消並行任務並將未提交意見標記為 `TIMEOUT`），`提醒` 為非中斷型（僅通知待提交評審員，主流程繼續）。實現詳見 [§1.7.2 Phase 2 計時器行為](#172-phase-2-意見收集計時器行為)。
+> **Phase 2** 中的虛線箭頭代表計時器事件：`超時` 為中斷型（取消並行任務並將未提交意見標記為 `TIMEOUT`）;`提醒` 為非中斷型（僅通知待提交評審員,主流程繼續）。
 >
-> `End: 流程結束` 節點的最終解析取決於觸發原因（摘要退回 / 最終拒絕 / 最終退回）——見 [§1.4 註冊結果對照表](#14-註冊結果對照表)。
+> `End: 流程結束` 節點的最終狀態取決於觸發原因（摘要退回 / 最終拒絕 / 最終退回）——見 [§6.1 註冊結果對照](#61-註冊結果對照)。
 
-### 1.2 拒絕／退回審核子流程
+### 4.2 註冊拒絕／退回子流程
 
-當 Final Approver（⑥）選擇 **拒絕** 或 **退回** 時，流程進入此子流程，用以起草、傳閱並定稿一份綜合意見。兩條分支共享同一子流程並在同一 BPMN 結束事件處結束；最終業務狀態由事件監聽器在流程結束後解析——見 [§1.4](#14-註冊結果對照表)。
+當 Final Approver（⑥）選擇 **拒絕** 或 **退回** 時,流程進入此子流程,用以起草、傳閱並定稿一份綜合意見。兩條分支共享同一子流程,最終業務狀態由結束時的「退回類型」決定。
 
 ```mermaid
 flowchart TD
@@ -164,11 +224,11 @@ flowchart TD
     SummarizeFeedback --> SummaryReview["⑨ 審核草擬意見<br/>(Summary Reviewer)"]
     SummaryReview --> SecretaryFinalSubmit["⑩ 最終提交意見<br/>(Secretary)"]
     SecretaryFinalSubmit --> EndNotify[/"auto: 派發最終通知"/]
-    EndNotify --> EndEventRejected(["BPMN 結束事件<br/>(endEventRejected)"])
+    EndNotify --> TypeGate
 
-    EndEventRejected --> TypeGate{rejectionType?}
-    TypeGate -->|"return"| EndResubmit(["End: PENDING_RESUBMIT<br/>(學生可重新提交)"])
-    TypeGate -->|"reject"| EndRejected(["End: REJECTED_FINAL<br/>(學生只能申訴)"])
+    TypeGate{退回類型?}
+    TypeGate -->|"退回 (return)"| EndResubmit(["End: PENDING_RESUBMIT<br/>(學生可重新提交)"])
+    TypeGate -->|"拒絕 (reject)"| EndRejected(["End: REJECTED_FINAL<br/>(學生只能申訴)"])
 
     style EntryPoint fill:#FF9800,color:#fff
     style EndRejected fill:#f44336,color:#fff
@@ -176,170 +236,22 @@ flowchart TD
     style ConfirmReminderEnd fill:#9E9E9E,color:#fff
 ```
 
-#### 1.2.1 子流程步驟詳述
+### 4.3 註冊重新提交
 
-- **auto: 初始化拒絕審核**（`rejectionReviewInitDelegate`）— 創建 `RejectionOpinionDO`，將 `finalAction` 映射為 `rejectionType`（`'reject'` 或 `'return'`），設置 `PROCESS_STATUS=REJECT`，並通知 Summary Reviewer（Role 138）。
-- **⑦ 起草綜合意見**（Secretary，Role 122）— 保存意見 version 1，設定兩個傳閱參數：`circulationDays` 與 `reminderDaysBeforeDeadline`。`RejectionOpinionService.submitDraft()` 強制 `reminderDaysBeforeDeadline < circulationDays`，並將兩者寫入 Flowable 運行時變量。
-- **auto: 初始化評審員確認**（`rejectionConfirmInitDelegate`）— 讀取傳閱參數，計算 `rejectionConfirmDeadline` 與 `rejectionConfirmReminderTime`，並解析確認人列表（`rejectionReviewer123UserIds`，role 123）。
-- **⑧ 評審員確認意見**（Reviewer Group，Role 123，並行多實例）— 每位評審員提交反饋 `APPROVE` / `SUGGEST` / `NO_COMMENT`。
-- **auto: 確認超時處理**（`rejectionConfirmTimeoutDelegate`）— 將 BPMN 路徑標記為超時（`isRejectionConfirmTimeout=true`）。`RejectionOpinionService.markTimeoutFeedbacks()` 將未提交的 role 123 反饋持久化為 `feedbackType='APPROVE'` 且 `isTimeout=true`。
-- **auto: 發送確認提醒**（`rejectionConfirmReminderDelegate`）— 非中斷型；只通知待提交評審員，不影響主路徑。
-- **auto: 彙總拒絕反饋**（`rejectionFeedbackSummarizeDelegate`）— 產生 `rejectionApproveCount`、`rejectionSuggestCount`、`rejectionNoCommentCount` 與 `rejectionHasSuggestions`。
-- **⑨ 審核草擬意見**（Summary Reviewer，Role 138）— 對草擬意見作單次審核評論。
-- **⑩ 最終提交意見**（Secretary，Role 122）— 可修改 `finalOpinion`，持久化 CONFIRMED 意見。
-- **auto: 派發最終通知**（`endNotifyDelegate`）— 將結果發送給兩類受眾：
-  - 行動方：申請人、協作者、Roles 136 與 132。
-  - 知會方：Roles 124、134、138、122 與 123。
-- **rejectionType 網關** — 由 BPMN 之外的 `StudentGroupBpmEventListener.handleRejection()` 處理：
-  - `rejectionType='return'` → 狀態 `PENDING_RESUBMIT`（學生可重新提交，見 §1.3）。
-  - `rejectionType='reject'` → 狀態 `REJECTED_FINAL`（學生只能申訴，見 §2）。
-
-### 1.3 註冊重新提交流程
-
-當狀態為 `PENDING_RESUBMIT` 時，學生可修正申請並重新提交。此操作 **啟動全新流程實例**——原實例已結束，沒有進程內回跳。
+當狀態為 `PENDING_RESUBMIT` 時,學生可修正申請並重新提交。此操作 **啟動全新的註冊流程實例**——原流程已結束,沒有流程內回跳。
 
 ```mermaid
 flowchart LR
     Rejected(["流程已結束：<br/>PENDING_RESUBMIT"])
-    Rejected -->|"學生調用<br/>resubmitRegistration()"| Cancel[/"auto: 取消舊流程<br/>(如仍在運行)"/]
+    Rejected -->|"學生重新提交"| Cancel[/"auto: 取消舊流程<br/>(如仍在運行)"/]
     Cancel --> Update[/"auto: 更新組數據<br/>(狀態 → PENDING,<br/>清除拒絕信息)"/]
-    Update --> NewProcess(["啟動新的<br/>註冊流程<br/>(見 §1.1)"])
+    Update --> NewProcess(["啟動新的<br/>註冊流程<br/>(見 §4.1)"])
 
     style Rejected fill:#FF9800,color:#fff
     style NewProcess fill:#4CAF50,color:#fff
 ```
 
-### 1.4 註冊結果對照表
-
-| 拒絕點 | 代碼路徑 | rejectionType | 最終狀態 | 學生可以 |
-|:-------|:---------|:--------------|:---------|:---------|
-| Secretary (122) 拒絕 | `rejectTask()` → 事件監聽器 | 無 RejectionOpinionDO；註冊默認為非終局 | **PENDING_RESUBMIT** | 重新提交註冊 |
-| Admin (136) 拒絕 | `rejectTask()` → 事件監聽器 | 無 RejectionOpinionDO；註冊默認為非終局 | **PENDING_RESUBMIT** | 重新提交註冊 |
-| Academic (132) 拒絕 | `rejectTask()` → 事件監聽器 | 無 RejectionOpinionDO；註冊默認為非終局 | **PENDING_RESUBMIT** | 重新提交註冊 |
-| Summary (138) 退回 | `completeSummary()` 設置 `summaryAction='return'` 與 `PROCESS_STATUS=RETURN` → BPMN `notifyReturnTask` → `endEventRejected` → 事件監聽器 | 無 RejectionOpinionDO | **PENDING_RESUBMIT** | 重新提交註冊 |
-| Final (124/134) 批准 | `approveTask()` → endEventApproved | N/A | **ACTIVE** | — |
-| Final (124/134) 拒絕 | 拒絕子流程（`122 起草 → 123 確認 → 138 審核 → 122 最終提交`）→ `endNotifyTask` → `endEventRejected` → 事件監聽器 | `reject` | **REJECTED_FINAL** | 只能申訴 |
-| Final (124/134) 退回 | 同一拒絕子流程 → `endNotifyTask` → `endEventRejected` → 事件監聽器 | `return` | **PENDING_RESUBMIT** | 重新提交註冊 |
-
-> **代碼參考**：`StudentGroupBpmEventListener.handleRejection()` 決定註冊結果是否為終局。當不存在 `RejectionOpinionDO` 時，註冊默認可重新提交；當存在 `RejectionOpinionDO` 時，由 `rejectionType` 控制是 `REJECTED_FINAL` 還是 `PENDING_RESUBMIT`。`resolveRejectionReason()` 優先取 `RejectionOpinionDO.finalOpinion`，其次取流程及任務變量。
-
-### 1.5 角色匯總（註冊）
-
-| 角色 ID | 角色名稱 | 職責 |
-|:-------:|:---------|:-----|
-| 122 | Secretary | 初審；起草拒絕／退回意見；最終提交確認意見 |
-| 136 | Admin Checker | 行政審核；摘要退回與最終拒絕／退回結果均收到通知 |
-| 132 | Academic Checker | 學術審核；摘要退回與最終拒絕／退回結果均收到通知 |
-| 123 | Reviewer Group | 提供註冊意見；對起草的拒絕／退回意見並行確認 |
-| 138 | Summary Reviewer | 審核已收集的註冊意見；對起草的拒絕／退回意見作審核評論 |
-| 124 | Final Approver | 最終批准／拒絕／退回決定 |
-| 134 | Final Approver Secretary | 替代終審人；與 Role 124 享有相同決定權 |
-
-### 1.6 評審員（Checker）重新分配
-
-當 Secretary（Role 122）提交註冊並通過流程變量（`admin_checker_{userId}`、`academic_checker_{userId}`）指定 Admin Checker（Role 136）與 Academic Checker（Role 132）後，由於人員變動、休假或其他運維原因，可能需要更換已指定的 Checker。
-
-**問題**：當 Secretary 完成 `secretaryCheckTask` 且流程已推進到 `adminCheckTask` / `academicCheckTask` 時，原始任務表單不再可訪問。Checker 指定信息儲存於 Flowable 流程變量中，因此單純重新分配任務無法生效——必須同步更新流程變量。
-
-**解決方案**：在管理中心提供專屬的 **評審員管理（Reviewer Management）** 頁面，僅 Registration Secretary（Role 134）可訪問。
-
-#### 入口
-
-| 項目 | 值 |
-|:-----|:---|
-| 菜單位置 | 管理中心 → 評審員管理 |
-| URL 路徑 | `/admin/ReviewerManagement` |
-| 權限 | `stugroup:reviewer-management:manage` |
-| 允許角色 | 134（`sg_reg_approver_secretary`） |
-
-#### 工作原理
-
-```mermaid
-sequenceDiagram
-    participant Secretary as Secretary (134)
-    participant UI as 管理頁面
-    participant API as Controller
-    participant Service as Service
-    participant Flowable as Flowable Runtime
-
-    Secretary->>UI: 打開評審員管理頁
-    UI->>API: GET /reviewer-management/page
-    API->>Service: 查詢處於 adminCheckTask / academicCheckTask<br/>的運行中流程實例
-    Service-->>UI: 返回列表（含當前 Checker 名稱）
-
-    Secretary->>UI: 點擊「修改評審員」
-    UI->>API: GET /reviewer-management/detail
-    API-->>UI: 返回當前 admin 與 academic checker
-
-    Secretary->>UI: 選擇新 Checker<br/>+ 填寫變更原因
-    UI->>API: PUT /reviewer-management/update
-    API->>Service: updateReviewer(...)
-
-    Service->>Flowable: 移除舊變量 admin_checker_{oldUserId}
-    Service->>Flowable: 寫入新變量 admin_checker_{newUserId}
-    Service->>Flowable: 移除舊變量 academic_checker_{oldUserId}
-    Service->>Flowable: 寫入新變量 academic_checker_{newUserId}
-    Flowable-->>Service: 變量更新完成
-
-    Note over Service,Flowable: 新 Checker 在待辦列表中看到任務；<br/>舊 Checker 不再看到。
-```
-
-#### 約束
-
-- 僅作用於 **運行中** 的註冊流程實例（`student_org_registration`），且當前停留在 `adminCheckTask` 或 `academicCheckTask` 節點。
-- 每次操作必須至少更換 admin 或 academic 之一。
-- 變更原因為必填項，用於審計。
-- 申訴流程（`student_org_appeal`）不使用指定 Checker 機制，故不在此功能範圍內。
-
-### 1.7 主流程步驟詳述
-
-本節集中陳述刻意從 §1.1 流程圖中省略的實現細節，以保持圖的可讀性。每條目均按以下格式：執行人、輸入／輸出、任何非顯然的行為。
-
-#### 1.7.1 Phase 1 順序三方審核
-
-- **① Secretary 初審**（Secretary，Role 122）— 初次審核。Secretary 在完成任務時，會通過寫入流程變量 `admin_checker_{userId}` 與 `academic_checker_{userId}` 來指定 Admin Checker（Role 136）與 Academic Checker（Role 132）。後續可通過評審員管理功能替換（見 §1.6）。
-- **② Admin 審核**（Admin Checker，Role 136）— 行政審核。受理人從 ① 設定的 `admin_checker_{userId}` 變量解析。
-- **③ Academic 審核**（Academic Checker，Role 132）— 學術審核。受理人從 ① 設定的 `academic_checker_{userId}` 變量解析。
-- **①／②／③ 任一處被拒** — 控制器調用 `rejectTask()`，不創建 `RejectionOpinionDO`。`StudentGroupBpmEventListener.handleRejection()` 將註冊結果默認為非終局，故狀態為 `PENDING_RESUBMIT`（見 §1.4）。
-
-#### 1.7.2 Phase 2 意見收集計時器行為
-
-Phase 2 在並行多實例 `意見收集` 任務上掛載兩個計時器邊界事件，行為完全不同：
-
-| 計時器 | BPMN 類型 | 觸發時的效果 |
-|:-------|:----------|:-------------|
-| `Reminder`（於 `reminderTime`） | **非中斷型** | 執行 `opinionReminderDelegate`（通知待提交評審員）。主多實例任務繼續運行。重新配置後可多次觸發。 |
-| `Timeout`（於 `opinionDeadline`） | **中斷型** | 取消多實例任務。執行 `opinionTimeoutDelegate`，將待提交意見標記為 `TIMEOUT` 並設置 `isTimeout=true`。流程繼續到 `彙總意見`。 |
-
-本階段的系統任務：
-
-- **auto: 初始化意見收集**（`opinionCollectionInitDelegate`）— 解析評審員列表（`reviewer123UserIds`），計算 `opinionDeadline` 與 `reminderTime`。
-- **auto: 發送提醒**（`opinionReminderDelegate`）— 非中斷型提醒，只發送通知。
-- **auto: 意見超時處理**（`opinionTimeoutDelegate`）— 將未提交評審員持久化為 TIMEOUT 並推進到彙總。
-- **auto: 彙總意見**（`opinionSummarizeDelegate`）— 為 Summary Reviewer 產生 `approveCount`、`rejectCount`、`completedOpinions`、`pendingOpinions`。
-
-#### 1.7.3 Phase 3 摘要審核
-
-- **⑤ 摘要審核**（Summary Reviewer，Role 138）— 審核彙總意見並二選一操作：
-  - **提交** → 控制器調用 `approveTask()` 並設置 `summaryAction='submit'`；BPMN 路由到 `finalApprovalTask`。
-  - **退回** → 控制器調用 `approveTask()` 並設置 `summaryAction='return'`、`taskStatus=RETURN`；BPMN 路由到 `notifyReturnTask`。結果為 `PENDING_RESUBMIT`（此處不創建 `RejectionOpinionDO`）。
-- **auto: 通知退回**（`summaryReturnNotifyDelegate`）— 通知 Role 136 與 Role 132，告知申請被 Summary Reviewer 退回。
-
-#### 1.7.4 Phase 4 最終審批
-
-- **⑥ 最終審批**（Final Approver / Final Approver Secretary，Role 124 / 134）— 產生 `finalAction='approve' | 'reject' | 'return'`。
-  - `approve` → BPMN 路由到 `endEventApproved`，狀態變為 `ACTIVE`。
-  - `reject` 或 `return` → 進入拒絕子流程（§1.2）。子流程內由 `rejectionType` 決定走向（'reject' → `REJECTED_FINAL`；'return' → `PENDING_RESUBMIT`）。
-
-> 各 Delegate 產生的完整變量集合見 [§5 流程變量參考](#5-流程變量參考)。
-
----
-
-## 2. 學生組織申訴流程（`student_org_appeal`）
-
-### 2.1 實際代碼流程
-
-> **重要**：`student_org_appeal` 的 BPMN 定義中包含一個 `studentResubmitTask`，「退回」路徑會回跳到 `summaryReviewTask`，但 **此循環在當前代碼中不可達**。下文 [§2.1.1](#211-bpmn-與代碼的偏離) 詳述兩處 BPMN 與代碼的差異。流程圖反映的是實際運行時行為，而非 BPMN 設計。
+### 4.4 申訴主流程
 
 ```mermaid
 flowchart TD
@@ -363,7 +275,7 @@ flowchart TD
         SummarizeOpinions --> SummaryReview["② 摘要審核<br/>(Appeal Summary Reviewer)"]
         SummaryReview --> SummaryDecision{摘要決定?}
         SummaryDecision -->|"提交"| FinalApproval
-        SummaryDecision -->|"退回 ⚠"| EndResubmitSummary
+        SummaryDecision -->|"退回"| EndResubmitSummary
     end
 
     subgraph Phase3["Phase 3: 最終審批"]
@@ -371,7 +283,7 @@ flowchart TD
         FinalApproval --> FinalDecision{最終決定?}
         FinalDecision -->|"批准"| EndApproved
         FinalDecision -->|"拒絕"| EndRejected
-        FinalDecision -->|"退回 ⚠"| EndResubmitFinal
+        FinalDecision -->|"退回"| EndResubmitFinal
     end
 
     EndApproved(["End: ACTIVE<br/>(申訴通過)"])
@@ -390,181 +302,294 @@ flowchart TD
     style Phase3 fill:#F3E5F5,stroke:#6A1B9A
 ```
 
-> ⚠ 標記運行時路徑與 BPMN 模型存在偏離的邊。詳見 [§2.1.1](#211-bpmn-與代碼的偏離) 與 [§4 BPMN 與代碼的差異](#4-bpmn-與代碼的差異)。
+> 申訴流程的「退回」業務上等同於「有條件批准」——學生需根據意見修改後重新提交申訴,而非直接通過。
 
-#### 2.1.1 BPMN 與代碼的偏離
+### 4.5 申訴重新提交
 
-上圖中兩條 ⚠ 邊隱藏了非顯然的行為。BPMN 模型與運行時在這兩處不一致：
-
-**1. 摘要的「退回」繞過 BPMN 網關。**
-BPMN 在 `summaryReviewTask` 處沒有網關——唯一建模出口直接指向 `finalApprovalTask`。但 [`ReviewerOpinionController.completeSummary()`](slas-module-stugroup/slas-module-stugroup-biz/src/main/java/hk/eduhk/sao/slas/module/stugroup/controller/admin/opinion/ReviewerOpinionController.java#L89-L103) 在此階段以「退回」決定為由直接調用 `rejectTask()`，立即結束流程。Secretary 選擇退回時，BPMN 通往 `finalApprovalTask` 的順序流永不會被走過。
-
-**2. 最終的「退回」在 BPMN 看到之前已被改寫為「拒絕」。**
-BPMN 顯式建模了 `studentResubmitTask`，條件 `${finalAction == 'return'}` 回跳到 `summaryReviewTask`。但 [`ReviewerOpinionController.completeFinal()`](slas-module-stugroup/slas-module-stugroup-biz/src/main/java/hk/eduhk/sao/slas/module/stugroup/controller/admin/opinion/ReviewerOpinionController.java#L131-L148) 對申訴流程把 `finalAction='return'` 覆蓋為 `'reject'`，因此 BPMN 條件 `${finalAction == 'return'}` 永遠不匹配。控制器仍會創建一個 `rejectionType='return'` 的 `RejectionOpinionDO`，事件監聽器據此把最終狀態設為 `APPEAL_RESUBMIT` 而非 `APPEAL_REJECTED`。完整握手見 [§2.3](#23-申訴退回機制詳解)。
-
-淨效果是：申訴的「退回」機制完全在 BPMN 之外實現——摘要階段退回與最終階段退回都繞開 BPMN 路由，依靠 `StudentGroupBpmEventListener.handleRejection()` 來判定最終業務狀態。流程內沒有回跳；重新提交永遠啟動新的流程實例（見 §2.2）。
-
-### 2.2 申訴重新提交流程
-
-當狀態為 `APPEAL_RESUBMIT` 時，學生可修改並重新提交。此操作 **啟動全新流程實例**——原實例已結束；BPMN `studentResubmitTask` 循環從不被使用。
+當狀態為 `APPEAL_RESUBMIT` 時,學生可修改並重新提交。此操作 **啟動全新的申訴流程實例**——原實例已結束。
 
 ```mermaid
 flowchart LR
     Rejected(["流程已結束：<br/>APPEAL_RESUBMIT"])
-    Rejected -->|"學生調用<br/>resubmitAppeal()"| Update[/"auto: 更新組數據<br/>(新的 appealReason,<br/>狀態 → APPEAL_PENDING)"/]
-    Update --> NewProcess(["啟動新的<br/>申訴流程<br/>(見 §2.1)"])
+    Rejected -->|"學生重新提交申訴"| Update[/"auto: 更新組數據<br/>(新的申訴理由,<br/>狀態 → APPEAL_PENDING)"/]
+    Update --> NewProcess(["啟動新的<br/>申訴流程<br/>(見 §4.4)"])
 
     style Rejected fill:#FF9800,color:#fff
     style NewProcess fill:#2196F3,color:#fff
 ```
 
-### 2.3 申訴退回機制詳解
+---
 
-申訴的「退回」（有條件批准）是本文檔中最微妙的路徑，因為它依賴於控制器層對 `finalAction` 的改寫。下方序列圖追蹤從 Final Approver 點擊「退回」到狀態變為 `APPEAL_RESUBMIT` 的完整鏈路：
+## 5. 步驟詳述
 
-```mermaid
-sequenceDiagram
-    participant User as Final Approver
-    participant Ctrl as Opinion Controller
-    participant Svc as RejectionOpinionService
-    participant BPM as BpmTaskService
-    participant Engine as BPMN 引擎
-    participant Listener as Bpm 事件監聽器
+按 ①–⑩（註冊）與 ①–③（申訴）順序列出所有人工任務及相關業務規則。
 
-    User->>Ctrl: completeFinal(finalAction='return')
-    Ctrl->>Ctrl: 識別為申訴流程
-    Ctrl->>Svc: createConfirmedReturnOpinion()
-    Note right of Svc: rejectionType='return'
-    Ctrl->>Ctrl: 覆蓋 finalAction='reject'
-    Ctrl->>BPM: approveTask(finalAction='reject',<br/>PROCESS_STATUS=REJECT)
-    BPM->>Engine: 完成任務
-    Engine->>Engine: 網關 → endEventRejected
-    Engine->>Listener: 流程結束 (REJECT)
-    Listener->>Listener: 查詢 RejectionOpinionDO
-    Note right of Listener: rejectionType='return'<br/>→ isFinalRejection=false
-    Listener->>Listener: 設置狀態 = APPEAL_RESUBMIT
-    Note over User,Listener: 之後學生調用 resubmitAppeal()<br/>→ 啟動全新流程實例 (§2.2)
-```
+### 5.1 註冊主流程步驟
 
-### 2.4 申訴結果對照表
+#### 5.1.1 Phase 1：順序三方審核
 
-| 決策點 | 代碼路徑 | 機制 | 最終狀態 | 學生可以 |
-|:-------|:---------|:-----|:---------|:---------|
-| Summary (139) 提交 | `approveTask()` → BPMN 路由到 finalApprovalTask | 正常 BPMN 流 | *(進入最終審批)* | — |
-| Summary (139) 退回 | 直接調用 `rejectTask()`（繞過 BPMN 網關） | RejectionOpinionDO(type='return') | **APPEAL_RESUBMIT** | 重新提交申訴 |
-| Final (126/135) 批准 | `approveTask(finalAction='approve')` → endEventApproved | 正常 BPMN 流 | **ACTIVE** | — |
-| Final (126/135) 拒絕 | `approveTask(finalAction='reject', PROCESS_STATUS=REJECT)` → endEventRejected | 無 RejectionOpinionDO；申訴默認為終局 | **APPEAL_REJECTED** | 無後續操作 |
-| Final (126/135) 退回 | `approveTask(finalAction='reject')` + RejectionOpinionDO(type='return') → endEventRejected | 代碼將 'return' 覆蓋為 'reject'；事件監聽器檢查 rejectionType | **APPEAL_RESUBMIT** | 重新提交申訴 |
+##### ① Secretary 初審
 
-> **代碼參考**：`finalAction` 覆蓋邏輯位於 [ReviewerOpinionController.java](slas-module-stugroup/slas-module-stugroup-biz/src/main/java/hk/eduhk/sao/slas/module/stugroup/controller/admin/opinion/ReviewerOpinionController.java#L131-L148) `completeFinal()`。狀態判定位於 [StudentGroupBpmEventListener.java](slas-module-stugroup/slas-module-stugroup-biz/src/main/java/hk/eduhk/sao/slas/module/stugroup/service/bpm/StudentGroupBpmEventListener.java#L87)，其中 `isFinalRejection = !isRegistration`（申訴默認為 `true`）。
+- **執行人**：Secretary
+- **動作**：初次審核註冊申請;在通過時指派 Admin Checker 與 Academic Checker（後續可在「評審員管理」工具中替換,見 §9）
+- **結果**：
+  - 通過 → 進入 ② Admin 審核
+  - 拒絕 → 流程結束（`PENDING_RESUBMIT`）
 
-### 2.5 角色匯總（申訴）
+##### ② Admin 審核
 
-| 角色 ID | 角色名稱 | 職責 |
-|:-------:|:---------|:-----|
-| 125 | Appeal Reviewer Group | 提供申訴意見（並行多實例） |
-| 139 | Appeal Summary Reviewer | 審核已收集意見；可提交至最終或退回（結束流程） |
-| 126 | Appeal Final Approver | 最終批准／拒絕／退回（有條件批准）決定 |
-| 135 | Appeal Final Approver Secretary | 替代終審人；與 Role 126 享有相同決定權 |
-| — | Appeal Initiator（學生） | 通過 `resubmitAppeal()` 重新提交申訴（流程外） |
+- **執行人**：由 Secretary 在 ① 中指派的 Admin Checker
+- **動作**：行政審核
+- **結果**：
+  - 通過 → 進入 ③ Academic 審核
+  - 拒絕 → 流程結束（`PENDING_RESUBMIT`）
+
+##### ③ Academic 審核
+
+- **執行人**：由 Secretary 在 ① 中指派的 Academic Checker
+- **動作**：學術審核
+- **結果**：
+  - 通過 → 進入 Phase 2 意見收集
+  - 拒絕 → 流程結束（`PENDING_RESUBMIT`）
+
+> Phase 1 任一步拒絕均直接結束於 `PENDING_RESUBMIT`,不進入拒絕子流程。
+
+#### 5.1.2 Phase 2：意見收集
+
+##### ④ 意見收集（並行）
+
+- **執行人**：所有 Registration Reviewer Group 成員並行
+- **動作**：每位評審員提交意見
+- **計時器規則**：
+  - **提醒**（非中斷型）：到達提醒時間時,系統通知尚未提交的評審員,主任務繼續運行
+  - **超時**（中斷型）：到達截止時間時,系統取消並行任務,將未提交的意見標記為 `TIMEOUT`,流程繼續到「auto: 彙總意見」
+- **結果**：全部完成（或超時觸發後）→ 進入 Phase 3
+
+#### 5.1.3 Phase 3：摘要審核
+
+##### ⑤ 摘要審核
+
+- **執行人**：Registration Summary Reviewer
+- **動作**：審核已彙總的意見,二選一
+- **結果**：
+  - **提交** → 進入 ⑥ 最終審批
+  - **退回** → 系統自動通知 Admin Checker 與 Academic Checker, 流程結束（`PENDING_RESUBMIT`）
+
+#### 5.1.4 Phase 4：最終審批
+
+##### ⑥ 最終審批
+
+- **執行人**：Registration Final Approver（或 Final Approver Secretary）
+- **動作**：作出 `批准` / `拒絕` / `退回` 決定
+- **結果**：
+  - **批准** → 流程結束（`ACTIVE`）
+  - **拒絕** 或 **退回** → 進入拒絕子流程（見 §5.2）
+
+### 5.2 註冊拒絕／退回子流程步驟
+
+子流程的最終狀態取決於 Final Approver 在 ⑥ 中選的是「拒絕」還是「退回」：
+
+| Final Approver 選擇 | 最終狀態 |
+|:------------------|:--------|
+| 退回（return） | `PENDING_RESUBMIT` |
+| 拒絕（reject） | `REJECTED_FINAL` |
+
+##### ⑦ 起草綜合意見
+
+- **執行人**：Secretary
+- **動作**：保存第一版綜合意見;設定兩個傳閱參數（傳閱天數與「截止前提醒」天數,後者必須小於前者）
+- **結果**：進入「auto: 初始化評審員確認」, 系統據此計算確認截止時間與提醒時間,並進入 ⑧
+
+##### ⑧ 評審員確認意見（並行）
+
+- **執行人**：所有 Registration Reviewer Group 成員並行
+- **動作**：每位提交確認反饋,選擇 `APPROVE` / `SUGGEST` / `NO_COMMENT`
+- **計時器規則**：
+  - **提醒**（非中斷型）：到達提醒時間時,僅通知待提交評審員
+  - **超時**（中斷型）：到達截止時間時,系統將未提交的反饋自動視為 `APPROVE` 並標記為超時
+- **結果**：全部確認完成（或超時觸發後）→ 進入「auto: 彙總拒絕反饋」, 再進入 ⑨
+
+##### ⑨ 審核草擬意見
+
+- **執行人**：Registration Summary Reviewer
+- **動作**：對草擬意見作單次審核評論
+- **結果**：進入 ⑩
+
+##### ⑩ 最終提交意見
+
+- **執行人**：Secretary
+- **動作**：可修改最終意見,確認並持久化
+- **結果**：系統自動派發最終通知（行動方:申請人、協作者、Admin Checker、Academic Checker;知會方:Final Approver、Final Approver Secretary、Summary Reviewer、Secretary、Reviewer Group）, 流程結束（依退回類型解析為 `PENDING_RESUBMIT` 或 `REJECTED_FINAL`）
+
+### 5.3 申訴流程步驟
+
+##### ① 意見收集（並行）
+
+- **執行人**：所有 Appeal Reviewer Group 成員並行
+- **動作**：每位評審員提交申訴意見
+- **計時器規則**：與註冊 ④ 相同（提醒 + 超時）
+- **結果**：全部完成（或超時觸發後）→ 進入 ②
+
+##### ② 摘要審核
+
+- **執行人**：Appeal Summary Reviewer
+- **動作**：審核已彙總的意見,二選一
+- **結果**：
+  - **提交** → 進入 ③ 最終審批
+  - **退回** → 流程結束（`APPEAL_RESUBMIT`,學生可重新提交申訴）
+
+##### ③ 最終審批
+
+- **執行人**：Appeal Final Approver（或 Final Approver Secretary）
+- **動作**：作出 `批准` / `拒絕` / `退回` 決定
+- **結果**：
+  - **批准** → 流程結束（`ACTIVE`）
+  - **拒絕** → 流程結束（`APPEAL_REJECTED`,終局）
+  - **退回** → 流程結束（`APPEAL_RESUBMIT`,業務上等同「有條件批准」）
+
+> 申訴流程沒有拒絕子流程;退回／拒絕直接結束流程。重新提交永遠啟動新的流程實例,不在原實例內回跳。
 
 ---
 
-## 3. 註冊與申訴的關鍵差異
+## 6. 結果對照表
+
+### 6.1 註冊結果對照
+
+| 拒絕點 | 決定 | 最終狀態 | 學生後續可進行 |
+|:-------|:-----|:--------|:--------------|
+| ① Secretary | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
+| ② Admin | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
+| ③ Academic | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
+| ⑤ Summary | 退回 | `PENDING_RESUBMIT` | 重新提交註冊 |
+| ⑥ Final | 批准 | `ACTIVE` | — |
+| ⑥ Final | 拒絕（經拒絕子流程） | `REJECTED_FINAL` | 只能發起申訴 |
+| ⑥ Final | 退回（經拒絕子流程） | `PENDING_RESUBMIT` | 重新提交註冊 |
+
+### 6.2 申訴結果對照
+
+| 決策點 | 決定 | 最終狀態 | 學生後續可進行 |
+|:-------|:-----|:--------|:--------------|
+| ② Summary | 提交 | （進入 ③ 最終審批） | — |
+| ② Summary | 退回 | `APPEAL_RESUBMIT` | 重新提交申訴 |
+| ③ Final | 批准 | `ACTIVE` | — |
+| ③ Final | 拒絕 | `APPEAL_REJECTED` | 無後續操作（終局） |
+| ③ Final | 退回（有條件批准） | `APPEAL_RESUBMIT` | 重新提交申訴 |
+
+---
+
+## 7. 場景示例
+
+### 7.1 註冊典型場景
+
+#### 場景 1：一次通過
+
+```
+① Secretary(通過,指派 Admin/Academic) → ② Admin(通過) → ③ Academic(通過)
+→ ④ Reviewer Group 全員提交意見 → ⑤ Summary(提交)
+→ ⑥ Final(批准) → ACTIVE ✅
+```
+
+#### 場景 2：早期被退回（任一 Phase 1 步驟拒絕）
+
+```
+① Secretary(通過) → ② Admin(拒絕) → PENDING_RESUBMIT
+（學生修改後重新提交,啟動新流程）
+```
+
+#### 場景 3：摘要退回
+
+```
+① → ② → ③ → ④ → ⑤ Summary(退回) → 通知 Admin/Academic → PENDING_RESUBMIT
+（學生修改後重新提交）
+```
+
+#### 場景 4：終局拒絕（走完拒絕子流程）
+
+```
+① → ② → ③ → ④ → ⑤(提交) → ⑥ Final(拒絕)
+→ 拒絕子流程: ⑦ Secretary 起草 → ⑧ Reviewer 確認 → ⑨ Summary 審核 → ⑩ Secretary 最終提交
+→ REJECTED_FINAL
+（學生只能發起申訴）
+```
+
+### 7.2 申訴典型場景
+
+#### 場景 5：申訴一次通過
+
+```
+（前置: REJECTED_FINAL）
+① 意見收集 → ② Summary(提交) → ③ Final(批准) → ACTIVE ✅
+```
+
+#### 場景 6：申訴被摘要退回
+
+```
+① 意見收集 → ② Summary(退回) → APPEAL_RESUBMIT
+（學生修改後重新提交申訴）
+```
+
+#### 場景 7：申訴有條件批准
+
+```
+① 意見收集 → ② Summary(提交) → ③ Final(退回) → APPEAL_RESUBMIT
+（學生根據意見修改後重新提交申訴）
+```
+
+---
+
+## 8. 註冊與申訴關鍵差異對比
 
 | 維度 | 註冊 | 申訴 |
 |:-----|:-----|:-----|
-| **進入前置條件** | 新申請或 `PENDING_RESUBMIT` 狀態 | `REJECTED_FINAL` 狀態（首次申訴）或 `APPEAL_RESUBMIT`（重新提交） |
-| **前置審核閘** | 3 步順序審核（Secretary 122 → Admin 136 → Academic 132） | 無——直接進入意見收集 |
-| **意見評審員角色** | Role 123 | Role 125 |
-| **摘要評審員角色** | Role 138 | Role 139 |
-| **最終審批人角色** | Role 124 / 134 | Role 126 / 135 |
-| **摘要審核選項** | 提交或退回（經 BPMN 網關） | 提交或退回（退回直接調用 `rejectTask()`，無 BPMN 網關） |
-| **拒絕子流程** | Secretary 起草 (122) → 評審員確認 (123, 並行) → 摘要審核評論 (138) → Secretary 最終提交 (122) | 不適用 |
-| **早期拒絕結果** | `PENDING_RESUBMIT`（註冊默認） | 不適用（無早期審核階段） |
-| **最終拒絕結果** | `REJECTED_FINAL`（經拒絕子流程，`rejectionType='reject'`） | `APPEAL_REJECTED`（申訴默認） |
-| **退回／重提機制** | 拒絕子流程，`rejectionType='return'` → `PENDING_RESUBMIT` → 學生調用 `resubmitRegistration()` | 代碼將 `finalAction` 覆蓋為 `'reject'` + `RejectionOpinionDO(type='return')` → `APPEAL_RESUBMIT` → 學生調用 `resubmitAppeal()` |
-| **重新提交方式** | **新流程實例**（`startRegistrationProcess()`） | **新流程實例**（`startProcess("student_org_appeal")`） |
-| **BPMN 重提循環** | BPMN 中未定義 | BPMN 中已定義（`studentResubmitTask` → `summaryReviewTask`），但 **代碼中不可達** |
+| **進入前置條件** | 新申請或 `PENDING_RESUBMIT` 狀態 | `REJECTED_FINAL`（首次申訴）或 `APPEAL_RESUBMIT`（重新提交申訴） |
+| **前置審核閘** | 3 步順序審核（Secretary → Admin → Academic） | 無——直接進入意見收集 |
+| **意見評審組** | Registration Reviewer Group | Appeal Reviewer Group |
+| **摘要評審員** | Registration Summary Reviewer | Appeal Summary Reviewer |
+| **最終審批人** | Registration Final Approver | Appeal Final Approver |
+| **摘要退回行為** | 進入 `PENDING_RESUBMIT`,通知 Admin/Academic Checker | 直接結束流程,進入 `APPEAL_RESUBMIT` |
+| **拒絕子流程** | 有（⑦ Secretary 起草 → ⑧ Reviewer 確認 → ⑨ Summary 審核 → ⑩ Secretary 最終提交） | 無 |
+| **早期拒絕結果** | `PENDING_RESUBMIT`（任一 Phase 1 步驟拒絕） | 不適用（無早期審核階段） |
+| **最終拒絕結果** | `REJECTED_FINAL`（經拒絕子流程） | `APPEAL_REJECTED`（終局,無後續） |
+| **「退回」的業務含義** | 學生需重新提交註冊 | 「有條件批准」——學生需根據意見修改後重新提交申訴 |
+| **重新提交方式** | 啟動全新註冊流程實例 | 啟動全新申訴流程實例 |
 | **計時器事件** | 意見收集 + 拒絕確認（兩者均有提醒 + 超時） | 僅意見收集（提醒 + 超時） |
 
-## 4. BPMN 與代碼的差異
+---
 
-| 項目 | BPMN 定義 | 實際代碼行為 | 位置 |
-|:-----|:----------|:-------------|:-----|
-| 申訴 `studentResubmitTask` | `finalAction='return'` → `appealReturnStatusDelegate` → `studentResubmitTask` → 回跳到 `summaryReviewTask` | **不可達**：代碼將 `finalAction` 覆蓋為 `'reject'`，故條件 `${finalAction == 'return'}` 永不匹配。重新提交在流程外通過 `resubmitAppeal()` 處理。 | [ReviewerOpinionController.java:131-148](slas-module-stugroup/slas-module-stugroup-biz/src/main/java/hk/eduhk/sao/slas/module/stugroup/controller/admin/opinion/ReviewerOpinionController.java#L131-L148) |
-| 申訴 `appealReturnStatusDelegate` | 將組狀態設為 `APPEAL_RESUBMIT` 並解析 `appealStudentUserId` | **從未執行**。狀態更新改由 `StudentGroupBpmEventListener.handleRejection()` 完成。 | [AppealReturnStatusDelegate.java](slas-module-stugroup/slas-module-stugroup-biz/src/main/java/hk/eduhk/sao/slas/module/stugroup/service/task/AppealReturnStatusDelegate.java) |
-| 申訴摘要審核網關 | BPMN 中無網關（直接順序流到 `finalApprovalTask`） | 代碼允許在摘要審核階段「退回」，方法是直接調用 `rejectTask()` 立即結束流程。 | [ReviewerOpinionController.java:89-103](slas-module-stugroup/slas-module-stugroup-biz/src/main/java/hk/eduhk/sao/slas/module/stugroup/controller/admin/opinion/ReviewerOpinionController.java#L89-L103) |
+## 9. 評審員管理（管理工具）
 
-## 5. 流程變量參考
+當 Secretary 在 ① 初審中指派的 Admin Checker 或 Academic Checker 因人員變動、休假等原因需要更換時,可通過此管理工具替換。替換後,新 Checker 在待辦列表中接手任務,原 Checker 不再看到。
 
-### 5.1 流程啟動時設定的變量
+### 9.1 入口
 
-**註冊**（`startRegistrationProcess()`）：
+| 項目 | 值 |
+|:-----|:---|
+| 菜單位置 | 管理中心 → 評審員管理 |
+| 允許角色 | Registration Final Approver Secretary |
 
-| 變量 | 值 | 用途 |
-|:-----|:---|:-----|
-| `groupId` | 學生組 ID | 全流程識別該組 |
-| `groupName` | `groupNameEn` | 通知中顯示用 |
-| `processType` | `"registration"` | 與申訴區分 |
-| `organisingUnitTypeCode` | 組所屬 organising-unit 類型代碼 | 將註冊上下文帶入工作流與通知 |
-| `registrationType` | 註冊類型如 `new` / `renewing` | 將註冊上下文帶入工作流與評審員管理篩選 |
-| `reviewerRoleIds` | `"123"` | 意見收集對應角色 |
-| `reviewerUserIdsVarName` | `"reviewer123UserIds"` | 評審員 ID 列表的變量名 |
-| `notifyRoleIds` | `"136,132"` | 退回時通知的角色 |
+### 9.2 工作流程
 
-`startRegistrationProcess()` 不再為每位 Checker 預置 `admin_checker_{userId}` 或 `academic_checker_{userId}`。Secretary 在完成 `secretaryCheckTask` 時僅寫入所選 Checker 標誌，後續可由評審員管理替換。
+```mermaid
+sequenceDiagram
+    participant Sec as Registration Secretary
+    participant Sys as 系統
+    participant Old as 原 Checker
+    participant New as 新 Checker
 
-**申訴**（`startAppealProcess()`）：
+    Sec->>Sys: 打開評審員管理頁
+    Sys-->>Sec: 列出當前處於 Admin 審核或 Academic 審核的所有運行中註冊申請
+    Sec->>Sys: 選擇要替換的申請,點擊「修改評審員」
+    Sys-->>Sec: 顯示當前 Admin / Academic Checker
+    Sec->>Sys: 選擇新 Checker,填寫變更原因
+    Sys->>Old: 從待辦列表中移除任務
+    Sys->>New: 在待辦列表中新增任務
+    Sys-->>Sec: 變更完成
+    Note over Sec,New: 新 Checker 接手,原 Checker 不再看到任務
+```
 
-| 變量 | 值 | 用途 |
-|:-----|:---|:-----|
-| `groupId` | 學生組 ID | 識別該組 |
-| `groupName` | `groupNameEn` | 顯示名 |
-| `appealReason` | 學生申訴文本 | 申訴理由 |
-| `originalProcessInstanceId` | 註冊流程 ID | 關聯原註冊 |
-| `processType` | `"appeal"` | 與註冊區分 |
-| `reviewerRoleIds` | `"125"` | 意見收集對應角色 |
-| `reviewerUserIdsVarName` | `"reviewer125UserIds"` | 評審員 ID 列表的變量名 |
-| `appealStudentUserId` | 當前用戶 ID | 供 BPMN `studentResubmitTask` 受理人使用（實際未啟用） |
+### 9.3 約束
 
-### 5.2 由 Delegate 設定的變量
-
-| 變量 | 設定者 | 用途 |
-|:-----|:-------|:-----|
-| `reviewer123UserIds` / `reviewer125UserIds` | `opinionCollectionInitDelegate` | 多實例的評審員用戶 ID 列表 |
-| `totalReviewers` | `opinionCollectionInitDelegate` | 評審員人數 |
-| `opinionDeadline` | `opinionCollectionInitDelegate` | 意見收集截止時間（ISO-8601） |
-| `reminderTime` | `opinionCollectionInitDelegate` | 提醒觸發時間（ISO-8601） |
-| `isTimeout` | `opinionTimeoutDelegate` / `opinionSummarizeDelegate` | 意見截止是否超時 |
-| `pendingReviewerNames` | `opinionTimeoutDelegate` / `opinionSummarizeDelegate` | 未提交評審員姓名 |
-| `completedOpinions` | `opinionSummarizeDelegate` | 已完成意見數 |
-| `pendingOpinions` | `opinionSummarizeDelegate` | 待提交／已超時意見數 |
-| `approveCount` | `opinionSummarizeDelegate` | 「approve」票數 |
-| `rejectCount` | `opinionSummarizeDelegate` | 「reject」票數 |
-| `rejectionType` | `rejectionReviewInitDelegate` | `"reject"` 或 `"return"`，決定最終狀態 |
-| `rejectionOpinionId` | `rejectionReviewInitDelegate` | RejectionOpinionDO 記錄 ID |
-| `rejectionReviewer123UserIds` | `rejectionConfirmInitDelegate` | 確認階段 role 123 用戶 ID 列表 |
-| `rejectionConfirmDeadline` | `rejectionConfirmInitDelegate` | 確認截止時間（ISO-8601） |
-| `rejectionConfirmReminderTime` | `rejectionConfirmInitDelegate` | 確認提醒時間（ISO-8601） |
-| `rejectionTimeoutReviewerNames` | `rejectionConfirmTimeoutDelegate` | 在確認截止前未提交的 Role 123 評審員姓名 |
-| `isRejectionConfirmTimeout` | `rejectionConfirmTimeoutDelegate` | 拒絕確認分支是否超時 |
-| `rejectionApproveCount` | `rejectionFeedbackSummarizeDelegate` | `APPROVE` 確認反饋數 |
-| `rejectionSuggestCount` | `rejectionFeedbackSummarizeDelegate` | `SUGGEST` 確認反饋數 |
-| `rejectionNoCommentCount` | `rejectionFeedbackSummarizeDelegate` | `NO_COMMENT` 確認反饋數 |
-| `rejectionHasSuggestions` | `rejectionFeedbackSummarizeDelegate` | 是否有評審員提交 `SUGGEST` 反饋 |
-| `rejectionTotalReviewers` | `rejectionFeedbackSummarizeDelegate` | 已存儲的確認反饋總記錄數 |
-
-Secretary 的草稿提交還會把 `circulationDays` 與 `reminderDaysBeforeDeadline` 寫入 Flowable 運行時變量。`rejectionConfirmInitDelegate` 在計算 `rejectionConfirmDeadline` 與 `rejectionConfirmReminderTime` 之前會讀取這些值。
-
-### 5.3 由 Controller 操作設定的變量
-
-| 變量 | 設定者 | 值 | BPMN 網關條件 |
-|:-----|:-------|:---|:-------------|
-| `approved` | `BpmTaskService.approveTask()` / `rejectTask()` | `true` / `false` | `${approved == true}` / `${approved == false}` |
-| `summaryAction` | `ReviewerOpinionController.completeSummary()` | `"submit"` / `"return"` | `${summaryAction == 'submit'}` / `${summaryAction == 'return'}` |
-| `summaryComment` | `ReviewerOpinionController.completeSummary()` | 摘要評審員自由文本評論 | 不參與網關判定；提供給最終審批人 |
-| `finalAction` | `ReviewerOpinionController.completeFinal()` | `"approve"` / `"reject"` / `"return"`（申訴：被覆蓋為 `"reject"`） | `${finalAction == 'approve'}` / `${finalAction == 'reject' \|\| finalAction == 'return'}` |
-| `rejectionReason` | `ReviewerOpinionController.completeSummary()` / `ReviewerOpinionController.completeFinal()` | 自由文本退回／拒絕原因 | 不參與網關判定；作為兜底拒絕原因使用 |
-| `PROCESS_STATUS` | `rejectionReviewInitDelegate` / `ReviewerOpinionController.completeSummary()` / `ReviewerOpinionController.completeFinal()` / `RejectionOpinionService.finalConfirm()` | `RETURN` 或 `REJECT` | 不參與網關判定；用於確保完成事件分類正確 |
-
+- 僅作用於 **運行中** 的註冊流程,且當前停留在 Admin 審核或 Academic 審核步驟。
+- 每次操作必須至少更換 Admin 或 Academic 評審員之一。
+- 變更原因為必填項,用於審計。
+- 申訴流程不使用指派 Checker 機制,故不在此功能範圍內。
