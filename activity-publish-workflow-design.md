@@ -39,6 +39,7 @@
 |:------------|:-----|
 | Activity Coordinator | 初審；判斷是否需要 Checker；指派 Activity Checker |
 | Activity Checker | 對活動內容作詳細審查（由 Coordinator 指派） |
+| Supervisor | 對組織與活動的第一級審核員；多人並行(由活動數據逐活動指派) |
 | Estate Office | 審批場地課後使用 |
 | Head | 與 Dean 同為贊助審批候選人,先到先審 |
 | Dean | 同時為贊助審批與嘉賓審批候選人,先到先審 |
@@ -56,7 +57,7 @@
 |:----------|:--------|
 | Sponsorship Approver | 候選組 = { Head, Dean }（任一者先到先審） |
 | Guest Approver | 候選組 = { Delegate, Dean }（任一者先到先審） |
-| Supervisor | 由活動數據指派的多位用戶（不是系統角色） |
+| Supervisor 多實例 | Supervisor 是系統角色（見 §2.1）；具體本次審核的 Supervisor 名單由活動數據（`activity_supervisor` 表）逐活動指派。整體 Supervisor 角色覆蓋全部組織與活動的初審層 |
 | VP ChairPerson | 由 VP Secretary 在 ⑩ 選組階段指定的一位 VP Member |
 
 ### 2.3 多人並行 / 候選組規則
@@ -549,3 +550,38 @@ flowchart TD
 → ⑩ VP 選組(第 3 輪) → ⑪ VP 投票 → VP AI 摘要 → ⑫ VP 共識(否)
 → ⑬ VP ChairPerson 決定（強制進入）→ 發布／拒絕／退回
 ```
+
+---
+
+## 8. 角色與審批節點對照表
+
+下表為活動發布流程中每個審批節點所對應的系統角色,及其工作職能與下一個環節的處理規則。多人並行的節點按典型實例數重複列出,以反映實際運行時並行的多個角色實例。
+
+| 角色 ID | 系統角色名稱 | 審批節點 | 工作職能描述 | 下一個環節 |
+|:-------:|:------------|:--------|:-----------|:----------|
+| - | Student Group Leader | 發起申請 | 學生組織負責人,提交活動申請以觸發審批流程 | ① Activity Coordinator 審核 |
+| 140 | Activity Coordinator | ① Coordinator 審核 | 初審活動基本信息;判斷是否需要 Activity Checker;如需要則指派一位 Checker | 通過且需 Checker → ② Activity Checker 審核;通過且無需 → ③ Supervisor 審核;退回 → 流程結束（`RETURNED`,可修改後重新提交） |
+| 142 | Activity Checker | ② Checker 審核 | 由 Coordinator 指派,對活動內容作詳細審查 | 通過 → ③ Supervisor 審核;拒絕 → 流程結束（`REJECTED`） |
+| 116 | Supervisor | ③ Supervisor 審核 (多實例) | 並行多人,各自給 `RECOMMEND` / `REJECT` / `RETURN` 個人決定;同時確認場地是否課後使用 | 全員提交後系統按聚合規則得出最終結果（見 §5） |
+| 116 | Supervisor | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
+| 116 | Supervisor | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
+| - | （系統聚合）| auto: 聚合 Supervisor 投票 | 任一 `RETURN` → 整體 `RETURN`;全員 `RECOMMEND` → 整體 `RECOMMEND`;含 `REJECT` 但無 `RETURN` → 整體 `REJECT` | `RECOMMEND` → ④ EO 審批（如需要）或 ⑤ 贊助;`RETURN` → 流程結束（`RETURNED`）;`REJECT` → 流程結束（`REJECTED`） |
+| 141 | Estate Office | ④ EO 審批 | 審批場地課後使用（僅當 Supervisor 在 ③ 確認場地涉及課後使用時觸發） | 通過 → ⑤ 贊助審批（如有贊助）或 ⑥ 嘉賓;退回 → 回到 ③ Supervisor 重新審核（循環,非拒絕） |
+| 148 | Head | ⑤ 贊助審批 (候選組之一) | 與 Dean 共同候選,先到先審贊助申請 | 通過 → ⑥ 嘉賓審批（如有外部嘉賓）或 NSOA 判斷;拒絕 → 流程結束（`REJECTED`） |
+| 149 | Dean | ⑤ 贊助審批 / ⑥ 嘉賓審批 (候選組之一) | 同時為贊助與嘉賓的候選審批人,先到先審 | 同 ⑤ 或 ⑥ 各自的下一環節 |
+| 150 | Delegate | ⑥ 嘉賓審批 (候選組之一) | 與 Dean 共同候選,先到先審外部嘉賓 | 通過 → 進入 NSOA 判斷;拒絕 → 流程結束（`REJECTED`） |
+| - | （系統判斷）| 是否為 NSOA? | 根據活動是否標記為 NSOA 分流 | 是 → 進入並行 IRG / VP 評審分支;否 → 直接發布（`APPROVED`） |
+| 144 | IRG Secretary | ⑦ IRG 選組 | 選擇本次的 IRG 評審組 | → 系統自動加載 IRG 成員,進入 ⑧ |
+| 145 | IRG Member | ⑧ IRG 投票 (多實例) | 並行多人,各自投 `RECOMMEND` / `RESERVE` / `REJECT` | 全員投票完成 → auto: AI 生成 IRG 摘要 → ⑨ |
+| 145 | IRG Member | ⑧ IRG 投票 (多實例) | 同上 | 同上 |
+| 145 | IRG Member | ⑧ IRG 投票 (多實例) | 同上 | 同上 |
+| 144 | IRG Secretary | ⑨ IRG 摘要審核 | 審核系統 AI 自動生成的 IRG 投票摘要 | 完成 → IRG 分支結束 + 解鎖 VP 投票提交 + 進入並行 Join |
+| 146 | VP Secretary | ⑩ VP 選組 | 選擇本次 VP 評審組;設定 VP 投票截止時間;指定 VP ChairPerson | → 系統自動加載成員、計算截止時間、識別並排除 ChairPerson,進入 ⑪ |
+| 147 | VP Member | ⑪ VP 投票 (多實例) | 並行多人（不含 ChairPerson）,各自投 `APPROVE` / `REJECT` / `ABSTAIN`;在 IRG 分支完成前無法提交 | 全員投票完成（或超時自動 `ABSTAIN`）→ 進入並行 Join |
+| 147 | VP Member | ⑪ VP 投票 (多實例) | 同上 | 同上 |
+| 147 | VP Member | ⑪ VP 投票 (多實例) | 同上 | 同上 |
+| 146 | VP Secretary | ⑫ VP 共識決定 | 審核 VP 投票結果,手動判定是否達成共識（共識判定參考：排除棄權票後,所有有效票一致為 `APPROVE` 或 `REJECT`） | 達成共識 → ⑬ ChairPerson 決定;未達共識且輪次 < 3 → 回到 ⑩ 重新選組投票（循環,最多 3 輪）;未達共識且為第 3 輪 → 強制進入 ⑬ |
+| 147 | VP ChairPerson | ⑬ 最終決定 | 由 VP Secretary 在 ⑩ 階段指定的一位 VP Member,作最終決定 | `PASS` → 系統自動發布,流程結束（`APPROVED`）;`REJECT` → 流程結束（`REJECTED`）;`RETURN` → 流程結束（`RETURNED`） |
+
+> **多實例行說明**：上表中標 "多實例" 的角色（Supervisor、IRG Member、VP Member）以 3 行重複列出,僅作格式示意。實際運行時並行的人數依配置而定,可多可少。
+
