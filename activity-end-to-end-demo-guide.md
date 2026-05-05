@@ -3,7 +3,8 @@
 > 本文檔面向 Demo 執行人、UAT 測試人與業務培訓人員，目標是讓使用者**不依賴開發人員陪同**，也能從活動草稿一路走到最終審批完成。
 >
 > 本指南基於 `SLAS_PRO` / `SLAS_UI` 當前實現撰寫。
-> 需注意：**最新 guest 流程已拆成 `Dean / Delegate 背書` + `非 NSOA 的 VPRD 最終審批`**，因此單一活動實例無法同時覆蓋 `VPRD` 與 `IRG / VP`。
+> 需注意：最新 guest 流程已拆成 `Dean / Delegate 背書` + `VPRD / VPRD Delegate 最終審批`。  
+> `非 NSOA` 會在一般高級審批後進入 `VPRD`；`NSOA` 會在 `Chair PASS` 後進入 `VPRD`。
 
 ---
 
@@ -12,11 +13,11 @@
 本次 Demo 建議拆成兩條主線：
 
 1. **NSOA 主線**
-   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → IRG → VP → Chair`
+   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → IRG → VP → Chair → VPRD / VPRD Delegate`
 2. **非 NSOA 主線**
    - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → VPRD / VPRD Delegate`
 
-若時間有限，可優先演示 NSOA 主線，再補充非 NSOA 的 VPRD 最終嘉賓審批。
+若時間有限，可優先演示 NSOA 主線；它能覆蓋 `IRG / VP / Chair` 以及 `VPRD` 最終嘉賓審批。
 
 共同準備條件：
 
@@ -30,7 +31,7 @@
    - 多名 Supervisors
 4. Supervisor 至少有 1 人勾選場地相關確認，以觸發 EO。
 5. `NSOA = Yes` 時，覆蓋 IRG / VP / Chair。
-6. `NSOA = No` 時，覆蓋 VPRD / VPRD Delegate 的最終嘉賓審批。
+6. `NSOA = No` 時，可快速覆蓋一般高級審批後的 `VPRD / VPRD Delegate` 最終嘉賓審批。
 
 ---
 
@@ -385,7 +386,7 @@
 1. `NSOA` 活動：直接進入 IRG / VP。
 2. `非 NSOA` 活動：如有外部嘉賓，進入 `VPRD / VPRD Delegate` 的 `Final Guest Approval`。
 
-### 5.7 VPRD / VPRD Delegate：最終外部嘉賓審批（僅非 NSOA）
+### 5.7 VPRD / VPRD Delegate：最終外部嘉賓審批
 
 1. `VPRD` 或 `VPRD Delegate` 打開 `Guest Approval`。
 2. 核對外部嘉賓名單。
@@ -395,7 +396,8 @@
 預期結果：
 
 1. 流程直接發布活動。
-2. 若本次 Demo 採用 `NSOA` 主線，則不會走到本節。
+2. `非 NSOA`：本節會在一般高級審批後出現。
+3. `NSOA`：本節會在 `Chair PASS` 後出現。
 
 ---
 
