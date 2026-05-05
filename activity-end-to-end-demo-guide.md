@@ -51,29 +51,75 @@
 
 > 如果你的環境仍顯示舊角色名稱，請使用其**等價角色**即可；本指南優先使用最新 `SYSTEM_ROLE.NAME` 口徑。
 
-### 2.1 Demo 帳號清單模板
+### 2.1 DEV Demo 帳號清單
 
-正式 Demo 前，建議先把實際帳號填入下表，並打印或貼到共享文件中，避免演示時臨時找人。
+> DEV 請使用**本地帳號**方式登入，預設密碼：`admin123`
 
-| Demo 角色 | 建議帳號 | 系統角色 | 登入方式 | 主要任務 | 備註 |
-|:---|:---|:---|:---|:---|:---|
-| 申請人 | `_______________` | `Group Leader` | SSO / 本地帳密 | 建立草稿、提交活動 | 建議使用主講人最熟悉的帳號 |
-| OC 成員 A | `_______________` | 活動 OC 成員 | SSO / 本地帳密 | Submit Endorsement | 需在該活動 OC 名單內 |
-| OC 成員 B | `_______________` | 活動 OC 成員 | SSO / 本地帳密 | Submit Endorsement | 需在該活動 OC 名單內 |
-| Coordinator | `_______________` | `Coordinator` | SSO / 本地帳密 | Coordinator Review | 必須可查到 Checker / Supervisor |
-| Activity Application Checker | `_______________` | `Activity Application Checker` | SSO / 本地帳密 | Checker Review | 建議單獨一個帳號 |
-| Activity Application Referrer 1 | `_______________` | `Activity Application Referrer` | SSO / 本地帳密 | Supervisor Vote | 建議此人觸發 EO |
-| Activity Application Referrer 2 | `_______________` | `Activity Application Referrer` | SSO / 本地帳密 | Supervisor Vote | 與 Referrer 1 分開帳號 |
-| EO Venue Reviewer | `_______________` | `EO Venue Reviewer` | SSO / 本地帳密 | EO Approval | 只需 1 個帳號即可 |
-| Head / Activity Application Reviewer | `_______________` | `Head` / `Activity Application Reviewer` | SSO / 本地帳密 | Sponsorship Approval | 請先確認能收到任務 |
-| VPRD / VPRD Delegate | `_______________` | `VPRD` / `VPRD Delegate` | SSO / 本地帳密 | Guest Approval | 請先確認能收到任務 |
-| IRG Secretary | `_______________` | `IRG Secretary` | SSO / 本地帳密 | 選 IRG group、審核摘要 | 建議與 IRG Member 分開 |
-| IRG Member 1 | `_______________` | `IRG Member` | SSO / 本地帳密 | IRG Vote | 需在 IRG Demo Group 中 |
-| IRG Member 2 | `_______________` | `IRG Member` | SSO / 本地帳密 | IRG Vote | 需在 IRG Demo Group 中 |
-| VPSLA Secretary | `_______________` | `VPSLA Secretary` | SSO / 本地帳密 | VP Select Group / VP Check Consensus | 需能看到 `VP Select Group` |
-| VPSLA Member 1 | `_______________` | `VPSLA Member` | SSO / 本地帳密 | VP Vote | 需在 VP Demo Group 中 |
-| VPSLA Member 2 | `_______________` | `VPSLA Member` | SSO / 本地帳密 | VP Vote | 需在 VP Demo Group 中 |
-| VP ChairPerson | `_______________` | `VPSLA Member` + `CHAIRPERSON` | SSO / 本地帳密 | Chair Decision | 必須是 VP Demo Group 的 `CHAIRPERSON` |
+#### 2.1.1 活動申請審批帳號
+
+| 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
+|:---|:---:|:---|:---:|:---|:---|
+| `S1132367` | - | Group Leader | N | 發起申請 | 申請人 |
+| `hro-test-071` | 115 / 140 | Coordinator | N | 活動協調審核 | 需核對環境使用 `115` 還是歷史 `140` |
+| `hro-test-072` | 141 | EO Venue Reviewer | N | 場地審批 | EO |
+| `hro-test-073` | 142 | Activity Application Checker | N | 活動審核 | Checker |
+| `hro-test-074` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 1 |
+| `hro-test-075` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 2 |
+| `hro-test-076` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 3 |
+| `hro-test-090` | 148 | Head | Y | 贊助審批 | Sponsorship |
+| `hro-test-091` | 149 | Activity Application Reviewer | Y | 高級審批相關節點 | 歷史帳號名可能仍顯示 Dean |
+| `hro-test-092` | 150 | Delegate | - | 舊內容/嘉賓審批口徑 | 僅在舊環境口徑中可能出現 |
+| `hro-test-077` | 144 | IRG Secretary | N | IRG 秘書 | IRG 選組 / 摘要審核 |
+| `hro-test-078 ~ hro-test-082` | 145 | IRG Member | N | IRG 成員投票（多實例） | IRG 投票 |
+| `hro-test-083` | 146 | VPSLA Secretary | N | VP 秘書 | VP Select Group / VP Check Consensus |
+| `hro-test-084 ~ hro-test-088` | 147 | VPSLA Member | N | VP 成員投票（多實例） | VP Vote |
+| `hro-test-089` | 147 | VPSLA Member / VP ChairPerson | Y | VP 主席決定 | 需在 VP Group 中設為 `CHAIRPERSON` |
+| `待確認` | 151 | VPRD | Y | 嘉賓審批 | 若環境已完成新口徑切換，應由此角色承接 |
+| `待確認` | 152 | VPRD Delegate | Y | 嘉賓審批（委派） | 若環境已完成新口徑切換，應由此角色承接 |
+
+#### 2.1.2 OC Endorsement 帳號
+
+| 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
+|:---|:---:|:---|:---:|:---|:---|
+| `S1132367` | `11323677` | Group Leader | N | Student Group Leader（活動建立者） | 申請人 |
+| `S1132368` | `11323688` | Group Leader | N | OC Endorsement | 需在該活動 OC 名單內 |
+| `S1132369` | `11323699` | Group Leader | N | OC Endorsement | 需在該活動 OC 名單內 |
+
+#### 2.1.3 社團註冊審批帳號
+
+| 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
+|:---|:---:|:---|:---:|:---|:---|
+| `S1132367` | - | Group Leader | N | 發起申請 | 社團註冊申請人 |
+| `hro-test-093` | 122 | Registration Administrator | N | Node 1: 秘書審核 | 角色名需更新到最新 |
+| `hro-test-105` | 136 | Registration Checker | N | Node 2: 行政審核 | 角色名需更新到最新 |
+| `ro-test-102` | 132 | Registration Referrer | N | Node 3: 學術審核 | 角色名需更新到最新 |
+| `hro-test-094` | 123 | Registration Reviewer | N | Node 4: 收集意見（多實例） | Reviewer 1 |
+| `hro-test-095` | 123 | Registration Reviewer | N | Node 4: 收集意見（多實例） | Reviewer 2 |
+| `hro-test-096` | 123 | Registration Reviewer | N | Node 4: 收集意見（多實例） | Reviewer 3 |
+| `hro-test-106` | 138 | Registration Endorser | N | Node 5: 匯總審核 | 角色名需更新到最新 |
+| `hro-test-097` | 124 | Registration Approver | Y | Node 6: 最終審批 | Final Approver |
+| `hro-test-103` | 134 | Student Group Registration Approver Secretary | - | Node 6: 最終審批（備選） | 備用 |
+
+#### 2.1.4 註冊申訴審批帳號
+
+| 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
+|:---|:---:|:---|:---:|:---|:---|
+| `S1132367` | - | Group Leader | N | 發起申訴 | 申訴發起人 |
+| `hro-test-098` | 125 | Registration Appeal Reviewer | N | Node 1: 收集意見（多實例） | Reviewer 1 |
+| `hro-test-099` | 125 | Registration Appeal Reviewer | N | Node 1: 收集意見（多實例） | Reviewer 2 |
+| `hro-test-100` | 125 | Registration Appeal Reviewer | N | Node 1: 收集意見（多實例） | Reviewer 3 |
+| `hro-test-107` | 139 | Registration Appeal Endorser | N | Node 2: 匯總審核 | 角色名需更新到最新 |
+| `hro-test-101` | 126 | Registration Appeal Approver | Y | Node 3: 最終審批 | Final Approver |
+| `hro-test-104` | 135 | Student Group Appeal Approver Secretary | - | Node 3: 最終審批（備選） | 備用 |
+
+#### 2.1.5 其他可用 Group Leader 帳號
+
+- `S1155707`
+- `S1154233`
+- `S1155654`
+- `S1155751`
+- `S1155738`
+- `S1155923`
 
 ### 2.2 建議切號順序
 
