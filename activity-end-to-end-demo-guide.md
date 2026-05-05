@@ -2,18 +2,26 @@
 
 > 本文檔面向 Demo 執行人、UAT 測試人與業務培訓人員，目標是讓使用者**不依賴開發人員陪同**，也能從活動草稿一路走到最終審批完成。
 >
-> 本指南基於 `SLAS_PRO` / `SLAS_UI` 當前實現撰寫，主線覆蓋：
-> `Draft → OC Endorsement → Coordinator → Activity Application Checker → Activity Application Referrer → EO Venue Reviewer → Sponsorship Approval → VPRD / VPRD Delegate → IRG → VPSLA → Chair → Published`
+> 本指南基於 `SLAS_PRO` / `SLAS_UI` 當前實現撰寫。
+> 需注意：**最新 guest 流程已拆成 `Dean / Delegate 背書` + `非 NSOA 的 VPRD 最終審批`**，因此單一活動實例無法同時覆蓋 `VPRD` 與 `IRG / VP`。
 
 ---
 
 ## 1. Demo 目標
 
-本次 Demo 推薦採用一條「最大覆蓋率」主線，盡量走到最多審批節點：
+本次 Demo 建議拆成兩條主線：
+
+1. **NSOA 主線**
+   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → IRG → VP → Chair`
+2. **非 NSOA 主線**
+   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → VPRD / VPRD Delegate`
+
+若時間有限，可優先演示 NSOA 主線，再補充非 NSOA 的 VPRD 最終嘉賓審批。
+
+共同準備條件：
 
 1. 申請人從零建立一個活動草稿，或從歷史申請複製一份作為起點。
 2. 活動包含：
-   - `NSOA = Yes`
    - 有外部嘉賓
    - 有贊助
    - 需要經過 OC 成員認可
@@ -21,11 +29,8 @@
    - 1 名 Checker
    - 多名 Supervisors
 4. Supervisor 至少有 1 人勾選場地相關確認，以觸發 EO。
-5. IRG / VP 採用已配置的 group。
-6. VP 可選：
-   - 最短路徑：第一輪後直接提交 Chair
-   - 完整路徑：第一輪故意不達共識，演示第二輪
-7. Chair 最終選擇 `PASS`，活動進入 `APPROVED / Published`。
+5. `NSOA = Yes` 時，覆蓋 IRG / VP / Chair。
+6. `NSOA = No` 時，覆蓋 VPRD / VPRD Delegate 的最終嘉賓審批。
 
 ---
 
@@ -353,20 +358,34 @@
 
 預期結果：
 
-1. 流程進入 Sponsorship Approval。
+1. 如有外部嘉賓，流程先進入 `Guest Endorsement`。
+2. 如無外部嘉賓，流程改進入 Sponsorship Approval 或後續分流。
 
-### 5.5 Sponsorship Reviewer：贊助審批
+### 5.5 Dean / Delegate：外部嘉賓背書
 
-1. Sponsorship Reviewer 打開 `Sponsorship Approval`。
+1. `Dean` 或 `Delegate` 打開 `Guest Endorsement`。
+2. 核對外部嘉賓名單。
+3. 選擇 `Approve`。
+4. 提交。
+
+預期結果：
+
+1. 流程進入 Sponsorship Approval（如活動有贊助）。
+2. 如無贊助，流程直接進入 NSOA / 非 NSOA 分流。
+
+### 5.6 Dean / Delegate：贊助審批
+
+1. `Dean` 或 `Delegate` 打開 `Sponsorship Approval`。
 2. 查看贊助資訊區塊。
 3. 選擇 `Approve`。
 4. 提交。
 
 預期結果：
 
-1. 流程進入 Guest Approval。
+1. `NSOA` 活動：直接進入 IRG / VP。
+2. `非 NSOA` 活動：如有外部嘉賓，進入 `VPRD / VPRD Delegate` 的 `Final Guest Approval`。
 
-### 5.6 VPRD / VPRD Delegate：外部嘉賓審批
+### 5.7 VPRD / VPRD Delegate：最終外部嘉賓審批（僅非 NSOA）
 
 1. `VPRD` 或 `VPRD Delegate` 打開 `Guest Approval`。
 2. 核對外部嘉賓名單。
@@ -375,7 +394,8 @@
 
 預期結果：
 
-1. 因活動是 NSOA，流程進入 IRG / VP 階段。
+1. 流程直接發布活動。
+2. 若本次 Demo 採用 `NSOA` 主線，則不會走到本節。
 
 ---
 

@@ -25,8 +25,14 @@
 
 ### 1.4 審批路徑差異
 
-- **非 NSOA 活動**：經過基礎審批後直接發布。
-- **NSOA 活動**：在基礎審批之後，額外經過 IRG（Initial Review Group）與 VP（Vetting Panel）**並行評審**，再由 VP ChairPerson 作最終決定。
+- **有外部嘉賓的活動**：在 EO 之後，先進入 `Dean / Delegate` 的 **Guest Endorsement**。
+- **有贊助的活動**：在 Guest Endorsement 之後，再進入 `Dean / Delegate` 的 **Sponsorship Approval**。
+- **非 NSOA 活動**：如活動有外部嘉賓，會在上述步驟後再進入 `VPRD / VPRD Delegate` 的 **Final Guest Approval**，然後發布。
+- **NSOA 活動**：在 Guest Endorsement / Sponsorship Approval 完成後，直接進入 IRG（Initial Review Group）與 VP（Vetting Panel）**並行評審**，再由 VP ChairPerson 作最終決定。
+
+> **重要說明**：依據當前 BPMN，單一活動實例**不會同時經過 `VPRD` 最終嘉賓審批與 `IRG/VP`**。
+> - `非 NSOA`：可能走 `VPRD / VPRD Delegate`
+> - `NSOA`：改走 `IRG / VP`
 
 ---
 
@@ -43,8 +49,8 @@
 | 142 | Activity Application Checker | 對活動內容作詳細審查（由 Coordinator 指派） |
 | 116 | Activity Application Referrer | 對組織與活動的第一級審核員；多人並行（由活動數據逐活動指派） |
 | 141 | EO Venue Reviewer | 審批校園場地相關使用 |
-| 148 | Head | 活動高級審批候選角色之一 |
-| 149 | Activity Application Reviewer | 活動高級審批候選角色之一 |
+| 149 | Dean | 外部嘉賓背書與贊助審批 |
+| 150 | Delegate | 外部嘉賓背書與贊助審批 |
 | 151 | VPRD | 外部嘉賓審批 |
 | 152 | VPRD Delegate | 外部嘉賓審批委派角色 |
 | 144 | IRG Secretary | 管理 IRG 評審；選組；審核 IRG 摘要 |
@@ -58,15 +64,16 @@
 
 | 功能性審批 | 由誰承擔 |
 |:----------|:--------|
-| Sponsorship Approval | 由 `Head`、`Activity Application Reviewer` 等高級審批角色承擔 |
-| Guest Approval | 最新 BPMN 口徑 = { `VPRD`, `VPRD Delegate` } |
+| Guest Endorsement | 由 `Dean`、`Delegate` 承擔；僅在活動有外部嘉賓時出現 |
+| Sponsorship Approval | 由 `Dean`、`Delegate` 承擔；僅在活動有贊助時出現 |
+| Final Guest Approval | 由 `VPRD`、`VPRD Delegate` 承擔；僅在 `非 NSOA + 有外部嘉賓` 時出現 |
 | Supervisor 多實例 | `Activity Application Referrer` 是當前系統角色名稱；具體本次審核的 Supervisor 名單由活動數據（`activity_supervisor` 表）逐活動指派 |
 | VP ChairPerson | 由 `VPSLA Secretary` 在 ⑩ 選組階段指定的一位 `VPSLA Member` |
 
 > **實作備註**
 > 1. 最新 Java 啟動代碼已把活動發布流程的 `coordinatorGroupId` 改為 `115`，因此本文以 `Coordinator (115)` 為主。
 > 2. SQL 歷史補丁中同時存在 `140` 舊口徑與 `115` 新口徑；若環境未完整同步，介面與資料可能仍混用。
-> 3. `guestApprovalTask` 的 BPMN 已切到 `VPRD / VPRD Delegate`，但流程啟動代碼仍可見舊變量 `guestApproverGroupId`；部署時需確認環境已正確提供 `vprdApproverGroupIds`。
+> 3. 當前運行時代碼已把 guest 相關變量拆成三組：`guestEndorsementGroupIds = 149,150`、`sponsorshipApproverGroupIds = 149,150`、`vprdApproverGroupIds = 151,152`。
 
 ### 2.3 多人並行 / 候選組規則
 
@@ -118,15 +125,16 @@
 | ② | Checker 審核 | Activity Application Checker | Phase 1 |
 | ③ | Supervisors 審核 | Supervisors（並行） | Phase 2 |
 | ④ | EO 審批 | EO Venue Reviewer | Phase 3 |
-| ⑤ | 贊助審批 | Sponsorship Approver | Phase 3 |
-| ⑥ | 嘉賓審批 | VPRD / VPRD Delegate | Phase 3 |
-| ⑦ | IRG 選組 | IRG Secretary | Phase 4 |
-| ⑧ | IRG 投票 | IRG Member（並行） | Phase 4 |
-| ⑨ | IRG 摘要審核 | IRG Secretary | Phase 4 |
-| ⑩ | VP 選組 | VPSLA Secretary | Phase 4 |
-| ⑪ | VP 投票 | VPSLA Member（並行） | Phase 4 |
-| ⑫ | VP 共識決定 | VPSLA Secretary | Phase 5 |
-| ⑬ | 最終決定 | VP ChairPerson | Phase 6 |
+| ⑤ | 嘉賓背書 | Dean / Delegate | Phase 3 |
+| ⑥ | 贊助審批 | Dean / Delegate | Phase 3 |
+| ⑦ | 最終嘉賓審批 | VPRD / VPRD Delegate | Phase 3 |
+| ⑧ | IRG 選組 | IRG Secretary | Phase 4 |
+| ⑨ | IRG 投票 | IRG Member（並行） | Phase 4 |
+| ⑩ | IRG 摘要審核 | IRG Secretary | Phase 4 |
+| ⑪ | VP 選組 | VPSLA Secretary | Phase 4 |
+| ⑫ | VP 投票 | VPSLA Member（並行） | Phase 4 |
+| ⑬ | VP 共識決定 | VPSLA Secretary | Phase 5 |
+| ⑭ | 最終決定 | VP ChairPerson | Phase 6 |
 
 ---
 
@@ -167,53 +175,62 @@ flowchart TD
     subgraph Phase3["Phase 3: 高級審批"]
         EoCheck{場地是否課後使用?}
         EoCheck -->|"是"| EO
-        EoCheck -->|"否"| SponsorCheck
+        EoCheck -->|"否"| GuestEndorsementCheck
 
         EO["④ EO 審批<br/>(EO Venue Reviewer)"]
         EO --> EoGate{EO 是否通過?}
-        EoGate -->|"通過"| SponsorCheck
+        EoGate -->|"通過"| GuestEndorsementCheck
         EoGate -.->|"退回 (循環)"| Supervisors
+
+        GuestEndorsementCheck{是否有外部嘉賓?}
+        GuestEndorsementCheck -->|"是"| GuestEndorsement
+        GuestEndorsementCheck -->|"否"| SponsorCheck
+
+        GuestEndorsement["⑤ 嘉賓背書<br/>(Dean / Delegate)"]
+        GuestEndorsement --> GuestEndorsementGate{是否通過?}
+        GuestEndorsementGate -->|"通過"| SponsorCheck
+        GuestEndorsementGate -->|"拒絕"| Supervisors
 
         SponsorCheck{是否有贊助?}
         SponsorCheck -->|"是"| Sponsor
-        SponsorCheck -->|"否"| GuestCheck
+        SponsorCheck -->|"否"| NsoaCheck
 
-        Sponsor["⑤ 贊助審批<br/>(Sponsorship Approver)"]
+        Sponsor["⑥ 贊助審批<br/>(Dean / Delegate)"]
         Sponsor --> SponsorGate{是否通過?}
-        SponsorGate -->|"通過"| GuestCheck
+        SponsorGate -->|"通過"| NsoaCheck
         SponsorGate -->|"拒絕"| EndRejected
-
-        GuestCheck{是否有外部嘉賓?}
-        GuestCheck -->|"是"| Guest
-        GuestCheck -->|"否"| NsoaCheck
-
-        Guest["⑥ 嘉賓審批<br/>(VPRD / VPRD Delegate)"]
-        Guest --> GuestGate{是否通過?}
-        GuestGate -->|"通過"| NsoaCheck
-        GuestGate -->|"拒絕"| EndRejected
     end
 
-    subgraph Phase4["Phase 4: NSOA 並行評審 (僅 NSOA)"]
+    subgraph Phase4["Phase 4: NSOA / 非 NSOA 分流"]
         NsoaCheck{是否為 NSOA?}
-        NsoaCheck -->|"否"| PublishTask
+        NsoaCheck -->|"否"| FinalGuestCheck
         NsoaCheck -->|"是"| ParallelFork
+
+        FinalGuestCheck{是否有外部嘉賓?}
+        FinalGuestCheck -->|"是"| Guest
+        FinalGuestCheck -->|"否"| PublishTask
+
+        Guest["⑦ 最終嘉賓審批<br/>(VPRD / VPRD Delegate)"]
+        Guest --> GuestGate{是否通過?}
+        GuestGate -->|"通過"| PublishTask
+        GuestGate -->|"拒絕"| EndRejected
 
         ParallelFork(["Parallel Fork"])
         ParallelFork --> IRGSelect
         ParallelFork --> VPSelect
 
-        IRGSelect["⑦ IRG 選組<br/>(IRG Secretary)"]
+        IRGSelect["⑧ IRG 選組<br/>(IRG Secretary)"]
         IRGSelect --> LoadIRG[/"auto: 加載 IRG 成員"/]
-        LoadIRG --> IRGVote["⑧ IRG 投票<br/>(IRG Member, 並行)"]
+        LoadIRG --> IRGVote["⑨ IRG 投票<br/>(IRG Member, 並行)"]
         IRGVote --> IRGAiSummary[/"auto: AI 生成 IRG 摘要"/]
-        IRGAiSummary --> IRGReview["⑨ IRG 摘要審核<br/>(IRG Secretary)"]
+        IRGAiSummary --> IRGReview["⑩ IRG 摘要審核<br/>(IRG Secretary)"]
         IRGReview --> IRGCompletion[/"auto: IRG 完成"/]
         IRGCompletion --> ParallelJoin
         IRGCompletion -.->|"解鎖 VP 投票提交"| VPVote
 
-        VPSelect["⑩ VP 選組<br/>(VPSLA Secretary)"]
+        VPSelect["⑪ VP 選組<br/>(VPSLA Secretary)"]
         VPSelect --> LoadVP[/"auto: 加載 VP 成員"/]
-        LoadVP --> VPVote["⑪ VP 投票<br/>(VPSLA Member, 並行)"]
+        LoadVP --> VPVote["⑫ VP 投票<br/>(VPSLA Member, 並行)"]
         VPVote -->|"全部投票完成"| VPMerge
         VPVote -.->|"超時 (自動 ABSTAIN)"| VPTimeout[/"auto: VP 超時處理"/]
         VPTimeout --> VPMerge
@@ -226,7 +243,7 @@ flowchart TD
         ParallelJoin --> VPAiSummary[/"auto: AI 生成 VP 摘要"/]
         VPAiSummary --> VPConsensus
 
-        VPConsensus["⑫ VP 共識決定<br/>(VPSLA Secretary)"]
+        VPConsensus["⑬ VP 共識決定<br/>(VPSLA Secretary)"]
         VPConsensus --> ConsensusGate{是否達成共識?}
         ConsensusGate -->|"是 (提交主席)"| ChairAI
         ConsensusGate -->|"否 (進入下一輪)"| RoundCheck
@@ -239,7 +256,7 @@ flowchart TD
 
     subgraph Phase6["Phase 6: ChairPerson 決定 (僅 NSOA)"]
         ChairAI[/"auto: AI 生成主席建議"/]
-        ChairAI --> Chair["⑬ 最終決定<br/>(VP ChairPerson)"]
+        ChairAI --> Chair["⑭ 最終決定<br/>(VP ChairPerson)"]
         Chair --> ChairGate{Chair 決定?}
         ChairGate -->|"PASS"| PublishTask
         ChairGate -->|"REJECT"| EndRejected
@@ -265,7 +282,7 @@ flowchart TD
     style Phase6 fill:#FCE4EC,stroke:#AD1457
 ```
 
-> 圖中虛線 `-.->` 表示三類非主路徑：① ④ EO 退回時回跳到 ③ Supervisors 重審；② ⑪ VP 投票超時自動 ABSTAIN；③ IRG 完成後解鎖 VP 投票提交。
+> 圖中虛線 `-.->` 表示三類非主路徑：① ④ EO 退回時回跳到 ③ Supervisors 重審；② ⑫ VP 投票超時自動 ABSTAIN；③ IRG 完成後解鎖 VP 投票提交。
 
 ### 4.2 非 NSOA 簡化路徑
 
@@ -281,14 +298,17 @@ flowchart LR
     F --> FA[/"auto: 聚合投票"/]
     FA --> B{場地是否課後使用?}
     B -->|"是"| C["④ EO 審批<br/>(EO Venue Reviewer)"]
-    B -->|"否"| G
-    C --> G{是否有贊助?}
-    G -->|"是"| H["⑤ 贊助審批<br/>(Sponsorship Approver)"]
-    G -->|"否"| I
-    H --> I{是否有外部嘉賓?}
-    I -->|"是"| J["⑥ 嘉賓審批<br/>(VPRD / VPRD Delegate)"]
-    I -->|"否"| Pub
-    J --> Pub
+    B -->|"否"| G{是否有外部嘉賓?}
+    C --> G
+    G -->|"是"| H["⑤ 嘉賓背書<br/>(Dean / Delegate)"]
+    G -->|"否"| I{是否有贊助?}
+    H --> I
+    I -->|"是"| J["⑥ 贊助審批<br/>(Dean / Delegate)"]
+    I -->|"否"| K{是否有外部嘉賓?}
+    J --> K
+    K -->|"是"| L["⑦ 最終嘉賓審批<br/>(VPRD / VPRD Delegate)"]
+    K -->|"否"| Pub
+    L --> Pub
     Pub[/"auto: 發布活動"/]
     Pub --> End(["End: APPROVED"])
 
@@ -309,18 +329,18 @@ flowchart TD
     ParallelFork --> VPBranch
 
     subgraph IRGBranch["IRG 分支"]
-        IRGSelect["⑦ IRG 選組<br/>(IRG Secretary)"]
+        IRGSelect["⑧ IRG 選組<br/>(IRG Secretary)"]
         IRGSelect --> LoadIRG[/"auto: 加載 IRG 成員"/]
-        LoadIRG --> IRGVote["⑧ IRG 投票<br/>(IRG Member, 並行)<br/>RECOMMEND / RESERVE / REJECT"]
+        LoadIRG --> IRGVote["⑨ IRG 投票<br/>(IRG Member, 並行)<br/>RECOMMEND / RESERVE / REJECT"]
         IRGVote --> IRGSummary[/"auto: AI 生成 IRG 摘要"/]
-        IRGSummary --> IRGReview["⑨ IRG 摘要審核<br/>(IRG Secretary)"]
+        IRGSummary --> IRGReview["⑩ IRG 摘要審核<br/>(IRG Secretary)"]
         IRGReview --> IRGDone[/"auto: IRG 完成"/]
     end
 
     subgraph VPBranch["VP 分支"]
-        VPSelect["⑩ VP 選組<br/>(VPSLA Secretary)"]
+        VPSelect["⑪ VP 選組<br/>(VPSLA Secretary)"]
         VPSelect --> LoadVP[/"auto: 加載 VP 成員"/]
-        LoadVP --> VPVote["⑪ VP 投票<br/>(VPSLA Member, 並行)<br/>APPROVE / REJECT / ABSTAIN"]
+        LoadVP --> VPVote["⑫ VP 投票<br/>(VPSLA Member, 並行)<br/>APPROVE / REJECT / ABSTAIN"]
         VPVote --> VPMerge(["VP 分支合併"])
     end
 
@@ -329,7 +349,7 @@ flowchart TD
     VPMerge --> Join
 
     Join --> VPSummary[/"auto: AI 生成 VP 摘要"/]
-    VPSummary --> VPDecide["⑫ VP 共識決定<br/>(VPSLA Secretary)"]
+    VPSummary --> VPDecide["⑬ VP 共識決定<br/>(VPSLA Secretary)"]
     VPDecide --> Gate{是否達成共識?}
     Gate -->|"是 (提交主席)"| ChairAI
     Gate -->|"否 (進入下一輪)"| RoundCheck{輪次 < 3?}
@@ -338,7 +358,7 @@ flowchart TD
     RoundCheck -->|"否 (達到上限)"| ChairAI
 
     ChairAI[/"auto: AI 生成主席建議"/]
-    ChairAI --> Chair["⑬ 最終決定<br/>(VP ChairPerson)"]
+    ChairAI --> Chair["⑭ 最終決定<br/>(VP ChairPerson)"]
     Chair --> FinalGate{Chair 決定?}
     FinalGate -->|"PASS"| EndApproved(["End: APPROVED<br/>(發布活動)"])
     FinalGate -->|"REJECT"| EndRejected(["End: REJECTED"])
@@ -412,43 +432,54 @@ flowchart TD
 - **觸發條件**：Supervisor 在 ③ 確認場地涉及課後使用
 - **動作**：審批場地課後使用
 - **結果**：
-  - 通過 → 進入 ⑤ 贊助檢查
+  - 通過 → 進入 ⑤ 嘉賓背書檢查
   - 退回 → **回跳到 ③ Supervisors 重新審核**（循環，非拒絕）
 
 > EO 不能直接拒絕活動,僅能批准或退回 Supervisors 重新評估。
 
-### ⑤ 贊助審批
+### ⑤ 嘉賓背書
 
-- **執行人**：Sponsorship Approver（候選組,先到先審）
+- **執行人**：Dean / Delegate（候選組,先到先審）
+- **觸發條件**：活動聲明有外部嘉賓
+- **動作**：對外部嘉賓安排作前置背書
+- **結果**：
+  - 通過 → 進入 ⑥ 贊助審批檢查
+  - 拒絕 → 回到 ③ Supervisors 重新審核
+
+### ⑥ 贊助審批
+
+- **執行人**：Dean / Delegate（候選組,先到先審）
 - **觸發條件**：活動聲明有贊助
 - **動作**：審批贊助相關內容
 - **結果**：
-  - 通過 → 進入 ⑥ 嘉賓檢查
-  - 拒絕 → 流程結束（`REJECTED`）
+  - 通過 → 進入 NSOA / 非 NSOA 分流
+  - 拒絕 → 回到 ③ Supervisors 重新審核
 
-### ⑥ 嘉賓審批
+### ⑦ 最終嘉賓審批
 
 - **執行人**：VPRD / VPRD Delegate（候選組,先到先審）
-- **觸發條件**：活動聲明有外部嘉賓
-- **動作**：審核外部嘉賓信息
+- **觸發條件**：`非 NSOA` 且活動聲明有外部嘉賓
+- **動作**：對外部嘉賓安排作最終審批
 - **結果**：
-  - 通過 → 進入 NSOA 判斷（NSOA 走 ⑦, 非 NSOA 直接發布）
+  - 通過 → 直接發布
   - 拒絕 → 流程結束（`REJECTED`）
 
-### ⑦ IRG 選組
+> **注意**：NSOA 活動不會進入 ⑦，而是直接改走 IRG / VP。
+
+### ⑧ IRG 選組
 
 - **執行人**：IRG Secretary
 - **觸發條件**：NSOA 活動進入並行評審
 - **動作**：選擇本次的 IRG 評審組
-- **結果**：系統自動加載該組成員,進入 ⑧
+- **結果**：系統自動加載該組成員,進入 ⑨
 
-### ⑧ IRG 投票（並行）
+### ⑨ IRG 投票（並行）
 
 - **執行人**：所有 IRG Member 並行
 - **動作**：每位投 `RECOMMEND` / `RESERVE` / `REJECT`
-- **結果**：全部完成後進入「auto: AI 生成 IRG 摘要」, 再進入 ⑨
+- **結果**：全部完成後進入「auto: AI 生成 IRG 摘要」, 再進入 ⑩
 
-### ⑨ IRG 摘要審核
+### ⑩ IRG 摘要審核
 
 - **執行人**：IRG Secretary
 - **動作**：審核系統 AI 自動生成的 IRG 投票摘要
@@ -456,31 +487,31 @@ flowchart TD
   1. 解鎖 VP 投票的提交（見 §4.3.2）
   2. 進入並行 Join
 
-### ⑩ VP 選組
+### ⑪ VP 選組
 
 - **執行人**：VPSLA Secretary
-- **觸發條件**：NSOA 活動進入並行評審；或 ⑫ 判定未達共識時回跳重新選組
+- **觸發條件**：NSOA 活動進入並行評審；或 ⑬ 判定未達共識時回跳重新選組
 - **動作**：選擇本次的 VP 評審組;設定 VP 投票截止時間
-- **結果**：系統自動加載成員、計算截止時間、識別並排除 ChairPerson,進入 ⑪
+- **結果**：系統自動加載成員、計算截止時間、識別並排除 ChairPerson,進入 ⑫
 
-### ⑪ VP 投票（並行,有截止時間）
+### ⑫ VP 投票（並行,有截止時間）
 
 - **執行人**：所有 VPSLA Member 並行（不含 ChairPerson）
 - **動作**：每位投 `APPROVE` / `REJECT` / `ABSTAIN`
-- **業務約束**：在 ⑨ IRG 摘要審核完成之前無法提交投票（見 §4.3.2）
+- **業務約束**：在 ⑩ IRG 摘要審核完成之前無法提交投票（見 §4.3.2）
 - **超時處理**：投票截止時間到達時,系統自動為未投票成員記為 `ABSTAIN`,並推進流程
 - **結果**：全部投票完成（或超時觸發後）→ 進入並行 Join
 
-### ⑫ VP 共識決定
+### ⑬ VP 共識決定
 
 - **執行人**：VPSLA Secretary
 - **動作**：審核 VP 投票結果, 手動判定本輪是否達成共識（共識判定參考：排除棄權票後, 所有有效票一致為 `APPROVE` 或 `REJECT`）
 - **結果**：
-  - 已達成共識 → 進入 ⑬ ChairPerson 決定
-  - 未達成共識且輪次 < 3 → 回到 ⑩ 重新選組投票
-  - 未達成共識且已是第 3 輪 → 強制進入 ⑬ ChairPerson 決定
+  - 已達成共識 → 進入 ⑭ ChairPerson 決定
+  - 未達成共識且輪次 < 3 → 回到 ⑪ 重新選組投票
+  - 未達成共識且已是第 3 輪 → 強制進入 ⑭ ChairPerson 決定
 
-### ⑬ 最終決定
+### ⑭ 最終決定
 
 - **執行人**：VP ChairPerson
 - **觸發條件**：⑫ 達成共識,或已完成 3 輪投票
@@ -501,11 +532,12 @@ flowchart TD
 | ③ Supervisor 聚合 | `RETURN` | `RETURNED` | 修改後重新提交 |
 | ③ Supervisor 聚合 | `REJECT` | `REJECTED` | — |
 | ④ EO | 退回 | （不結束）回到 ③ Supervisors 重新審核 | — |
-| ⑤ Sponsorship | 拒絕 | `REJECTED` | — |
-| ⑥ Guest | 拒絕 | `REJECTED` | — |
-| ⑬ ChairPerson | `PASS` | `APPROVED` | — |
-| ⑬ ChairPerson | `REJECT` | `REJECTED` | — |
-| ⑬ ChairPerson | `RETURN` | `RETURNED` | 修改後重新提交 |
+| ⑤ Guest Endorsement | 拒絕 | （不結束）回到 ③ Supervisors 重新審核 | — |
+| ⑥ Sponsorship | 拒絕 | （不結束）回到 ③ Supervisors 重新審核 | — |
+| ⑦ Final Guest Approval | 拒絕 | `REJECTED` | — |
+| ⑭ ChairPerson | `PASS` | `APPROVED` | — |
+| ⑭ ChairPerson | `REJECT` | `REJECTED` | — |
+| ⑭ ChairPerson | `RETURN` | `RETURNED` | 修改後重新提交 |
 
 ---
 
@@ -524,7 +556,7 @@ flowchart TD
 **條件**：非 NSOA, 需 Checker, 場地涉及課後使用, 有贊助, 有外部嘉賓
 
 ```
-① Coordinator → ② Activity Application Checker → ③ Supervisor → 聚合 → ④ EO Venue Reviewer → ⑤ Sponsorship Approval → ⑥ VPRD / VPRD Delegate → 發布 ✅
+① Coordinator → ② Activity Application Checker → ③ Supervisor → 聚合 → ④ EO Venue Reviewer → ⑤ Dean / Delegate 背書 → ⑥ Dean / Delegate 贊助審批 → ⑦ VPRD / VPRD Delegate → 發布 ✅
 ```
 
 ### 場景 3：非 NSOA + EO 退回
@@ -541,9 +573,11 @@ flowchart TD
 
 ```
 ① Coordinator → ③ Supervisor → 聚合
-→ 並行: { ⑦ IRG 選組 → ⑧ IRG 投票 → ⑨ IRG 審核 → IRG 完成 }
-         { ⑩ VP 選組 → ⑪ VP 投票 }
-→ 並行 Join → VP AI 摘要 → ⑫ VP 共識 → ⑬ VP ChairPerson 決定 → 發布 ✅
+→ （如有外部嘉賓）⑤ Dean / Delegate 背書
+→ （如有贊助）⑥ Dean / Delegate 贊助審批
+→ 並行: { ⑧ IRG 選組 → ⑨ IRG 投票 → ⑩ IRG 審核 → IRG 完成 }
+         { ⑪ VP 選組 → ⑫ VP 投票 }
+→ 並行 Join → VP AI 摘要 → ⑬ VP 共識 → ⑭ VP ChairPerson 決定 → 發布 ✅
 ```
 
 ### 場景 5：NSOA 完整路徑 + VP 多輪投票
@@ -551,12 +585,14 @@ flowchart TD
 **條件**：所有條件均觸發, VP 共識未達成
 
 ```
-① Coordinator → ② Activity Application Checker → ③ Supervisor → 聚合 → ④ EO Venue Reviewer → ⑤ Sponsorship Approval → ⑥ VPRD / VPRD Delegate
+① Coordinator → ② Activity Application Checker → ③ Supervisor → 聚合 → ④ EO Venue Reviewer
+→ （如有外部嘉賓）⑤ Dean / Delegate 背書
+→ （如有贊助）⑥ Dean / Delegate 贊助審批
 → 並行: { IRG 流程 } + { VP 投票 } → 並行 Join
-→ VP AI 摘要 → ⑫ VP 共識(否)
-→ ⑩ VP 選組(第 2 輪) → ⑪ VP 投票 → VP AI 摘要 → ⑫ VP 共識(否)
-→ ⑩ VP 選組(第 3 輪) → ⑪ VP 投票 → VP AI 摘要 → ⑫ VP 共識(否)
-→ ⑬ VP ChairPerson 決定（強制進入）→ 發布／拒絕／退回
+→ VP AI 摘要 → ⑬ VP 共識(否)
+→ ⑪ VP 選組(第 2 輪) → ⑫ VP 投票 → VP AI 摘要 → ⑬ VP 共識(否)
+→ ⑪ VP 選組(第 3 輪) → ⑫ VP 投票 → VP AI 摘要 → ⑬ VP 共識(否)
+→ ⑭ VP ChairPerson 決定（強制進入）→ 發布／拒絕／退回
 ```
 
 ---
@@ -575,21 +611,21 @@ flowchart TD
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
 | - | （系統聚合）| auto: 聚合 Supervisor 投票 | 任一 `RETURN` → 整體 `RETURN`;全員 `RECOMMEND` → 整體 `RECOMMEND`;含 `REJECT` 但無 `RETURN` → 整體 `REJECT` | `RECOMMEND` → ④ EO 審批（如需要）或 ⑤ 贊助;`RETURN` → 流程結束（`RETURNED`）;`REJECT` → 流程結束（`REJECTED`） |
 | 141 | EO Venue Reviewer | ④ EO 審批 | 審批場地課後使用（僅當 Supervisor 在 ③ 確認場地涉及課後使用時觸發） | 通過 → ⑤ 贊助審批（如有贊助）或 ⑥ 嘉賓;退回 → 回到 ③ Supervisor 重新審核（循環,非拒絕） |
-| 148 | Head | ⑤ 贊助審批 (候選組之一) | 與 Activity Application Reviewer 共同作為高級審批相關角色 | 通過 → ⑥ 嘉賓審批（如有外部嘉賓）或 NSOA 判斷;拒絕 → 流程結束（`REJECTED`） |
-| 149 | Activity Application Reviewer | ⑤ 贊助審批 / 歷史文檔中的高級審批角色 | 替代舊文檔中的 `Dean` 名稱；可作為活動高級審批相關角色 | 同 ⑤ 或對應後續高級審批環節 |
-| 151 | VPRD | ⑥ 嘉賓審批 (候選組之一) | 最新 BPMN 中的外部嘉賓審批角色 | 通過 → 進入 NSOA 判斷;拒絕 → 流程結束（`REJECTED`） |
-| 152 | VPRD Delegate | ⑥ 嘉賓審批 (候選組之一) | 最新 BPMN 中的外部嘉賓審批委派角色 | 通過 → 進入 NSOA 判斷;拒絕 → 流程結束（`REJECTED`） |
+| 149 | Dean | ⑤ 嘉賓背書 / ⑥ 贊助審批 (候選組之一) | 對外部嘉賓先作背書，並承接贊助審批 | ⑤ 通過 → ⑥；⑥ 通過 → 進入 NSOA / 非 NSOA 分流 |
+| 150 | Delegate | ⑤ 嘉賓背書 / ⑥ 贊助審批 (候選組之一) | 與 Dean 共用候選組，先到先審 | 同 ⑤ / ⑥ 各自的下一環節 |
+| 151 | VPRD | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的非 NSOA 最終外部嘉賓審批角色 | 通過 → 直接發布;拒絕 → `REJECTED` |
+| 152 | VPRD Delegate | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的非 NSOA 最終外部嘉賓審批委派角色 | 通過 → 直接發布;拒絕 → `REJECTED` |
 | - | （系統判斷）| 是否為 NSOA? | 根據活動是否標記為 NSOA 分流 | 是 → 進入並行 IRG / VP 評審分支;否 → 直接發布（`APPROVED`） |
-| 144 | IRG Secretary | ⑦ IRG 選組 | 選擇本次的 IRG 評審組 | → 系統自動加載 IRG 成員,進入 ⑧ |
-| 145 | IRG Member | ⑧ IRG 投票 (多實例) | 並行多人,各自投 `RECOMMEND` / `RESERVE` / `REJECT` | 全員投票完成 → auto: AI 生成 IRG 摘要 → ⑨ |
-| 145 | IRG Member | ⑧ IRG 投票 (多實例) | 同上 | 同上 |
-| 145 | IRG Member | ⑧ IRG 投票 (多實例) | 同上 | 同上 |
-| 144 | IRG Secretary | ⑨ IRG 摘要審核 | 審核系統 AI 自動生成的 IRG 投票摘要 | 完成 → IRG 分支結束 + 解鎖 VP 投票提交 + 進入並行 Join |
-| 146 | VPSLA Secretary | ⑩ VP 選組 | 選擇本次 VP 評審組;設定 VP 投票截止時間;指定 VP ChairPerson | → 系統自動加載成員、計算截止時間、識別並排除 ChairPerson,進入 ⑪ |
-| 147 | VPSLA Member | ⑪ VP 投票 (多實例) | 並行多人（不含 ChairPerson）,各自投 `APPROVE` / `REJECT` / `ABSTAIN`;在 IRG 分支完成前無法提交 | 全員投票完成（或超時自動 `ABSTAIN`）→ 進入並行 Join |
-| 147 | VPSLA Member | ⑪ VP 投票 (多實例) | 同上 | 同上 |
-| 147 | VPSLA Member | ⑪ VP 投票 (多實例) | 同上 | 同上 |
-| 146 | VPSLA Secretary | ⑫ VP 共識決定 | 審核 VP 投票結果,手動判定是否達成共識（共識判定參考：排除棄權票後,所有有效票一致為 `APPROVE` 或 `REJECT`） | 達成共識 → ⑬ ChairPerson 決定;未達共識且輪次 < 3 → 回到 ⑩ 重新選組投票（循環,最多 3 輪）;未達共識且為第 3 輪 → 強制進入 ⑬ |
-| 147 | VP ChairPerson | ⑬ 最終決定 | 由 VPSLA Secretary 在 ⑩ 階段指定的一位 VPSLA Member,作最終決定 | `PASS` → 系統自動發布,流程結束（`APPROVED`）;`REJECT` → 流程結束（`REJECTED`）;`RETURN` → 流程結束（`RETURNED`） |
+| 144 | IRG Secretary | ⑧ IRG 選組 | 選擇本次的 IRG 評審組 | → 系統自動加載 IRG 成員,進入 ⑨ |
+| 145 | IRG Member | ⑨ IRG 投票 (多實例) | 並行多人,各自投 `RECOMMEND` / `RESERVE` / `REJECT` | 全員投票完成 → auto: AI 生成 IRG 摘要 → ⑩ |
+| 145 | IRG Member | ⑨ IRG 投票 (多實例) | 同上 | 同上 |
+| 145 | IRG Member | ⑨ IRG 投票 (多實例) | 同上 | 同上 |
+| 144 | IRG Secretary | ⑩ IRG 摘要審核 | 審核系統 AI 自動生成的 IRG 投票摘要 | 完成 → IRG 分支結束 + 解鎖 VP 投票提交 + 進入並行 Join |
+| 146 | VPSLA Secretary | ⑪ VP 選組 | 選擇本次 VP 評審組;設定 VP 投票截止時間;指定 VP ChairPerson | → 系統自動加載成員、計算截止時間、識別並排除 ChairPerson,進入 ⑫ |
+| 147 | VPSLA Member | ⑫ VP 投票 (多實例) | 並行多人（不含 ChairPerson）,各自投 `APPROVE` / `REJECT` / `ABSTAIN`;在 IRG 分支完成前無法提交 | 全員投票完成（或超時自動 `ABSTAIN`）→ 進入並行 Join |
+| 147 | VPSLA Member | ⑫ VP 投票 (多實例) | 同上 | 同上 |
+| 147 | VPSLA Member | ⑫ VP 投票 (多實例) | 同上 | 同上 |
+| 146 | VPSLA Secretary | ⑬ VP 共識決定 | 審核 VP 投票結果,手動判定是否達成共識（共識判定參考：排除棄權票後,所有有效票一致為 `APPROVE` 或 `REJECT`） | 達成共識 → ⑭ ChairPerson 決定;未達共識且輪次 < 3 → 回到 ⑪ 重新選組投票（循環,最多 3 輪）;未達共識且為第 3 輪 → 強制進入 ⑭ |
+| 147 | VP ChairPerson | ⑭ 最終決定 | 由 VPSLA Secretary 在 ⑪ 階段指定的一位 VPSLA Member,作最終決定 | `PASS` → 系統自動發布,流程結束（`APPROVED`）;`REJECT` → 流程結束（`REJECTED`）;`RETURN` → 流程結束（`RETURNED`） |
 
 > **多實例行說明**：上表中標 "多實例" 的角色（Supervisor、IRG Member、VP Member/VPSLA Member）以 3 行重複列出,僅作格式示意。實際運行時並行的人數依配置而定,可多可少。
