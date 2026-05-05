@@ -1,6 +1,7 @@
 # 學生組織註冊與申訴流程
 
 > 本文檔描述 SLAS 系統中學生組織的註冊審批與申訴審批兩個業務流程。
+> 角色名稱已按 `SLAS_PRO/sql/patch/0004_017_update_approval_role_names.sql` 同步到最新 `SYSTEM_ROLE.NAME` 口徑；為了保持流程圖可讀性，正文仍保留少量功能別名。
 
 ---
 
@@ -39,32 +40,32 @@ REJECTED_FINAL → 申訴流程 → 通過? → ACTIVE
 
 ### 2.1 註冊流程系統角色
 
-下表為註冊流程涉及的系統定義角色（`SYSTEM_ROLE.NAME`）：
+下表為註冊流程涉及的系統定義角色,與 `SYSTEM_ROLE` 表（`ID`／`CODE`／`NAME`）以及 BPMN `<flowable:candidateParam>` 中的角色 ID 對齊：
 
-| 系統角色名稱 | 職責 |
-|:------------|:-----|
-| Student Group Registration Secretary | 初審；指派 Administrative Checker 與 Academic Checker；起草拒絕／退回意見；最終提交確認意見 |
-| Student Group Registration Administrative Checker | 行政審核（由 Registration Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
-| Student Group Registration Academic Checker | 學術審核（由 Registration Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
-| Student Group Registration Reviewer | 提供註冊意見；對起草的拒絕／退回意見並行確認 |
-| Student Group Registration Summary Reviewer | 審核已收集的註冊意見；對起草的拒絕／退回意見作審核評論 |
-| Student Group Registration Approver | 最終批准／拒絕／退回決定 |
-| Student Group Registration Approver Secretary | 替代終審人,與 Registration Approver 享有相同決定權 |
+| ID  | CODE                            | `SYSTEM_ROLE.NAME`                         | 文中功能別名 | 職責 |
+|----:|:--------------------------------|:-------------------------------------------|:-------------|:-----|
+| 122 | `sg_reg_secretary`              | Registration Administrator                 | Secretary | 初審；指派 Administrative Checker 與 Academic Checker；起草拒絕／退回意見；最終提交確認意見 |
+| 123 | `sg_reg_reviewer`               | Registration Reviewer                      | Registration Reviewer | 提供註冊意見；對起草的拒絕／退回意見並行確認 |
+| 124 | `sg_reg_approver`               | Registration Approver                      | Registration Approver | 最終批准／拒絕／退回決定 |
+| 132 | `sg_reg_checker_academic`       | Registration Referrer                      | Academic Checker | 學術審核（由 Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
+| 134 | `sg_reg_approver_secretary`     | Student Group Registration Approver Secretary | Registration Approver Secretary | 替代終審人,與 Registration Approver 享有相同決定權 |
+| 136 | `sg_reg_checker_administrative` | Registration Checker                       | Admin Checker | 行政審核（由 Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
+| 138 | `sg_reg_summary_reviewer`       | Registration Endorser                      | Registration Summary Reviewer | 審核已收集的註冊意見；對起草的拒絕／退回意見作審核評論 |
 
 ### 2.2 申訴流程系統角色
 
-下表為申訴流程涉及的系統定義角色（`SYSTEM_ROLE.NAME`）：
+下表為申訴流程涉及的系統定義角色,字段對齊規則同 §2.1：
 
-| 系統角色名稱 | 職責 |
-|:------------|:-----|
-| Student Group Appeal Reviewer | 提供申訴意見（並行多人） |
-| Student Group Appeal Summary Reviewer | 審核已收集的申訴意見；可提交至最終,或退回（結束流程） |
-| Student Group Appeal Approver | 最終批准／拒絕／退回（有條件批准）決定 |
-| Student Group Appeal Approver Secretary | 替代終審人,與 Appeal Approver 享有相同決定權 |
+| ID  | CODE                          | `SYSTEM_ROLE.NAME`                            | 文中功能別名 | 職責 |
+|----:|:------------------------------|:----------------------------------------------|:-------------|:-----|
+| 125 | `sg_app_reviewer`             | Registration Appeal Reviewer                  | Appeal Reviewer | 提供申訴意見（並行多人） |
+| 126 | `sg_app_approver`             | Registration Appeal Approver                  | Appeal Approver | 最終批准／拒絕／退回（有條件批准）決定 |
+| 135 | `sg_app_approver_secretary`   | Student Group Appeal Approver Secretary       | Appeal Approver Secretary | 替代終審人,與 Appeal Approver 享有相同決定權 |
+| 139 | `sg_app_summary_reviewer`     | Registration Appeal Endorser                  | Appeal Summary Reviewer | 審核已收集的申訴意見；可提交至最終,或退回（結束流程） |
 
 > **流程外參與者**：Appeal Initiator（學生）—— 發起申訴；在 `APPEAL_RESUBMIT` 狀態時重新提交申訴。
 >
-> **本文簡稱規則**：為保持流程圖與步驟詳述的可讀性,後續章節省略 `Student Group` 前綴,並在不致歧義的單流程上下文中進一步簡化（例如 `Student Group Registration Secretary` 簡作 `Secretary`；`Student Group Registration Administrative Checker` 簡作 `Admin Checker`；`Student Group Registration Academic Checker` 簡作 `Academic Checker`；`Student Group Registration Reviewer` 簡作 `Registration Reviewer`,以區別於 `Appeal Reviewer`；`Student Group Registration Approver` 簡作 `Registration Approver`,以區別於 `Appeal Approver`）。
+> **本文簡稱規則**：為保持流程圖與步驟詳述的可讀性,後續章節在不致歧義時使用功能別名（例如 `Registration Administrator` 簡作 `Secretary`；`Registration Checker` 簡作 `Admin Checker`；`Registration Referrer` 簡作 `Academic Checker`；`Registration Endorser` 簡作 `Registration Summary Reviewer`；`Registration Appeal Endorser` 簡作 `Appeal Summary Reviewer`）。
 
 ### 2.3 多人並行 / 候選組規則
 
@@ -611,15 +612,15 @@ sequenceDiagram
 
 | 角色 ID | 系統角色名稱 | 審批節點 | 工作職能描述 | 下一個環節 |
 |:-------:|:------------|:--------|:-----------|:----------|
-| - | Student Group Leader | 發起申請 | 學生組織負責人,提交註冊申請以觸發審批流程 | Node 1 秘書審核 |
-| 122 | Student Group Registration Secretary | Node 1: 秘書審核 | 對申請進行初審;通過時指派 Administrative Checker 與 Academic Checker | 通過 → Node 2 行政審核;拒絕 → 流程結束（`PENDING_RESUBMIT`,學生可重新提交） |
-| 136 | Student Group Registration Administrative Checker | Node 2: 行政審核 | 由 Secretary 指派,負責申請的行政合規審核 | 通過 → Node 3 學術審核;拒絕 → 流程結束（`PENDING_RESUBMIT`） |
-| 132 | Student Group Registration Academic Checker | Node 3: 學術審核 | 由 Secretary 指派,負責申請的學術相關審核 | 通過 → Node 4 收集意見;拒絕 → 流程結束（`PENDING_RESUBMIT`） |
-| 123 | Student Group Registration Reviewer | Node 4: 收集意見 (多實例) | 並行多人,各自提交對該申請的審核意見 | 全員提交（或超時將未提交意見標記為 `TIMEOUT`）→ Node 5 匯總審核 |
-| 123 | Student Group Registration Reviewer | Node 4: 收集意見 (多實例) | 同上 | 同上 |
-| 123 | Student Group Registration Reviewer | Node 4: 收集意見 (多實例) | 同上 | 同上 |
-| 138 | Student Group Registration Summary Reviewer | Node 5: 匯總審核 | 審核 Reviewer 提交的意見彙總 | 提交 → Node 6 最終審批;退回 → 系統通知 Admin Checker 與 Academic Checker,流程結束（`PENDING_RESUBMIT`） |
-| 124 | Student Group Registration Approver | Node 6: 最終審批 | 對註冊申請作最終 `批准` / `拒絕` / `退回` 決定 | 批准 → 流程結束（`ACTIVE`）;拒絕／退回 → 進入拒絕子流程（見 §10.2） |
+| - | Group Leader | 發起申請 | 學生組織負責人,提交註冊申請以觸發審批流程 | Node 1 秘書審核 |
+| 122 | Registration Administrator | Node 1: 秘書審核 | 對申請進行初審;通過時指派 Administrative Checker 與 Academic Checker | 通過 → Node 2 行政審核;拒絕 → 流程結束（`PENDING_RESUBMIT`,學生可重新提交） |
+| 136 | Registration Checker | Node 2: 行政審核 | 由 Secretary 指派,負責申請的行政合規審核 | 通過 → Node 3 學術審核;拒絕 → 流程結束（`PENDING_RESUBMIT`） |
+| 132 | Registration Referrer | Node 3: 學術審核 | 由 Secretary 指派,負責申請的學術相關審核 | 通過 → Node 4 收集意見;拒絕 → 流程結束（`PENDING_RESUBMIT`） |
+| 123 | Registration Reviewer | Node 4: 收集意見 (多實例) | 並行多人,各自提交對該申請的審核意見 | 全員提交（或超時將未提交意見標記為 `TIMEOUT`）→ Node 5 匯總審核 |
+| 123 | Registration Reviewer | Node 4: 收集意見 (多實例) | 同上 | 同上 |
+| 123 | Registration Reviewer | Node 4: 收集意見 (多實例) | 同上 | 同上 |
+| 138 | Registration Endorser | Node 5: 匯總審核 | 審核 Reviewer 提交的意見彙總 | 提交 → Node 6 最終審批;退回 → 系統通知 Admin Checker 與 Academic Checker,流程結束（`PENDING_RESUBMIT`） |
+| 124 | Registration Approver | Node 6: 最終審批 | 對註冊申請作最終 `批准` / `拒絕` / `退回` 決定 | 批准 → 流程結束（`ACTIVE`）;拒絕／退回 → 進入拒絕子流程（見 §10.2） |
 | 134 | Student Group Registration Approver Secretary | Node 6: 最終審批 (備選) | 替代終審人,與 Approver 享有相同決定權,任一者可作出決定 | 同 Node 6 |
 
 ### 10.2 註冊拒絕／退回子流程
@@ -628,24 +629,23 @@ sequenceDiagram
 
 | 角色 ID | 系統角色名稱 | 審批節點 | 工作職能描述 | 下一個環節 |
 |:-------:|:------------|:--------|:-----------|:----------|
-| 122 | Student Group Registration Secretary | Sub-Node 7: 起草綜合意見 | Secretary 起草拒絕／退回意見初稿;設定傳閱天數與「截止前提醒」天數 | 完成 → 系統初始化評審員確認 → Sub-Node 8 |
-| 123 | Student Group Registration Reviewer | Sub-Node 8: 評審員確認意見 (多實例) | 並行多人,各自選擇 `APPROVE` / `SUGGEST` / `NO_COMMENT` 確認反饋 | 全員確認（或超時自動視為 `APPROVE`）→ 系統彙總拒絕反饋 → Sub-Node 9 |
-| 123 | Student Group Registration Reviewer | Sub-Node 8: 評審員確認意見 (多實例) | 同上 | 同上 |
-| 123 | Student Group Registration Reviewer | Sub-Node 8: 評審員確認意見 (多實例) | 同上 | 同上 |
-| 138 | Student Group Registration Summary Reviewer | Sub-Node 9: 審核草擬意見 | 對草擬綜合意見作審核評論 | 完成 → Sub-Node 10 |
-| 122 | Student Group Registration Secretary | Sub-Node 10: 最終提交意見 | Secretary 確認並最終提交意見;系統派發最終通知 | 流程結束（依退回類型解析）：「退回」→ `PENDING_RESUBMIT`;「拒絕」→ `REJECTED_FINAL`（學生只能發起申訴） |
+| 122 | Registration Administrator | Sub-Node 7: 起草綜合意見 | Secretary 起草拒絕／退回意見初稿;設定傳閱天數與「截止前提醒」天數 | 完成 → 系統初始化評審員確認 → Sub-Node 8 |
+| 123 | Registration Reviewer | Sub-Node 8: 評審員確認意見 (多實例) | 並行多人,各自選擇 `APPROVE` / `SUGGEST` / `NO_COMMENT` 確認反饋 | 全員確認（或超時自動視為 `APPROVE`）→ 系統彙總拒絕反饋 → Sub-Node 9 |
+| 123 | Registration Reviewer | Sub-Node 8: 評審員確認意見 (多實例) | 同上 | 同上 |
+| 123 | Registration Reviewer | Sub-Node 8: 評審員確認意見 (多實例) | 同上 | 同上 |
+| 138 | Registration Endorser | Sub-Node 9: 審核草擬意見 | 對草擬綜合意見作審核評論 | 完成 → Sub-Node 10 |
+| 122 | Registration Administrator | Sub-Node 10: 最終提交意見 | Secretary 確認並最終提交意見;系統派發最終通知 | 流程結束（依退回類型解析）：「退回」→ `PENDING_RESUBMIT`;「拒絕」→ `REJECTED_FINAL`（學生只能發起申訴） |
 
 ### 10.3 申訴流程
 
 | 角色 ID | 系統角色名稱 | 審批節點 | 工作職能描述 | 下一個環節 |
 |:-------:|:------------|:--------|:-----------|:----------|
-| - | Student Group Leader | 發起申訴 | 提交申訴（前置：組別處於 `REJECTED_FINAL` 或 `APPEAL_RESUBMIT`） | Node 1 收集意見 |
-| 125 | Student Group Appeal Reviewer | Node 1: 收集意見 (多實例) | 並行多人,各自提交對申訴的審核意見 | 全員提交（或超時將未提交意見標記為 `TIMEOUT`）→ Node 2 匯總審核 |
-| 125 | Student Group Appeal Reviewer | Node 1: 收集意見 (多實例) | 同上 | 同上 |
-| 125 | Student Group Appeal Reviewer | Node 1: 收集意見 (多實例) | 同上 | 同上 |
-| 139 | Student Group Appeal Summary Reviewer | Node 2: 匯總審核 | 審核已收集的申訴意見 | 提交 → Node 3 最終審批;退回 → 流程結束（`APPEAL_RESUBMIT`,學生可重新提交申訴） |
-| 126 | Student Group Appeal Approver | Node 3: 最終審批 | 對申訴作最終 `批准` / `拒絕` / `退回` 決定 | 批准 → `ACTIVE`;拒絕 → `APPEAL_REJECTED`（終局,無後續）;退回（業務上等同「有條件批准」）→ `APPEAL_RESUBMIT` |
+| - | Group Leader | 發起申訴 | 提交申訴（前置：組別處於 `REJECTED_FINAL` 或 `APPEAL_RESUBMIT`） | Node 1 收集意見 |
+| 125 | Registration Appeal Reviewer | Node 1: 收集意見 (多實例) | 並行多人,各自提交對申訴的審核意見 | 全員提交（或超時將未提交意見標記為 `TIMEOUT`）→ Node 2 匯總審核 |
+| 125 | Registration Appeal Reviewer | Node 1: 收集意見 (多實例) | 同上 | 同上 |
+| 125 | Registration Appeal Reviewer | Node 1: 收集意見 (多實例) | 同上 | 同上 |
+| 139 | Registration Appeal Endorser | Node 2: 匯總審核 | 審核已收集的申訴意見 | 提交 → Node 3 最終審批;退回 → 流程結束（`APPEAL_RESUBMIT`,學生可重新提交申訴） |
+| 126 | Registration Appeal Approver | Node 3: 最終審批 | 對申訴作最終 `批准` / `拒絕` / `退回` 決定 | 批准 → `ACTIVE`;拒絕 → `APPEAL_REJECTED`（終局,無後續）;退回（業務上等同「有條件批准」）→ `APPEAL_RESUBMIT` |
 | 135 | Student Group Appeal Approver Secretary | Node 3: 最終審批 (備選) | 替代終審人,與 Appeal Approver 享有相同決定權,任一者可作出決定 | 同 Node 3 |
 
 > **多實例行說明**：上表中標 "多實例" 的角色（Reviewer）以 3 行重複列出,僅作格式示意。實際運行時並行的評審員人數依配置而定,可多可少。
-
