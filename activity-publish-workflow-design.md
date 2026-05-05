@@ -1,7 +1,7 @@
 # 活動發布審批流程
 
 > 本文檔描述 SLAS 系統中活動發布審批的完整業務流程，覆蓋 NSOA（新生迎新活動）與非 NSOA 兩種場景。
-> 系統角色名稱已按 `SLAS_PRO/sql/patch/0004_017_update_approval_role_names.sql` 與近期 BPMN 變更同步；正文仍保留少量流程別名以維持可讀性。
+> 除流程節點名稱外，文中凡涉及角色稱呼，均以 `SYSTEM_ROLE.NAME` 為主。
 
 ---
 
@@ -34,22 +34,23 @@
 
 ### 2.1 系統角色清單
 
-下表為本流程涉及的系統定義角色（`SYSTEM_ROLE.NAME`）與文中流程別名：
+下表為本流程涉及的系統定義角色（`SYSTEM_ROLE.NAME`）與文中流程別名。
+以下內容優先對齊**當前運行時代碼**；若你的資料庫仍停留在舊補丁階段，可能仍會看到歷史口徑。
 
-| 角色 ID | `SYSTEM_ROLE.NAME` | 文中流程別名 | 職責 |
-|:-------:|:-------------------|:-------------|:-----|
-| 140 | Activity Coordinator | Coordinator | 初審；判斷是否需要 Checker；指派 Checker |
-| 142 | Activity Application Checker | Checker | 對活動內容作詳細審查（由 Coordinator 指派） |
-| 116 | Activity Application Referrer | Supervisor | 對組織與活動的第一級審核員；多人並行（由活動數據逐活動指派） |
-| 141 | EO Venue Reviewer | EO | 審批校園場地相關使用 |
-| 148 | Head | Head | 活動高級審批候選角色之一 |
-| 149 | Activity Application Reviewer | Reviewer | 活動高級審批候選角色之一；替代舊文檔中的 `Dean` 稱謂 |
-| 151 | VPRD | Guest Approver | 外部嘉賓審批 |
-| 152 | VPRD Delegate | Guest Approver | 外部嘉賓審批委派角色 |
-| 144 | IRG Secretary | IRG Secretary | 管理 IRG 評審；選組；審核 IRG 摘要 |
-| 145 | IRG Member | IRG Member | 對 NSOA 活動進行 IRG 投票 |
-| 146 | VPSLA Secretary | VP Secretary | 管理 VP 評審；選組；判定是否達成共識 |
-| 147 | VPSLA Member | VP Member | 對 NSOA 活動進行 VP 投票（包含 ChairPerson 候選） |
+| 角色 ID | `SYSTEM_ROLE.NAME` | 職責 |
+|:-------:|:-------------------|:-----|
+| 115 | Coordinator | 初審；判斷是否需要 Checker；指派 Checker |
+| 142 | Activity Application Checker | 對活動內容作詳細審查（由 Coordinator 指派） |
+| 116 | Activity Application Referrer | 對組織與活動的第一級審核員；多人並行（由活動數據逐活動指派） |
+| 141 | EO Venue Reviewer | 審批校園場地相關使用 |
+| 148 | Head | 活動高級審批候選角色之一 |
+| 149 | Activity Application Reviewer | 活動高級審批候選角色之一 |
+| 151 | VPRD | 外部嘉賓審批 |
+| 152 | VPRD Delegate | 外部嘉賓審批委派角色 |
+| 144 | IRG Secretary | 管理 IRG 評審；選組；審核 IRG 摘要 |
+| 145 | IRG Member | 對 NSOA 活動進行 IRG 投票 |
+| 146 | VPSLA Secretary | 管理 VP 評審；選組；判定是否達成共識 |
+| 147 | VPSLA Member | 對 NSOA 活動進行 VP 投票（包含 ChairPerson 候選） |
 
 ### 2.2 流程中的功能性審批組合
 
@@ -57,10 +58,15 @@
 
 | 功能性審批 | 由誰承擔 |
 |:----------|:--------|
-| Sponsorship Approver | 文中功能稱謂；與 `Head`、`Activity Application Reviewer` 等高級審批角色相關 |
-| Guest Approver | 最新 BPMN 口徑 = { `VPRD`, `VPRD Delegate` }；正文仍以 `Guest Approver` 表示該可選審批節點 |
+| Sponsorship Approval | 由 `Head`、`Activity Application Reviewer` 等高級審批角色承擔 |
+| Guest Approval | 最新 BPMN 口徑 = { `VPRD`, `VPRD Delegate` } |
 | Supervisor 多實例 | `Activity Application Referrer` 是當前系統角色名稱；具體本次審核的 Supervisor 名單由活動數據（`activity_supervisor` 表）逐活動指派 |
 | VP ChairPerson | 由 `VPSLA Secretary` 在 ⑩ 選組階段指定的一位 `VPSLA Member` |
+
+> **實作備註**
+> 1. 最新 Java 啟動代碼已把活動發布流程的 `coordinatorGroupId` 改為 `115`，因此本文以 `Coordinator (115)` 為主。
+> 2. SQL 歷史補丁中同時存在 `140` 舊口徑與 `115` 新口徑；若環境未完整同步，介面與資料可能仍混用。
+> 3. `guestApprovalTask` 的 BPMN 已切到 `VPRD / VPRD Delegate`，但流程啟動代碼仍可見舊變量 `guestApproverGroupId`；部署時需確認環境已正確提供 `vprdApproverGroupIds`。
 
 ### 2.3 多人並行 / 候選組規則
 
@@ -69,7 +75,7 @@
 | Supervisor 審核 | 所有 Supervisor 並行審核,全部完成後系統按聚合規則得出最終結果（見 §5） |
 | 贊助審批 / 嘉賓審批 | 候選組內任一審批人可認領並審批,採「先到先審」 |
 | IRG 投票 | 所有 IRG Member 並行投票 |
-| VP 投票 | 所有 VP Member（系統角色名：`VPSLA Member`）並行投票（不含 ChairPerson）；VP 投票有截止時間,超時自動視為棄權 |
+| VP 投票 | 所有 `VPSLA Member` 並行投票（不含 ChairPerson）；VP 投票有截止時間,超時自動視為棄權 |
 
 ---
 
@@ -97,7 +103,7 @@
 
 | 類型 | 格式 | 範例 |
 |:-----|:-----|:-----|
-| 人工任務 | `<編號> <步驟名><br/>(角色名)` | `① Coordinator 審核<br/>(Activity Coordinator)` |
+| 人工任務 | `<編號> <步驟名><br/>(角色名)` | `① Coordinator 審核<br/>(Coordinator)` |
 | 系統任務 | `auto: <行為描述>` | `auto: 聚合投票結果` |
 | 判斷網關 | 以問號結尾的問句 | `{是否有贊助?}` |
 | 結束點 | `End: <狀態><br/>(<業務含義>)` | `End: APPROVED<br/>(活動已發布)` |
@@ -108,12 +114,12 @@
 
 | 編號 | 步驟 | 角色 | 階段 |
 |:----:|:-----|:-----|:----:|
-| ① | Coordinator 審核 | Activity Coordinator | Phase 1 |
+| ① | Coordinator 審核 | Coordinator | Phase 1 |
 | ② | Checker 審核 | Activity Application Checker | Phase 1 |
 | ③ | Supervisors 審核 | Supervisors（並行） | Phase 2 |
 | ④ | EO 審批 | EO Venue Reviewer | Phase 3 |
 | ⑤ | 贊助審批 | Sponsorship Approver | Phase 3 |
-| ⑥ | 嘉賓審批 | Guest Approver（VPRD / VPRD Delegate） | Phase 3 |
+| ⑥ | 嘉賓審批 | VPRD / VPRD Delegate | Phase 3 |
 | ⑦ | IRG 選組 | IRG Secretary | Phase 4 |
 | ⑧ | IRG 投票 | IRG Member（並行） | Phase 4 |
 | ⑨ | IRG 摘要審核 | IRG Secretary | Phase 4 |
@@ -134,7 +140,7 @@ flowchart TD
     Start --> Coordinator
 
     subgraph Phase1["Phase 1: 初審"]
-        Coordinator["① Coordinator 審核<br/>(Activity Coordinator)"]
+        Coordinator["① Coordinator 審核<br/>(Coordinator)"]
         Coordinator --> CoordGate{Coordinator 是否通過?}
         CoordGate -->|"通過"| CheckerCheck
         CoordGate -->|"退回"| EndReturned
@@ -181,7 +187,7 @@ flowchart TD
         GuestCheck -->|"是"| Guest
         GuestCheck -->|"否"| NsoaCheck
 
-        Guest["⑥ 嘉賓審批<br/>(Guest Approver / VPRD 系列)"]
+        Guest["⑥ 嘉賓審批<br/>(VPRD / VPRD Delegate)"]
         Guest --> GuestGate{是否通過?}
         GuestGate -->|"通過"| NsoaCheck
         GuestGate -->|"拒絕"| EndRejected
@@ -267,7 +273,7 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    Start(["Start"]) --> A["① Coordinator 審核<br/>(Activity Coordinator)"]
+    Start(["Start"]) --> A["① Coordinator 審核<br/>(Coordinator)"]
     A --> D{需要 Checker?}
     D -->|"是"| E["② Checker 審核<br/>(Activity Application Checker)"]
     D -->|"否"| F
@@ -280,7 +286,7 @@ flowchart LR
     G -->|"是"| H["⑤ 贊助審批<br/>(Sponsorship Approver)"]
     G -->|"否"| I
     H --> I{是否有外部嘉賓?}
-    I -->|"是"| J["⑥ 嘉賓審批<br/>(Guest Approver / VPRD 系列)"]
+    I -->|"是"| J["⑥ 嘉賓審批<br/>(VPRD / VPRD Delegate)"]
     I -->|"否"| Pub
     J --> Pub
     Pub[/"auto: 發布活動"/]
@@ -371,7 +377,7 @@ flowchart TD
 
 ### ① Coordinator 審核
 
-- **執行人**：Activity Coordinator
+- **執行人**：Coordinator
 - **動作**：審核活動基本信息；判斷是否需要 Checker；如需要則指派一位 Checker
 - **結果**：
   - 通過 → 進入 ② Checker 審核（如已指派）或 ③ Supervisors 審核
@@ -379,7 +385,7 @@ flowchart TD
 
 ### ② Checker 審核
 
-- **執行人**：Activity Application Checker（由 Activity Coordinator 指派）
+- **執行人**：Activity Application Checker（由 Coordinator 指派）
 - **觸發條件**：① 中決定需要 Checker
 - **動作**：對活動內容作詳細審查
 - **結果**：
@@ -422,7 +428,7 @@ flowchart TD
 
 ### ⑥ 嘉賓審批
 
-- **執行人**：Guest Approver（候選組,先到先審）
+- **執行人**：VPRD / VPRD Delegate（候選組,先到先審）
 - **觸發條件**：活動聲明有外部嘉賓
 - **動作**：審核外部嘉賓信息
 - **結果**：
@@ -510,7 +516,7 @@ flowchart TD
 **條件**：非 NSOA, 無 Checker, 場地不涉及課後使用, 無贊助, 無外部嘉賓
 
 ```
-① Activity Coordinator → ③ Supervisor → 聚合(RECOMMEND) → 發布 ✅
+① Coordinator → ③ Supervisor → 聚合(RECOMMEND) → 發布 ✅
 ```
 
 ### 場景 2：非 NSOA 完整路徑
@@ -518,7 +524,7 @@ flowchart TD
 **條件**：非 NSOA, 需 Checker, 場地涉及課後使用, 有贊助, 有外部嘉賓
 
 ```
-① Activity Coordinator → ② Activity Application Checker → ③ Supervisor → 聚合 → ④ EO Venue Reviewer → ⑤ Sponsorship Approver → ⑥ Guest Approver → 發布 ✅
+① Coordinator → ② Activity Application Checker → ③ Supervisor → 聚合 → ④ EO Venue Reviewer → ⑤ Sponsorship Approval → ⑥ VPRD / VPRD Delegate → 發布 ✅
 ```
 
 ### 場景 3：非 NSOA + EO 退回
@@ -526,7 +532,7 @@ flowchart TD
 **條件**：場地涉及課後使用, EO 不批准
 
 ```
-① Activity Coordinator → ③ Supervisor → 聚合 → ④ EO Venue Reviewer(退回) → ③ Supervisor(重新審核) → ...
+① Coordinator → ③ Supervisor → 聚合 → ④ EO Venue Reviewer(退回) → ③ Supervisor(重新審核) → ...
 ```
 
 ### 場景 4：NSOA 最簡路徑
@@ -534,7 +540,7 @@ flowchart TD
 **條件**：NSOA, 無 Checker, 場地不涉及課後使用, 無贊助, 無外部嘉賓
 
 ```
-① Activity Coordinator → ③ Supervisor → 聚合
+① Coordinator → ③ Supervisor → 聚合
 → 並行: { ⑦ IRG 選組 → ⑧ IRG 投票 → ⑨ IRG 審核 → IRG 完成 }
          { ⑩ VP 選組 → ⑪ VP 投票 }
 → 並行 Join → VP AI 摘要 → ⑫ VP 共識 → ⑬ VP ChairPerson 決定 → 發布 ✅
@@ -545,7 +551,7 @@ flowchart TD
 **條件**：所有條件均觸發, VP 共識未達成
 
 ```
-① Activity Coordinator → ② Activity Application Checker → ③ Supervisor → 聚合 → ④ EO Venue Reviewer → ⑤ Sponsorship Approver → ⑥ Guest Approver
+① Coordinator → ② Activity Application Checker → ③ Supervisor → 聚合 → ④ EO Venue Reviewer → ⑤ Sponsorship Approval → ⑥ VPRD / VPRD Delegate
 → 並行: { IRG 流程 } + { VP 投票 } → 並行 Join
 → VP AI 摘要 → ⑫ VP 共識(否)
 → ⑩ VP 選組(第 2 輪) → ⑪ VP 投票 → VP AI 摘要 → ⑫ VP 共識(否)
@@ -561,8 +567,8 @@ flowchart TD
 
 | 角色 ID | 系統角色名稱 | 審批節點 | 工作職能描述 | 下一個環節 |
 |:-------:|:------------|:--------|:-----------|:----------|
-| - | Group Leader | 發起申請 | 學生組織負責人,提交活動申請以觸發審批流程 | ① Activity Coordinator 審核 |
-| 140 | Activity Coordinator | ① Coordinator 審核 | 初審活動基本信息;判斷是否需要 Activity Application Checker;如需要則指派一位 Checker | 通過且需 Checker → ② Activity Application Checker 審核;通過且無需 → ③ Supervisor 審核;退回 → 流程結束（`RETURNED`,可修改後重新提交） |
+| - | Group Leader | 發起申請 | 學生組織負責人,提交活動申請以觸發審批流程 | ① Coordinator 審核 |
+| 115 | Coordinator | ① Coordinator 審核 | 初審活動基本信息;判斷是否需要 Activity Application Checker;如需要則指派一位 Checker | 通過且需 Checker → ② Activity Application Checker 審核;通過且無需 → ③ Supervisor 審核;退回 → 流程結束（`RETURNED`,可修改後重新提交） |
 | 142 | Activity Application Checker | ② Checker 審核 | 由 Coordinator 指派,對活動內容作詳細審查 | 通過 → ③ Supervisor 審核;拒絕 → 流程結束（`REJECTED`） |
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 並行多人,各自給 `RECOMMEND` / `REJECT` / `RETURN` 個人決定;同時確認場地是否課後使用 | 全員提交後系統按聚合規則得出最終結果（見 §5） |
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
