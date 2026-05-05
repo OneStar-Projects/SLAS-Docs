@@ -184,6 +184,21 @@
    - 至少包含：
      - 1 名 `SECRETARY`
      - 2 名 `MEMBER`
+   - 建議建立步驟：
+     1. 打開 `IRG Group Management`
+     2. 點擊 `Create IRG Group`
+     3. 填寫：
+        - `Name`：例如 `IRG Demo Group`
+        - `Name TC / Name SC`：可按環境需要填寫
+        - `Description`：例如 `Demo use only`
+        - `Status`：選 `Enabled`
+        - `Sort`：填一個容易辨識的序號，例如 `1`
+     4. 儲存後回到列表頁
+     5. 點擊該 group 的 `Members`
+     6. 依序新增：
+        - 1 名 `SECRETARY`
+        - 2 名 `MEMBER`
+     7. 確認成員列表顯示正確，且 group 狀態為 `Enabled`
 
 2. **VP Group 已建立且啟用**
    - 入口：`Activity Configuration` → `Vetting Panel Group Management`
@@ -192,6 +207,26 @@
      - 1 名 `SECRETARY`
      - 1 名 `CHAIRPERSON`
      - 2 名 `MEMBER`
+   - 建議建立步驟：
+     1. 打開 `Vetting Panel Group Management`
+     2. 點擊 `Create Vetting Panel Group`
+     3. 填寫：
+        - `Name`：例如 `VP Demo Group`
+        - `Name TC / Name SC`：可按環境需要填寫
+        - `Description`：例如 `Demo use only`
+        - `Status`：選 `Enabled`
+        - `Sort`：填一個容易辨識的序號，例如 `1`
+     4. 儲存後回到列表頁
+     5. 點擊該 group 的 `Members`
+     6. 依序新增：
+        - 1 名 `SECRETARY`
+        - 1 名 `CHAIRPERSON`
+        - 2 名 `MEMBER`
+     7. 確認頁面不再顯示 `noChairPerson` 警示
+     8. 確認成員列表顯示正確，且 group 狀態為 `Enabled`
+   - 補充說明：
+     - 只有 `Enabled` 的 group 才會出現在 `IRG Select Group` / `VP Select Group` 下拉選單中
+     - VP group 若沒有 `CHAIRPERSON`，後續 `Chair Decision` 無法正確承接
 
 3. **Orientation Application Period 已開放**
    - 因本主線使用 `NSOA = Yes`
