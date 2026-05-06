@@ -27,12 +27,16 @@
 
 - **有外部嘉賓的活動**：在 EO 之後，先進入 `Dean / Delegate` 的 **Guest Endorsement**。
 - **有贊助的活動**：在 Guest Endorsement 之後，再進入 `Dean / Delegate` 的 **Sponsorship Approval**。
-- **非 NSOA 活動**：如活動有外部嘉賓，會在上述步驟後再進入 `VPRD / VPRD Delegate` 的 **Final Guest Approval**，然後發布。
-- **NSOA 活動**：在 Guest Endorsement / Sponsorship Approval 完成後，先進入 IRG（Initial Review Group）與 VP（Vetting Panel）**並行評審**；若 `Chair PASS`，且活動有外部嘉賓，之後仍會再進入 `VPRD / VPRD Delegate` 的 **Final Guest Approval**。
+- **非 NSOA 活動**：如活動有外部嘉賓，會在上述步驟後再進入 `VP(RD) / VP(RD) Delegate` 的 **Final Guest Approval**，然後發布。
+- **NSOA 活動**：在 Guest Endorsement / Sponsorship Approval 完成後，先進入 IRG（Initial Review Group）與 VP（Vetting Panel）**並行評審**；若 `Chair PASS`，且活動有外部嘉賓，之後仍會再進入 `VP(RD) / VP(RD) Delegate` 的 **Final Guest Approval**。
 
-> **重要說明**：依據當前 BPMN，只要 `hasExternalGuest == true`，活動最終都可能進入 `VPRD / VPRD Delegate` 的 `guestApprovalTask`。
+> **重要說明**：依據當前 BPMN，只要 `hasExternalGuest == true`，活動最終都可能進入 `VP(RD) / VP(RD) Delegate` 的 `guestApprovalTask`。
 > - `非 NSOA`：在一般高級審批後進入
 > - `NSOA`：在 `IRG / VP` 完成且 `Chair PASS` 後進入
+>
+> **編輯鎖說明**：最新 `SLAS_UI` 在活動編輯頁（`mode=edit`）進入時，會先呼叫 `/activity/acquire-editing` 取得 30 分鐘短鎖；若拿鎖失敗，前端目前會顯示錯誤訊息並跳回 `ActivityListForStudent`，而不是在原頁面顯示一個「已鎖定、只讀」狀態。成功更新後後端會自動釋放鎖；若使用者直接關閉頁面，則主要依賴鎖超時失效。
+>
+> **名稱口徑說明**：本文按最新 `SYSTEM_ROLE.NAME` 使用 `VP(RD)` / `VP(RD) Delegate`；但當前 BPMN 註釋、前端任務標題與部分變量名仍常寫作 `VPRD / VPRD Delegate`，兩者在本文中視為同一組角色。
 
 ---
 
@@ -51,8 +55,8 @@
 | 141 | EO Venue Reviewer | 審批校園場地相關使用 |
 | 149 | Dean | 外部嘉賓背書與贊助審批 |
 | 150 | Delegate | 外部嘉賓背書與贊助審批 |
-| 151 | VPRD | 外部嘉賓審批 |
-| 152 | VPRD Delegate | 外部嘉賓審批委派角色 |
+| 151 | VP(RD) | 外部嘉賓審批 |
+| 152 | VP(RD) Delegate | 外部嘉賓審批委派角色 |
 | 144 | IRG Secretary | 管理 IRG 評審；選組；審核 IRG 摘要 |
 | 145 | IRG Member | 對 NSOA 活動進行 IRG 投票 |
 | 146 | VPSLA Secretary | 管理 VP 評審；選組；判定是否達成共識 |
@@ -66,7 +70,7 @@
 |:----------|:--------|
 | Guest Endorsement | 由 `Dean`、`Delegate` 承擔；僅在活動有外部嘉賓時出現 |
 | Sponsorship Approval | 由 `Dean`、`Delegate` 承擔；僅在活動有贊助時出現 |
-| Final Guest Approval | 由 `VPRD`、`VPRD Delegate` 承擔；只要活動有外部嘉賓就可能出現。`非 NSOA` 在一般高級審批後進入；`NSOA` 在 `Chair PASS` 後進入 |
+| Final Guest Approval | 由 `VP(RD)`、`VP(RD) Delegate` 承擔；只要活動有外部嘉賓就可能出現。`非 NSOA` 在一般高級審批後進入；`NSOA` 在 `Chair PASS` 後進入 |
 | Supervisor 多實例 | `Activity Application Referrer` 是當前系統角色名稱；具體本次審核的 Supervisor 名單由活動數據（`activity_supervisor` 表）逐活動指派 |
 | VP ChairPerson | 由 `VPSLA Secretary` 在 ⑩ 選組階段指定的一位 `VPSLA Member` |
 
@@ -74,6 +78,7 @@
 > 1. 最新 Java 啟動代碼已把活動發布流程的 `coordinatorGroupId` 改為 `115`，因此本文以 `Coordinator (115)` 為主。
 > 2. SQL 歷史補丁中同時存在 `140` 舊口徑與 `115` 新口徑；若環境未完整同步，介面與資料可能仍混用。
 > 3. 當前運行時代碼已把 guest 相關變量拆成三組：`guestEndorsementGroupIds = 149,150`、`sponsorshipApproverGroupIds = 149,150`、`vprdApproverGroupIds = 151,152`。
+> 4. `Head (148)` 雖仍存在於 `SYSTEM_ROLE` 裡，但**當前 `activity_publish` BPMN 標準主線不再把 148 放入候選組**；Guest Endorsement 與 Sponsorship Approval 的實際候選組都是 `149,150`，即 `Dean / Delegate`。
 
 ### 2.3 多人並行 / 候選組規則
 
@@ -127,7 +132,7 @@
 | ④ | EO 審批 | EO Venue Reviewer | Phase 3 |
 | ⑤ | 嘉賓背書 | Dean / Delegate | Phase 3 |
 | ⑥ | 贊助審批 | Dean / Delegate | Phase 3 |
-| ⑦ | 最終嘉賓審批 | VPRD / VPRD Delegate | Phase 3 |
+| ⑦ | 最終嘉賓審批 | VP(RD) / VP(RD) Delegate | Phase 3 |
 | ⑧ | IRG 選組 | IRG Secretary | Phase 4 |
 | ⑨ | IRG 投票 | IRG Member（並行） | Phase 4 |
 | ⑩ | IRG 摘要審核 | IRG Secretary | Phase 4 |
@@ -160,7 +165,7 @@ flowchart TD
         Checker["② Checker 審核<br/>(Activity Application Checker)"]
         Checker --> CheckerGate{Checker 是否通過?}
         CheckerGate -->|"通過"| Supervisors
-        CheckerGate -->|"拒絕"| EndRejected
+        CheckerGate -->|"退回"| EndReturned
     end
 
     subgraph Phase2["Phase 2: Supervisor 審核"]
@@ -210,7 +215,7 @@ flowchart TD
         FinalGuestCheck -->|"是"| Guest
         FinalGuestCheck -->|"否"| PublishTask
 
-        Guest["⑦ 最終嘉賓審批<br/>(VPRD / VPRD Delegate)"]
+        Guest["⑦ 最終嘉賓審批<br/>(VP(RD) / VP(RD) Delegate)"]
         Guest --> GuestGate{是否通過?}
         GuestGate -->|"通過"| PublishTask
         GuestGate -->|"拒絕"| EndRejected
@@ -306,7 +311,7 @@ flowchart LR
     I -->|"是"| J["⑥ 贊助審批<br/>(Dean / Delegate)"]
     I -->|"否"| K{是否有外部嘉賓?}
     J --> K
-    K -->|"是"| L["⑦ 最終嘉賓審批<br/>(VPRD / VPRD Delegate)"]
+    K -->|"是"| L["⑦ 最終嘉賓審批<br/>(VP(RD) / VP(RD) Delegate)"]
     K -->|"否"| Pub
     L --> Pub
     Pub[/"auto: 發布活動"/]
@@ -363,7 +368,7 @@ flowchart TD
     FinalGate -->|"PASS"| FinalGuestCheck{有外部嘉賓?}
     FinalGate -->|"REJECT"| EndRejected(["End: REJECTED"])
     FinalGate -->|"RETURN"| EndReturned(["End: RETURNED"])
-    FinalGuestCheck -->|"是"| FinalGuest["⑦ 最終嘉賓審批<br/>(VPRD / VPRD Delegate)"]
+    FinalGuestCheck -->|"是"| FinalGuest["⑦ 最終嘉賓審批<br/>(VP(RD) / VP(RD) Delegate)"]
     FinalGuestCheck -->|"否"| EndApproved(["End: APPROVED<br/>(發布活動)"])
     FinalGuest --> EndApproved
 
@@ -413,7 +418,7 @@ flowchart TD
 - **動作**：對活動內容作詳細審查
 - **結果**：
   - 通過 → 進入 ③ Supervisors 審核
-  - 拒絕 → 流程結束（`REJECTED`）
+  - 退回 → 流程結束（`RETURNED`）
 
 ### ③ Supervisors 審核（並行）
 
@@ -460,7 +465,7 @@ flowchart TD
 
 ### ⑦ 最終嘉賓審批
 
-- **執行人**：VPRD / VPRD Delegate（候選組,先到先審）
+- **執行人**：VP(RD) / VP(RD) Delegate（候選組,先到先審）
 - **觸發條件**：活動聲明有外部嘉賓，且：
   - `非 NSOA`：在一般高級審批後進入
   - `NSOA`：在 `Chair PASS` 後進入
@@ -533,7 +538,7 @@ flowchart TD
 | 決策點 | 決定 | 最終狀態 | 申請人後續可進行 |
 |:-------|:-----|:--------|:----------------|
 | ① Coordinator | 退回 | `RETURNED` | 修改後重新提交 |
-| ② Checker | 拒絕 | `REJECTED` | — |
+| ② Checker | 退回 | `RETURNED` | 修改後重新提交 |
 | ③ Supervisor 聚合 | `RETURN` | `RETURNED` | 修改後重新提交 |
 | ③ Supervisor 聚合 | `REJECT` | `REJECTED` | — |
 | ④ EO | 退回 | （不結束）回到 ③ Supervisors 重新審核 | — |
@@ -550,7 +555,7 @@ flowchart TD
 
 ### 場景 1：非 NSOA 最簡路徑
 
-**條件**：非 NSOA, 無 Checker, 場地不涉及課後使用, 無贊助, 無外部嘉賓
+**條件**：非 NSOA, 無 Checker, 不涉及 `campus public venue`, 場地不涉及課後使用, 無贊助, 無外部嘉賓
 
 ```
 ① Coordinator → ③ Supervisor → 聚合(RECOMMEND) → 發布 ✅
@@ -561,7 +566,7 @@ flowchart TD
 **條件**：非 NSOA, 需 Checker, 場地涉及課後使用, 有贊助, 有外部嘉賓
 
 ```
-① Coordinator → ② Activity Application Checker → ③ Supervisor → 聚合 → ④ EO Venue Reviewer → ⑤ Dean / Delegate 背書 → ⑥ Dean / Delegate 贊助審批 → ⑦ VPRD / VPRD Delegate → 發布 ✅
+① Coordinator → ② Activity Application Checker → ③ Supervisor → 聚合 → ④ EO Venue Reviewer → ⑤ Dean / Delegate 背書 → ⑥ Dean / Delegate 贊助審批 → ⑦ VP(RD) / VP(RD) Delegate → 發布 ✅
 ```
 
 ### 場景 3：非 NSOA + EO 退回
@@ -574,7 +579,7 @@ flowchart TD
 
 ### 場景 4：NSOA 最簡路徑
 
-**條件**：NSOA, 無 Checker, 場地不涉及課後使用, 無贊助, 無外部嘉賓
+**條件**：NSOA, 無 Checker, 不涉及 `campus public venue`, 場地不涉及課後使用, 無贊助, 無外部嘉賓
 
 ```
 ① Coordinator → ③ Supervisor → 聚合
@@ -583,7 +588,7 @@ flowchart TD
 → 並行: { ⑧ IRG 選組 → ⑨ IRG 投票 → ⑩ IRG 審核 → IRG 完成 }
          { ⑪ VP 選組 → ⑫ VP 投票 }
 → 並行 Join → VP AI 摘要 → ⑬ VP 共識 → ⑭ VP ChairPerson 決定
-→ （如有外部嘉賓）⑦ VPRD / VPRD Delegate → 發布 ✅
+→ （如有外部嘉賓）⑦ VP(RD) / VP(RD) Delegate → 發布 ✅
 ```
 
 ### 場景 5：NSOA 完整路徑 + VP 多輪投票
@@ -599,7 +604,7 @@ flowchart TD
 → ⑪ VP 選組(第 2 輪) → ⑫ VP 投票 → VP AI 摘要 → ⑬ VP 共識(否)
 → ⑪ VP 選組(第 3 輪) → ⑫ VP 投票 → VP AI 摘要 → ⑬ VP 共識(否)
 → ⑭ VP ChairPerson 決定（強制進入）
-→ （如有外部嘉賓）⑦ VPRD / VPRD Delegate
+→ （如有外部嘉賓）⑦ VP(RD) / VP(RD) Delegate
 → 發布／拒絕／退回
 ```
 
@@ -613,7 +618,7 @@ flowchart TD
 |:-------:|:------------|:--------|:-----------|:----------|
 | - | Group Leader | 發起申請 | 學生組織負責人,提交活動申請以觸發審批流程 | ① Coordinator 審核 |
 | 115 | Coordinator | ① Coordinator 審核 | 初審活動基本信息;判斷是否需要 Activity Application Checker;如需要則指派一位 Checker | 通過且需 Checker → ② Activity Application Checker 審核;通過且無需 → ③ Supervisor 審核;退回 → 流程結束（`RETURNED`,可修改後重新提交） |
-| 142 | Activity Application Checker | ② Checker 審核 | 由 Coordinator 指派,對活動內容作詳細審查 | 通過 → ③ Supervisor 審核;拒絕 → 流程結束（`REJECTED`） |
+| 142 | Activity Application Checker | ② Checker 審核 | 由 Coordinator 指派,對活動內容作詳細審查 | 通過 → ③ Supervisor 審核;退回 → 流程結束（`RETURNED`,可修改後重新提交） |
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 並行多人,各自給 `RECOMMEND` / `REJECT` / `RETURN` 個人決定;同時確認場地是否課後使用 | 全員提交後系統按聚合規則得出最終結果（見 §5） |
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
@@ -621,8 +626,8 @@ flowchart TD
 | 141 | EO Venue Reviewer | ④ EO 審批 | 審批場地課後使用（僅當 Supervisor 在 ③ 確認場地涉及課後使用時觸發） | 通過 → ⑤ 贊助審批（如有贊助）或 ⑥ 嘉賓;退回 → 回到 ③ Supervisor 重新審核（循環,非拒絕） |
 | 149 | Dean | ⑤ 嘉賓背書 / ⑥ 贊助審批 (候選組之一) | 對外部嘉賓先作背書，並承接贊助審批 | ⑤ 通過 → ⑥；⑥ 通過 → 進入 NSOA / 非 NSOA 分流 |
 | 150 | Delegate | ⑤ 嘉賓背書 / ⑥ 贊助審批 (候選組之一) | 與 Dean 共用候選組，先到先審 | 同 ⑤ / ⑥ 各自的下一環節 |
-| 151 | VPRD | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的最終外部嘉賓審批角色；`非 NSOA` 直接進入，`NSOA` 於 `Chair PASS` 後進入 | 通過 → 直接發布;拒絕 → `REJECTED` |
-| 152 | VPRD Delegate | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的最終外部嘉賓審批委派角色；`非 NSOA` 直接進入，`NSOA` 於 `Chair PASS` 後進入 | 通過 → 直接發布;拒絕 → `REJECTED` |
+| 151 | VP(RD) | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的最終外部嘉賓審批角色；`非 NSOA` 直接進入，`NSOA` 於 `Chair PASS` 後進入 | 通過 → 直接發布;拒絕 → `REJECTED` |
+| 152 | VP(RD) Delegate | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的最終外部嘉賓審批委派角色；`非 NSOA` 直接進入，`NSOA` 於 `Chair PASS` 後進入 | 通過 → 直接發布;拒絕 → `REJECTED` |
 | - | （系統判斷）| 是否為 NSOA? | 根據活動是否標記為 NSOA 分流 | 是 → 進入並行 IRG / VP 評審分支;否 → 直接發布（`APPROVED`） |
 | 144 | IRG Secretary | ⑧ IRG 選組 | 選擇本次的 IRG 評審組 | → 系統自動加載 IRG 成員,進入 ⑨ |
 | 145 | IRG Member | ⑨ IRG 投票 (多實例) | 並行多人,各自投 `RECOMMEND` / `RESERVE` / `REJECT` | 全員投票完成 → auto: AI 生成 IRG 摘要 → ⑩ |

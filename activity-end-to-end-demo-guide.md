@@ -3,8 +3,9 @@
 > 本文檔面向 Demo 執行人、UAT 測試人與業務培訓人員，目標是讓使用者**不依賴開發人員陪同**，也能從活動草稿一路走到最終審批完成。
 >
 > 本指南基於 `SLAS_PRO` / `SLAS_UI` 當前實現撰寫。
-> 需注意：最新 guest 流程已拆成 `Dean / Delegate 背書` + `VPRD / VPRD Delegate 最終審批`。  
-> `非 NSOA` 會在一般高級審批後進入 `VPRD`；`NSOA` 會在 `Chair PASS` 後進入 `VPRD`。
+> 需注意：最新 guest 流程已拆成 `Dean / Delegate 背書` + `VP(RD) / VP(RD) Delegate 最終審批`。  
+> `非 NSOA` 會在一般高級審批後進入 `VP(RD)`；`NSOA` 會在 `Chair PASS` 後進入 `VP(RD)`。
+> 文中按最新 `SYSTEM_ROLE.NAME` 使用 `VP(RD)` / `VP(RD) Delegate`；流程實作與部分 UI 仍常寫作 `VPRD / VPRD Delegate`。
 
 ---
 
@@ -13,11 +14,11 @@
 本次 Demo 建議拆成兩條主線：
 
 1. **NSOA 主線**
-   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → IRG → VP → Chair → VPRD / VPRD Delegate`
+   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → IRG → VP → Chair → VP(RD) / VP(RD) Delegate`
 2. **非 NSOA 主線**
-   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → VPRD / VPRD Delegate`
+   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → VP(RD) / VP(RD) Delegate`
 
-若時間有限，可優先演示 NSOA 主線；它能覆蓋 `IRG / VP / Chair` 以及 `VPRD` 最終嘉賓審批。
+若時間有限，可優先演示 NSOA 主線；它能覆蓋 `IRG / VP / Chair` 以及 `VP(RD)` 最終嘉賓審批。
 
 共同準備條件：
 
@@ -31,7 +32,7 @@
    - 多名 Supervisors
 4. Supervisor 至少有 1 人勾選場地相關確認，以觸發 EO。
 5. `NSOA = Yes` 時，覆蓋 IRG / VP / Chair。
-6. `NSOA = No` 時，可快速覆蓋一般高級審批後的 `VPRD / VPRD Delegate` 最終嘉賓審批。
+6. `NSOA = No` 時，可快速覆蓋一般高級審批後的 `VP(RD) / VP(RD) Delegate` 最終嘉賓審批。
 
 ---
 
@@ -47,8 +48,8 @@
 | Activity Application Checker | `Activity Application Checker` | 詳細審查 |
 | Activity Application Referrer 1 / 2 | `Activity Application Referrer` | 並行投票與確認 |
 | EO Venue Reviewer | `EO Venue Reviewer` | EO 審批 |
-| Head / Activity Application Reviewer | `Head` / `Activity Application Reviewer` | 贊助審批 |
-| VPRD / VPRD Delegate | `VPRD` 或 `VPRD Delegate` | 外部嘉賓審批 |
+| Dean / Delegate | `Dean` / `Delegate` | 嘉賓背書 / 贊助審批 |
+| VP(RD) / VP(RD) Delegate | `VP(RD)` 或 `VP(RD) Delegate` | 外部嘉賓審批 |
 | IRG Secretary | `IRG Secretary` | 選 IRG group、審核 IRG 摘要 |
 | IRG Member 1 / 2 | `IRG Member` | IRG 投票 |
 | VPSLA Secretary | `VPSLA Secretary` | 選 VP group、檢查共識 |
@@ -72,16 +73,18 @@
 | `hro-test-074` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 1 |
 | `hro-test-075` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 2 |
 | `hro-test-076` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 3 |
-| `hro-test-090` | 148 | Head | Y | 贊助審批 | Sponsorship |
-| `hro-test-091` | 149 | Activity Application Reviewer | Y | 高級審批相關節點 | 歷史帳號名可能仍顯示 Dean |
-| `hro-test-092` | 150 | Delegate | - | 舊內容/嘉賓審批口徑 | 僅在舊環境口徑中可能出現 |
+| `hro-test-091` | 149 | Dean | Y | 嘉賓背書 / 贊助審批 | Guest Endorsement / Sponsorship |
+| `hro-test-092` | 150 | Delegate | - | 嘉賓背書 / 贊助審批 | 與 Dean 共用候選組，先到先審 |
 | `hro-test-077` | 144 | IRG Secretary | N | IRG 秘書 | IRG 選組 / 摘要審核 |
 | `hro-test-078 ~ hro-test-082` | 145 | IRG Member | N | IRG 成員投票（多實例） | IRG 投票 |
 | `hro-test-083` | 146 | VPSLA Secretary | N | VP 秘書 | VP Select Group / VP Check Consensus |
 | `hro-test-084 ~ hro-test-088` | 147 | VPSLA Member | N | VP 成員投票（多實例） | VP Vote |
 | `hro-test-089` | 147 | VPSLA Member / VP ChairPerson | Y | VP 主席決定 | 需在 VP Group 中設為 `CHAIRPERSON` |
-| `待確認` | 151 | VPRD | Y | 嘉賓審批 | 若環境已完成新口徑切換，應由此角色承接 |
-| `待確認` | 152 | VPRD Delegate | Y | 嘉賓審批（委派） | 若環境已完成新口徑切換，應由此角色承接 |
+| `待確認` | 151 | VP(RD) | Y | 嘉賓審批 | 若環境已完成新口徑切換，應由此角色承接 |
+| `待確認` | 152 | VP(RD) Delegate | Y | 嘉賓審批（委派） | 若環境已完成新口徑切換，應由此角色承接 |
+
+> `Head (148)` 目前仍存在於角色表中，但按最新 `activity_publish` BPMN 與運行時變量，**標準活動發布主線不使用 148 作為贊助或嘉賓審批候選組**。  
+> 標準 Demo 請以 `Dean (149)`、`Delegate (150)` 為準。
 
 #### 2.1.2 OC Endorsement 帳號
 
@@ -105,8 +108,8 @@
 7. Activity Application Referrer 1
 8. Activity Application Referrer 2
 9. EO Venue Reviewer
-10. Head / Activity Application Reviewer
-11. VPRD / VPRD Delegate
+10. Dean / Delegate
+11. VP(RD) / VP(RD) Delegate
 12. IRG Secretary
 13. IRG Member 1
 14. IRG Member 2
@@ -202,13 +205,16 @@
    - 所有 Demo 參與者都能登入
    - 所有審批人都能看到 BPM 待辦
 
-5. **Checker / Supervisor / EO / Guest / Sponsorship 審批帳號可用**
+5. **Checker / Supervisor / EO / Dean / Delegate / Guest 審批帳號可用**
    - Coordinator 頁面能查到 Checker / Supervisor
-   - `VPRD` / `VPRD Delegate` 帳號能接收嘉賓審批任務
+   - `Dean / Delegate` 能接收 Guest Endorsement / Sponsorship 任務
+   - `VP(RD)` / `VP(RD) Delegate` 帳號能接收最終嘉賓審批任務
 
 6. **活動編輯鎖已啟用**
    - 最新代碼已加入活動表單 editing lock
-   - 同一時間建議只由 1 名申請人編輯同一筆活動
+   - 編輯既有活動時，前端會先嘗試取得 30 分鐘編輯鎖
+   - 同一時間建議只由 1 名申請人或 1 名 OC 成員編輯同一筆活動
+   - 若拿鎖失敗，當前 UI 會顯示錯誤訊息並跳回活動列表，而不是在原頁面顯示只讀鎖定狀態
 
 ### 3.2 建議示範活動資料
 
@@ -249,6 +255,7 @@
    - `Preview`
 
 > **編輯鎖提示**：如果你是打開一筆既有活動或草稿進行修改，系統可能先取得該活動的編輯鎖。Demo 中若多人輪流修改同一筆活動，請先由上一位使用者儲存或退出，避免被鎖定。
+> 需注意：按當前實作，「退出頁面」本身不一定立即釋放鎖；最可靠的是先完成一次儲存 / 更新，否則可能需要等待 30 分鐘超時。
 
 ### 4.2 申請人：填寫關鍵觸發欄位
 
@@ -384,11 +391,11 @@
 預期結果：
 
 1. `NSOA` 活動：直接進入 IRG / VP。
-2. `非 NSOA` 活動：如有外部嘉賓，進入 `VPRD / VPRD Delegate` 的 `Final Guest Approval`。
+2. `非 NSOA` 活動：如有外部嘉賓，進入 `VP(RD) / VP(RD) Delegate` 的 `Final Guest Approval`。
 
-### 5.7 VPRD / VPRD Delegate：最終外部嘉賓審批
+### 5.7 VP(RD) / VP(RD) Delegate：最終外部嘉賓審批
 
-1. `VPRD` 或 `VPRD Delegate` 打開 `Guest Approval`。
+1. `VP(RD)` 或 `VP(RD) Delegate` 打開 `Guest Approval`。
 2. 核對外部嘉賓名單。
 3. 選擇 `Approve`。
 4. 提交。
@@ -529,19 +536,23 @@
    - Coordinator 選擇 `Return`
    - 驗證申請人看到 `RETURNED`
 
-2. **Supervisor Return**
+2. **Checker Return**
+   - Checker 選擇紅色按鈕
+   - 驗證流程最終狀態是 `RETURNED`，不是 `REJECTED`
+
+3. **Supervisor Return**
    - 任一 Supervisor 選擇 `RETURN`
    - 驗證流程直接回到申請人
 
-3. **EO Return**
+4. **EO Return**
    - EO 選擇不通過 / 退回
    - 驗證流程回到 Supervisors
 
-4. **VP 多輪**
+5. **VP 多輪**
    - 第一輪故意分裂投票
    - VPSLA Secretary 發起第二輪
 
-5. **Chair Return**
+6. **Chair Return**
    - Chair 選擇 `RETURN`
    - 驗證活動被退回
 
@@ -583,7 +594,7 @@
 檢查：
 
 1. 活動是否真的設置了外部嘉賓
-2. `VPRD` / `VPRD Delegate` 角色在當前環境是否已正確配置
+2. `VP(RD)` / `VP(RD) Delegate` 角色在當前環境是否已正確配置
 3. 當前部署是否已同步 Guest Approval 的最新 BPMN / 角色映射
 4. 若任務仍未出現，請再確認運行環境是否正確提供 `vprdApproverGroupIds`
 
@@ -593,7 +604,9 @@
 
 1. 是否已有其他使用者先打開並編輯同一筆活動
 2. 是否仍在 30 分鐘編輯鎖有效期內
-3. 前一位使用者是否已經完成儲存、更新或退出
+3. 前一位使用者是否已經完成儲存或更新
+4. 若前一位只是直接關閉頁面，請考慮鎖可能仍要等到超時才會釋放
+5. 目前前端拿鎖失敗時，會提示錯誤並跳回 `ActivityListForStudent`；不會在原頁面顯示只讀鎖定狀態
 
 ---
 
@@ -611,7 +624,7 @@
    - 1 名 Activity Application Referrer
    - EO Venue Reviewer
    - Sponsorship Approval
-   - VPRD / VPRD Delegate
+   - VP(RD) / VP(RD) Delegate
    - IRG Secretary / IRG Members
    - VPSLA Secretary / VPSLA Members
    - Chair
