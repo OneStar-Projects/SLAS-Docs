@@ -88,52 +88,17 @@
 | 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
 |:---|:---:|:---|:---:|:---|:---|
 | `S1132367` | `11323677` | Group Leader | N | Student Group Leader（活動建立者） | 申請人 |
-| `S1132368` | `11323688` | Group Leader | N | OC Endorsement | 需在該活動 OC 名單內 |
-| `S1132369` | `11323699` | Group Leader | N | OC Endorsement | 需在該活動 OC 名單內 |
 
-#### 2.1.3 社團註冊審批帳號
-
-| 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
-|:---|:---:|:---|:---:|:---|:---|
-| `S1132367` | - | Group Leader | N | 發起申請 | 社團註冊申請人 |
-| `hro-test-093` | 122 | Registration Administrator | N | Node 1: 秘書審核 | 角色名需更新到最新 |
-| `hro-test-105` | 136 | Registration Checker | N | Node 2: 行政審核 | 角色名需更新到最新 |
-| `ro-test-102` | 132 | Registration Referrer | N | Node 3: 學術審核 | 角色名需更新到最新 |
-| `hro-test-094` | 123 | Registration Reviewer | N | Node 4: 收集意見（多實例） | Reviewer 1 |
-| `hro-test-095` | 123 | Registration Reviewer | N | Node 4: 收集意見（多實例） | Reviewer 2 |
-| `hro-test-096` | 123 | Registration Reviewer | N | Node 4: 收集意見（多實例） | Reviewer 3 |
-| `hro-test-106` | 138 | Registration Endorser | N | Node 5: 匯總審核 | 角色名需更新到最新 |
-| `hro-test-097` | 124 | Registration Approver | Y | Node 6: 最終審批 | Final Approver |
-| `hro-test-103` | 134 | Student Group Registration Approver Secretary | - | Node 6: 最終審批（備選） | 備用 |
-
-#### 2.1.4 註冊申訴審批帳號
-
-| 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
-|:---|:---:|:---|:---:|:---|:---|
-| `S1132367` | - | Group Leader | N | 發起申訴 | 申訴發起人 |
-| `hro-test-098` | 125 | Registration Appeal Reviewer | N | Node 1: 收集意見（多實例） | Reviewer 1 |
-| `hro-test-099` | 125 | Registration Appeal Reviewer | N | Node 1: 收集意見（多實例） | Reviewer 2 |
-| `hro-test-100` | 125 | Registration Appeal Reviewer | N | Node 1: 收集意見（多實例） | Reviewer 3 |
-| `hro-test-107` | 139 | Registration Appeal Endorser | N | Node 2: 匯總審核 | 角色名需更新到最新 |
-| `hro-test-101` | 126 | Registration Appeal Approver | Y | Node 3: 最終審批 | Final Approver |
-| `hro-test-104` | 135 | Student Group Appeal Approver Secretary | - | Node 3: 最終審批（備選） | 備用 |
-
-#### 2.1.5 其他可用 Group Leader 帳號
-
-- `S1155707`
-- `S1154233`
-- `S1155654`
-- `S1155751`
-- `S1155738`
-- `S1155923`
+> `OC Endorsement` 需另外準備 2 名實際在該活動 `OC` 名單內的 `Group Leader` 帳號。  
+> 先前文檔中的 `S1132368 / S1132369` 已移除，後續請按實際演示名單補入。
 
 ### 2.2 建議切號順序
 
 如果只有 1 台電腦演示，建議按下面順序切換帳號：
 
 1. 申請人
-2. OC 成員 A
-3. OC 成員 B
+2. 實際 OC 成員 A
+3. 實際 OC 成員 B
 4. 申請人
 5. Coordinator
 6. Activity Application Checker
