@@ -80,8 +80,8 @@
 | `hro-test-083` | 146 | VPSLA Secretary | N | VP 秘書 | VP Select Group / VP Check Consensus |
 | `hro-test-084 ~ hro-test-088` | 147 | VPSLA Member | N | VP 成員投票（多實例） | VP Vote |
 | `hro-test-089` | 147 | VPSLA Member / VP ChairPerson | Y | VP 主席決定 | 需在 VP Group 中設為 `CHAIRPERSON` |
-| `待確認` | 151 | VP(RD) | Y | 嘉賓審批 | 若環境已完成新口徑切換，應由此角色承接 |
-| `待確認` | 152 | VP(RD) Delegate | Y | 嘉賓審批（委派） | 若環境已完成新口徑切換，應由此角色承接 |
+| `hro-test-109` | 151 | VP(RD) | Y | 嘉賓審批 | 新口徑下承接最終嘉賓審批 |
+| `hro-test-110` | 152 | VP(RD) Delegate | Y | 嘉賓審批（委派） | 新口徑下承接最終嘉賓審批（委派） |
 
 > `Head (148)` 目前仍存在於角色表中，但按最新 `activity_publish` BPMN 與運行時變量，**標準活動發布主線不使用 148 作為贊助或嘉賓審批候選組**。  
 > 標準 Demo 請以 `Dean (149)`、`Delegate (150)` 為準。
