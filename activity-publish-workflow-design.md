@@ -43,30 +43,50 @@
 
 > 本節為**全文後續所有"拒絕 / 退回"描述**提供統一語義基礎。讀後續 §4 流程圖、§5 步驟詳述與 §6 結果表時請以本節為準。
 
-#### 1.5.1 通用節點：`/bpm/task/reject` 短路至 `endEventReturned`
+#### 1.5.1 高級審批節點：`approveTask(approved=false)` + BPMN gate 真正分支
 
-EO、Guest Endorsement、Sponsorship、Activity Content、Final Guest（VPRD）等高級審批節點，前端「拒絕」按鈕統一調用通用接口 `PUT /bpm/task/reject`，後端進入 `BpmTaskServiceImpl.rejectTask`。
+EO、Checker、Guest Endorsement、Sponsorship、Activity Content、Final Guest（VPRD）等審批節點，前端表單（`SimpleApprovalForm` / `ContentGuestApprovalForm`）的「通過」與「拒絕／退回」按鈕**統一調用** `PUT /bpm/task/approve`（[useApprovalFormBase.ts → submitApproval](https://example.invalid)），把使用者選擇通過 `variables: { approved: true | false }` 寫入流程變量。
 
-該方法**不走 BPMN 上畫的 `flow_xxx_rejected` sequence flow**。它的實際邏輯：
+```ts
+await approveTask({
+  id: props.taskId,
+  reason,
+  variables: { approved, ...variables },
+  taskStatus: approved ? undefined : BpmTaskStatus.RETURN
+})
+```
 
-1. 偵測流程定義裡是否存在 ID 含 `returned` 字樣的 EndEvent。
-2. `activity_publish.bpmn20.xml` 有 `endEventReturned` → 條件成立 → 直接 `moveTaskToEnd(processInstanceId, endEventReturned.getId(), ...)`。
-3. 流程實例狀態置為 `RETURN`，活動 `approvalStatus` 變 `RETURNED`，發送退回通知給申請人，**流程結束**。
+→ BPMN 上的 `flow_xxx_approved` / `flow_xxx_rejected`（或對應命名）**會真正按 `${approved == true/false}` 分流**，到哪個目標完全由 BPMN 定義決定，並非短路到 `endEventReturned`。
 
-因此：
-- 任何上述節點選擇「拒絕」，**結局都是申請人收到退回通知，可改稿後從草稿重新提交**。
-- BPMN 上畫的 `flow_xxx_rejected → supervisorsReviewTask` 是**無法被觸發的死代碼**，僅作流程定義文件結構完整性保留。
+具體每個節點 reject/return 的去向，請看以下對照表（以 `activity_publish.bpmn20.xml` 為準）：
 
-#### 1.5.2 例外節點：使用 `approveTask + 顯式變量` 真正走 BPMN gate
+| 節點 | reject/return 後實際去向 | 業務含義 |
+|:----|:----------------------|:--------|
+| ② Checker | `endEventReturned` | 流程結束，申請人可修改後重新提交 |
+| ④ EO | `supervisorsReviewTask` | 回到 ③ Supervisor 多實例**重新審核** |
+| ⑤ Guest Endorsement | `supervisorsReviewTask` | 回到 ③ Supervisor 重審 |
+| ⑥ Sponsorship | `supervisorsReviewTask` | 回到 ③ Supervisor 重審 |
+| ⑥' Activity Content | `supervisorsReviewTask` | 回到 ③ Supervisor 重審 |
+| ⑦ Final Guest（VPRD） | `endEventRejected` | 流程結束，活動申請被駁回 |
 
-下列節點不走通用 `/bpm/task/reject`，而由各自服務方法封裝 `approveTask`，把決定塞進流程變量讓 gate 真正分支：
+> 注意：上述「回到 Supervisor」並非 bug 而是 BPMN `<!-- EO returns → back to Supervisors (no reject path) -->` 等明文設計。對需要「直接退回申請人」的場景，應由 ③ Supervisor 在重審時自行投 `RETURN` / `REJECT`，由聚合委托 + `supervisorsDecisionGate` 真正結束流程。
+
+#### 1.5.2 通用 `rejectTask` 短路機制（目前 activity_publish 流程**沒有節點調用**）
+
+`BpmTaskServiceImpl.rejectTask` 內部存在一段「若流程定義包含 ID 含 `returned` 的 EndEvent 則短路 `moveTaskToEnd` 到該 EndEvent」的邏輯，但 **`activity_publish` 流程的所有審批節點目前都不調用這條接口**——前端統一走 `approveTask`（見 §1.5.1），supervisor / chair 走自己的專屬服務方法（見 §1.5.3）。本節僅作框架行為記錄，方便排查時對齊；本流程文檔中**所有 reject/return 描述以 §1.5.1 / §1.5.3 為準**。
+
+#### 1.5.3 專屬服務節點：`supervisorApprove` / `chairPersonDecision` 直接寫流程變量
+
+下列節點不通過 `SimpleApprovalForm`，而是各自的專屬表單 + 專屬服務方法封裝 `approveTask`，再把決定塞進流程變量讓 gate 真正分支：
 
 | 節點 | 服務方法 | 如何向 BPMN 表達"非通過"決定 |
 |:----|:--------|:-----------------------|
 | ③ Supervisor | `supervisorApprove(...)` | 設 `supvAggregateDecision = REJECT / RETURN`、`supervisorsAllApproved = false`，BPMN gate 真正按值分流 → `endEventRejected` 或 `endEventReturned` |
 | ⑭ ChairPerson | `chairPersonDecision(...)` | 設 `chairDecision = PASS / REJECT / RETURN`，BPMN gate 真正按值分流 |
 
-#### 1.5.3 ⑭ ChairPerson `RETURN` 已知不一致（待業務確認）
+> **已知問題**：`supervisorApprove` 的多人聚合目前實際"最後一個投票人說了算"——`ActivitySupervisorAggregateDelegate` 想讀 `supvDecisions` 集合，但 BPMN 多實例任務沒有 `flowable:outputCollection` 配置、Java 端也沒有累積寫入該變量，聚合委托因此 fallback 到讀單個 `supvDecision`（每次投票覆蓋）。產品設計的「任一 RETURN → 整體 RETURN」規則在當前生產環境**未生效**。修法待跟進（BPMN 補 outputCollection / outputElement，或 Java 端維護累積列表）。
+
+#### 1.5.4 ⑭ ChairPerson `RETURN` 已知不一致（待業務確認）
 
 `chairPersonDecision` 在處理 `RETURN` 時做了**兩件事**，目前互相矛盾：
 
@@ -77,7 +97,7 @@ EO、Guest Endorsement、Sponsorship、Activity Content、Final Guest（VPRD）�
 
 > 本文後續涉及 ⑭ Chair `RETURN` 的描述均按目前實際行為標注，並保留「**待業務確認**」標記，等修正方向確定後再統一更新。
 
-#### 1.5.4 supervisor 在 ③ 步勾選的"贊助／嘉賓"等附加標記不影響後續 gate
+#### 1.5.5 supervisor 在 ③ 步勾選的"贊助／嘉賓"等附加標記不影響後續 gate
 
 主管審批表單裡的 `sponsorshipConfirmed` / `campusPublicVenueConfirmed` / `venueAfterHoursConfirmed` / `elatEligible` 等欄位中：
 
