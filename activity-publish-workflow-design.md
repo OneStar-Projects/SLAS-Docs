@@ -43,6 +43,18 @@
 
 > 本節為**全文後續所有"拒絕 / 退回"描述**提供統一語義基礎。讀後續 §4 流程圖、§5 步驟詳述與 §6 結果表時請以本節為準。
 
+> ⚠️ **已知 BUG 待修（解決後請刪除本框並同步全文相關備註，搜索關鍵字 `TODO[supv-agg-bug]`）**
+>
+> **`supervisorApprove` 多人聚合不工作**（詳見 §1.5.3）。`ActivitySupervisorAggregateDelegate` 想讀的 `supvDecisions` 集合在當前代碼裡**沒有任何地方寫入**——BPMN 多實例任務沒配 `flowable:outputCollection`，Java 端也沒累積寫回。聚合委托 fallback 到讀單個 `supvDecision`，**最後一個投票人說了算**。
+>
+> 影響：產品設計的「任一 RETURN → 整體 RETURN」與「任一 REJECT 且無 RETURN → REJECT」規則在生產環境**完全失效**。實測 3 人投 [RECOMMEND, RETURN, RECOMMEND] 會聚合成 RECOMMEND 並繼續走到 EO，而不是退回申請人。
+>
+> 修法（兩選一，以 BPMN 改動為首選）：
+> 1. 在 `supervisorsReviewTask` 的 `multiInstanceLoopCharacteristics` 加 `flowable:outputCollection="supvDecisions"` + `flowable:outputElement="${supvDecision}"`，由 Flowable 自動累積；無需 Java 改動
+> 2. 在 `ActivityApprovalServiceImpl.supervisorApprove` 裡讀現有 `supvDecisions` list、append 當前 decision、`variables.put` 寫回；要注意並發 lost-update
+>
+> 解決後需要同步更新的位置：本節 §1.5.3 已知問題塊、§4.1 流程圖 `SuperGate` 節點備註、§7 各場景中關於 supervisor 聚合的描述。
+
 #### 1.5.1 高級審批節點：`approveTask(approved=false)` + BPMN gate 真正分支
 
 EO、Checker、Guest Endorsement、Sponsorship、Activity Content、Final Guest（VPRD）等審批節點，前端表單（`SimpleApprovalForm` / `ContentGuestApprovalForm`）的「通過」與「拒絕／退回」按鈕**統一調用** `PUT /bpm/task/approve`（[useApprovalFormBase.ts → submitApproval](https://example.invalid)），把使用者選擇通過 `variables: { approved: true | false }` 寫入流程變量。
@@ -84,7 +96,7 @@ await approveTask({
 | ③ Supervisor | `supervisorApprove(...)` | 設 `supvAggregateDecision = REJECT / RETURN`、`supervisorsAllApproved = false`，BPMN gate 真正按值分流 → `endEventRejected` 或 `endEventReturned` |
 | ⑭ ChairPerson | `chairPersonDecision(...)` | 設 `chairDecision = PASS / REJECT / RETURN`，BPMN gate 真正按值分流 |
 
-> **已知問題**：`supervisorApprove` 的多人聚合目前實際"最後一個投票人說了算"——`ActivitySupervisorAggregateDelegate` 想讀 `supvDecisions` 集合，但 BPMN 多實例任務沒有 `flowable:outputCollection` 配置、Java 端也沒有累積寫入該變量，聚合委托因此 fallback 到讀單個 `supvDecision`（每次投票覆蓋）。產品設計的「任一 RETURN → 整體 RETURN」規則在當前生產環境**未生效**。修法待跟進（BPMN 補 outputCollection / outputElement，或 Java 端維護累積列表）。
+> ⚠️ **已知 BUG `TODO[supv-agg-bug]`**：`supervisorApprove` 的多人聚合目前實際"最後一個投票人說了算"——`ActivitySupervisorAggregateDelegate` 想讀 `supvDecisions` 集合，但 BPMN 多實例任務沒有 `flowable:outputCollection` 配置、Java 端也沒有累積寫入該變量，聚合委托因此 fallback 到讀單個 `supvDecision`（每次投票覆蓋）。產品設計的「任一 RETURN → 整體 RETURN」規則在當前生產環境**未生效**。修法見 §1.5 頂部 TODO 框。**解決後請刪除本備註與 §1.5 頂部 TODO 框，並把 §4.1 `SuperGate` 節點的備註恢復成正常文案。**
 
 #### 1.5.4 ⑭ ChairPerson `RETURN` 已知不一致（待業務確認）
 
@@ -243,7 +255,7 @@ flowchart TD
 
     subgraph Phase2["Phase 2: Supervisor 審核"]
         Supervisors["③ Supervisors 審核<br/>(Supervisors, 並行)"]
-        Supervisors --> SuperAggregate[/"auto: 聚合 Supervisor 投票"/]
+        Supervisors --> SuperAggregate[/"auto: 聚合 Supervisor 投票<br/>⚠️ 當前實際:最後一個投票人說了算<br/>(已知 BUG, 見 §1.5)"/]
         SuperAggregate --> SuperGate{聚合結果?}
         SuperGate -->|"RECOMMEND"| EoCheck
         SuperGate -->|"RETURN"| EndReturned
@@ -258,7 +270,7 @@ flowchart TD
         EO["④ EO 審批<br/>(EO Venue Reviewer)"]
         EO --> EoGate{EO 是否通過?}
         EoGate -->|"通過"| GuestEndorsementCheck
-        EoGate -.->|"退回<br/>(rejectTask 短路, 見 §1.5.1)"| EndReturned
+        EoGate -.->|"退回<br/>(回 ③ Supervisor 重審, 見 §1.5.1)"| Supervisors
 
         GuestEndorsementCheck{是否有外部嘉賓?}
         GuestEndorsementCheck -->|"是"| GuestEndorsement
@@ -267,7 +279,7 @@ flowchart TD
         GuestEndorsement["⑤ 嘉賓背書<br/>(Dean / Delegate)"]
         GuestEndorsement --> GuestEndorsementGate{是否通過?}
         GuestEndorsementGate -->|"通過"| SponsorCheck
-        GuestEndorsementGate -.->|"拒絕<br/>(rejectTask 短路, 見 §1.5.1)"| EndReturned
+        GuestEndorsementGate -.->|"拒絕<br/>(回 ③ Supervisor 重審, 見 §1.5.1)"| Supervisors
 
         SponsorCheck{是否有贊助?}
         SponsorCheck -->|"是"| Sponsor
@@ -276,12 +288,12 @@ flowchart TD
         Sponsor["⑥ 贊助審批<br/>(Dean / Delegate)"]
         Sponsor --> SponsorGate{是否通過?}
         SponsorGate -->|"通過"| ContentApproval
-        SponsorGate -.->|"拒絕<br/>(rejectTask 短路, 見 §1.5.1)"| EndReturned
+        SponsorGate -.->|"拒絕<br/>(回 ③ Supervisor 重審, 見 §1.5.1)"| Supervisors
 
         ContentApproval["⑥' 活動內容審批 (必經)<br/>(Dean / Delegate)"]
         ContentApproval --> ContentGate{是否通過?}
         ContentGate -->|"通過"| NsoaCheck
-        ContentGate -.->|"拒絕 / 退回<br/>(rejectTask 短路, 見 §1.5.1)"| EndReturned
+        ContentGate -.->|"拒絕 / 退回<br/>(回 ③ Supervisor 重審, 見 §1.5.1)"| Supervisors
     end
 
     subgraph Phase4["Phase 4: NSOA / 非 NSOA 分流"]
@@ -296,7 +308,7 @@ flowchart TD
         Guest["⑦ 最終嘉賓審批<br/>(VP(RD) / VP(RD) Delegate)"]
         Guest --> GuestGate{是否通過?}
         GuestGate -->|"通過"| PublishTask
-        GuestGate -.->|"拒絕<br/>(rejectTask 短路, 見 §1.5.1)"| EndReturned
+        GuestGate -.->|"拒絕<br/>(流程結束, 見 §1.5.1)"| EndRejected
 
         ParallelFork(["Parallel Fork"])
         ParallelFork --> IRGSelect
@@ -343,7 +355,7 @@ flowchart TD
         Chair --> ChairGate{Chair 決定?}
         ChairGate -->|"PASS"| FinalGuestCheck
         ChairGate -->|"REJECT"| EndRejected
-        ChairGate -.->|"RETURN<br/>(已知不一致, 見 §1.5.3)"| Supervisors
+        ChairGate -.->|"RETURN<br/>(已知不一致, 見 §1.5.4)"| Supervisors
     end
 
     PublishTask[/"auto: 發布活動"/]
@@ -365,7 +377,7 @@ flowchart TD
     style Phase6 fill:#FCE4EC,stroke:#AD1457
 ```
 
-> 圖中虛線 `-.->` 表示非主路徑，分三類：① 高級審批節點（EO / Guest Endorsement / Sponsorship / Activity Content / VPRD）拒絕時通過 `rejectTask` 短路至 `endEventReturned`，流程結束、申請人可改稿重提（見 §1.5.1）；② ⑫ VP 投票超時自動 ABSTAIN；③ IRG 完成後解鎖 VP 投票提交；④ ⑭ Chair `RETURN` 目前實際指向 ③ Supervisors（已知不一致，見 §1.5.3）。
+> 圖中虛線 `-.->` 表示非主路徑，分四類：① 高級審批節點 EO / Guest Endorsement / Sponsorship / Activity Content 拒絕／退回時，由 BPMN gate 真正回到 ③ Supervisors 重審（見 §1.5.1）；⑦ Final Guest Approval（VPRD）拒絕時走 `endEventRejected`、流程結束；② ⑫ VP 投票超時自動 ABSTAIN；③ IRG 完成後解鎖 VP 投票提交；④ ⑭ Chair `RETURN` 目前實際指向 ③ Supervisors（已知不一致，見 §1.5.4）。
 
 ### 4.2 非 NSOA 簡化路徑
 
@@ -447,7 +459,7 @@ flowchart TD
     Chair --> FinalGate{Chair 決定?}
     FinalGate -->|"PASS"| FinalGuestCheck{有外部嘉賓?}
     FinalGate -->|"REJECT"| EndRejected(["End: REJECTED"])
-    FinalGate -.->|"RETURN<br/>(已知不一致, 見 §1.5.3)<br/>實際:回 ③ Supervisor + status=RETURNED"| ChairReturnNode(["回 ③ Supervisor<br/>(BPMN 實際路徑,<br/>同時 status=RETURNED)"])
+    FinalGate -.->|"RETURN<br/>(已知不一致, 見 §1.5.4)<br/>實際:回 ③ Supervisor + status=RETURNED"| ChairReturnNode(["回 ③ Supervisor<br/>(BPMN 實際路徑,<br/>同時 status=RETURNED)"])
     FinalGuestCheck -->|"是"| FinalGuest["⑦ 最終嘉賓審批<br/>(VP(RD) / VP(RD) Delegate)"]
     FinalGuestCheck -->|"否"| EndApproved(["End: APPROVED<br/>(發布活動)"])
     FinalGuest --> EndApproved
@@ -622,7 +634,7 @@ flowchart TD
 - **結果**：
   - `PASS` → 系統自動發布活動,流程結束（`APPROVED`）
   - `REJECT` → 流程結束（`REJECTED`）
-  - `RETURN` → ⚠️ **已知不一致(見 §1.5.3)**：BPMN 實際指向 `supervisorsReviewTask`，會生成新的主管待辦任務；同時 Java 將 `activity.approvalStatus` 置為 `RETURNED`、發退回通知給申請人。審核歷史「下一個處理人」顯示主管。等業務確認最終語義後再統一
+  - `RETURN` → ⚠️ **已知不一致(見 §1.5.4)**：BPMN 實際指向 `supervisorsReviewTask`，會生成新的主管待辦任務；同時 Java 將 `activity.approvalStatus` 置為 `RETURNED`、發退回通知給申請人。審核歷史「下一個處理人」顯示主管。等業務確認最終語義後再統一
 
 ---
 
@@ -641,7 +653,7 @@ flowchart TD
 | ⑦ Final Guest Approval | 拒絕 | `RETURNED` | 修改後重新提交（rejectTask 短路, 見 §1.5.1。**此節不會產生 `REJECTED` 終局**） |
 | ⑭ ChairPerson | `PASS` | （如有外部嘉賓則進入 ⑦，否則 `APPROVED`） | — |
 | ⑭ ChairPerson | `REJECT` | `REJECTED` | — |
-| ⑭ ChairPerson | `RETURN` | ⚠️ 已知不一致(見 §1.5.3): 同時生成新主管待辦 + `activity.approvalStatus = RETURNED` | 待業務確認最終語義 |
+| ⑭ ChairPerson | `RETURN` | ⚠️ 已知不一致(見 §1.5.4): 同時生成新主管待辦 + `activity.approvalStatus = RETURNED` | 待業務確認最終語義 |
 
 ---
 
@@ -737,6 +749,6 @@ flowchart TD
 | 147 | VPSLA Member | ⑫ VP 投票 (多實例) | 同上 | 同上 |
 | 147 | VPSLA Member | ⑫ VP 投票 (多實例) | 同上 | 同上 |
 | 146 | VPSLA Secretary | ⑬ VP 共識決定 | 審核 VP 投票結果,手動判定是否達成共識（共識判定參考：排除棄權票後,所有有效票一致為 `APPROVE` 或 `REJECT`） | 達成共識 → ⑭ ChairPerson 決定;未達共識且輪次 < 3 → 回到 ⑪ 重新選組投票（循環,最多 3 輪）;未達共識且為第 3 輪 → 強制進入 ⑭ |
-| 147 | VP ChairPerson | ⑭ 最終決定 | 由 VPSLA Secretary 在 ⑪ 階段指定的一位 VPSLA Member,作最終決定 | `PASS` → 系統自動發布,流程結束（`APPROVED`）;`REJECT` → 流程結束（`REJECTED`）;`RETURN` → ⚠️ 已知不一致(見 §1.5.3): 生成新主管待辦 + `activity.approvalStatus = RETURNED`,審核歷史下一個處理人顯示主管 |
+| 147 | VP ChairPerson | ⑭ 最終決定 | 由 VPSLA Secretary 在 ⑪ 階段指定的一位 VPSLA Member,作最終決定 | `PASS` → 系統自動發布,流程結束（`APPROVED`）;`REJECT` → 流程結束（`REJECTED`）;`RETURN` → ⚠️ 已知不一致(見 §1.5.4): 生成新主管待辦 + `activity.approvalStatus = RETURNED`,審核歷史下一個處理人顯示主管 |
 
 > **多實例行說明**：上表中標 "多實例" 的角色（Supervisor、IRG Member、VP Member/VPSLA Member）以 3 行重複列出,僅作格式示意。實際運行時並行的人數依配置而定,可多可少。
