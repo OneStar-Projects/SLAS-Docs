@@ -69,7 +69,7 @@
 | 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
 |:---|:---:|:---|:---:|:---|:---|
 | `S1132367` | - | Group Leader | N | 發起申請 | 申請人 |
-| `hro-test-071` | 115 / 140 | Coordinator | N | 活動協調審核 | 需核對環境使用 `115` 還是歷史 `140` |
+| `hro-test-071` | 115 | Coordinator | N | 活動協調審核 | 一審 / 指派 Checker |
 | `hro-test-072` | 141 | EO Venue Reviewer | N | 場地審批 | EO |
 | `hro-test-073` | 142 | Activity Application Checker | N | 活動審核 | Checker |
 | `hro-test-074` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 1 |
@@ -595,7 +595,6 @@
 1. 對應帳號是否具備相關系統角色
 2. 帳號是否啟用
 3. 當前環境是否已同步到最新角色配置
-4. 若環境較舊，請確認活動發布流程是否仍錯誤使用 `140` 舊口徑，而非最新運行時的 `115 / Coordinator`
 
 ### 9.3 VPSLA Secretary 下拉裡沒有 VP Group
 
