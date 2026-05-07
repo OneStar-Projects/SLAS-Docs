@@ -75,8 +75,8 @@
 | `hro-test-074` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 1 |
 | `hro-test-075` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 2 |
 | `hro-test-076` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 3 |
-| `hro-test-091` | 149 | Dean | Y | 嘉賓背書 / 贊助審批 | Guest Endorsement / Sponsorship |
-| `hro-test-092` | 150 | Delegate | - | 嘉賓背書 / 贊助審批 | 與 Dean 共用候選組，先到先審 |
+| `hro-test-091` | 149 | Dean | Y | 嘉賓背書 / 贊助審批 / 活動內容審批 | Guest Endorsement / Sponsorship / Activity Content Approval |
+| `hro-test-092` | 150 | Delegate | - | 嘉賓背書 / 贊助審批 / 活動內容審批 | 與 Dean 共用候選組，先到先審 |
 | `hro-test-077` | 144 | IRG Secretary | N | IRG 秘書 | IRG 選組 / 摘要審核 |
 | `hro-test-078 ~ hro-test-082` | 145 | IRG Member | N | IRG 成員投票（多實例） | IRG 投票 |
 | `hro-test-083` | 146 | VPSLA Secretary | N | VP 秘書 | VP Select Group / VP Check Consensus |
@@ -209,7 +209,7 @@
 
 5. **Checker / Supervisor / EO / Dean / Delegate / Guest 審批帳號可用**
    - Coordinator 頁面能查到 Checker / Supervisor
-   - `Dean / Delegate` 能接收 Guest Endorsement / Sponsorship 任務
+   - `Dean / Delegate` 能接收 Guest Endorsement / Sponsorship / Activity Content Approval 任務
    - `VP(RD)` / `VP(RD) Delegate` 帳號能接收最終嘉賓審批任務
 
 6. **活動編輯鎖已啟用**
@@ -369,7 +369,7 @@
 預期結果：
 
 1. 如有外部嘉賓，流程先進入 `Guest Endorsement`。
-2. 如無外部嘉賓，流程改進入 Sponsorship Approval 或後續分流。
+2. 如無外部嘉賓，流程會改進入 `Sponsorship Approval`（如有贊助）或直接進入 `Activity Content Approval`。
 
 ### 5.5 Dean / Delegate：外部嘉賓背書
 
@@ -381,7 +381,7 @@
 預期結果：
 
 1. 流程進入 Sponsorship Approval（如活動有贊助）。
-2. 如無贊助，流程直接進入 NSOA / 非 NSOA 分流。
+2. 如無贊助，流程直接進入 `Activity Content Approval`。
 
 ### 5.6 Dean / Delegate：贊助審批
 
@@ -401,7 +401,7 @@
 
 1. `Dean` 或 `Delegate` 打開 `Activity Content Approval`。
 2. 核對活動詳情、預算項目。
-3. 選擇 `Approve` / `Return`（退回申請人修改）/ `Reject`（駁回）。
+3. 選擇 `Approve`，或在當前實作中使用 `Return / Reject` 其中之一把流程退回給 Supervisor 重審。
 4. 提交。
 
 預期結果：
@@ -409,8 +409,9 @@
 1. `Approve`：
    - `NSOA` 活動：進入 IRG / VP / Chair。
    - `非 NSOA` 活動：如有外部嘉賓進入 `VP(RD) / VP(RD) Delegate`，否則直接發布。
-2. `Return`：申請被退回給申請人，可修改後重新提交。
-3. `Reject`：流程結束，活動申請被駁回。
+2. `Return / Reject`（當前 UI 兩個按鈕流程上等價）：
+   - BPMN 實際都會回到 `Supervisors Review`
+   - 最終是否變成 `RETURNED / REJECTED`，取決於 Supervisor 重審後的聚合結果
 
 ### 5.7 VP(RD) / VP(RD) Delegate：最終外部嘉賓審批
 
@@ -524,9 +525,9 @@
 
 預期結果：
 
-1. 流程結束。
-2. 活動變為 `APPROVED`。
-3. 系統自動發布活動。
+1. 若活動**有外部嘉賓**，流程會在 `Chair PASS` 後進入 `VP(RD) / VP(RD) Delegate` 的 `Final Guest Approval`。
+2. 若活動**沒有外部嘉賓**，流程才會在 `Chair PASS` 後直接結束。
+3. 只有在最終嘉賓審批通過，或本身沒有外部嘉賓時，活動才會變為 `APPROVED` 並自動發布。
 
 ---
 

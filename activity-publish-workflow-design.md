@@ -632,7 +632,9 @@ flowchart TD
 - **觸發條件**：⑫ 達成共識,或已完成 3 輪投票
 - **前置**：系統自動生成「主席建議」供 ChairPerson 參考
 - **結果**：
-  - `PASS` → 系統自動發布活動,流程結束（`APPROVED`）
+  - `PASS` → 先進入 `checkGuestGate`
+    - 如 `hasExternalGuest == true` → 進入 ⑦ 最終嘉賓審批
+    - 如 `hasExternalGuest == false` → 系統自動發布活動,流程結束（`APPROVED`）
   - `REJECT` → 流程結束（`REJECTED`）
   - `RETURN` → ⚠️ **已知不一致(見 §1.5.4)**：BPMN 實際指向 `supervisorsReviewTask`，會生成新的主管待辦任務；同時 Java 將 `activity.approvalStatus` 置為 `RETURNED`、發退回通知給申請人。審核歷史「下一個處理人」顯示主管。等業務確認最終語義後再統一
 
@@ -732,13 +734,13 @@ flowchart TD
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 並行多人,各自給 `RECOMMEND` / `REJECT` / `RETURN` 個人決定;同時確認場地是否課後使用 | 全員提交後系統按聚合規則得出最終結果（見 §5） |
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
-| - | （系統聚合）| auto: 聚合 Supervisor 投票 | 設計規則：任一 `RETURN` → 整體 `RETURN`;全員 `RECOMMEND` → 整體 `RECOMMEND`;含 `REJECT` 但無 `RETURN` → 整體 `REJECT`。⚠️ **當前實際:最後一個投票人說了算**（已知 BUG `TODO[supv-agg-bug]`，見 §1.5 頂部 TODO 框與 §1.5.3） | `RECOMMEND` → ④ EO 審批（如場地涉課後使用）或進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;`RETURN` → 流程結束（`RETURNED`）;`REJECT` → 流程結束（`REJECTED`） |
-| 141 | EO Venue Reviewer | ④ EO 審批 | 審批場地課後使用（僅當 Supervisor 在 ③ 確認場地涉及課後使用時觸發） | 通過 → 進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;退回 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
+| - | （系統聚合）| auto: 聚合 Supervisor 投票 | 設計規則：任一 `RETURN` → 整體 `RETURN`;全員 `RECOMMEND` → 整體 `RECOMMEND`;含 `REJECT` 但無 `RETURN` → 整體 `REJECT`。⚠️ **當前實際:最後一個投票人說了算**（已知 BUG `TODO[supv-agg-bug]`，見 §1.5 頂部 TODO 框與 §1.5.3） | `RECOMMEND` → ④ EO 審批（如涉及 `campus public venue` 或課後使用）或進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;`RETURN` → 流程結束（`RETURNED`）;`REJECT` → 流程結束（`REJECTED`） |
+| 141 | EO Venue Reviewer | ④ EO 審批 | 審批 `campus public venue` 與課後使用（僅當 Supervisor 在 ③ 確認其中任一項成立時觸發） | 通過 → 進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;退回 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
 | 149 | Dean | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 對外部嘉賓先作背書，承接贊助審批，並對活動內容 / 預算作必經的最終把關 | ⑤ 通過 → ⑥（如有贊助）或 ⑥'；⑥ 通過 → ⑥'；⑥' 通過 → 進入 NSOA / 非 NSOA 分流；⑤/⑥/⑥' 任一拒絕 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
 | 150 | Delegate | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 與 Dean 共用候選組，先到先審 | 同 ⑤ / ⑥ / ⑥' 各自的下一環節 |
 | 151 | VP(RD) | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的最終外部嘉賓審批角色；`非 NSOA` 直接進入，`NSOA` 於 `Chair PASS` 後進入 | 通過 → 直接發布;拒絕 → 流程結束（`REJECTED`，終局，見 §1.5.1） |
 | 152 | VP(RD) Delegate | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的最終外部嘉賓審批委派角色；`非 NSOA` 直接進入，`NSOA` 於 `Chair PASS` 後進入 | 通過 → 直接發布;拒絕 → 流程結束（`REJECTED`，終局，見 §1.5.1） |
-| - | （系統判斷）| 是否為 NSOA? | 根據活動是否標記為 NSOA 分流 | 是 → 進入並行 IRG / VP 評審分支;否 → 直接發布（`APPROVED`） |
+| - | （系統判斷）| 是否為 NSOA? | 根據活動是否標記為 NSOA 分流 | 是 → 進入並行 IRG / VP 評審分支;否 → 進入 `checkGuestGate`（有嘉賓 → ⑦；無嘉賓 → `APPROVED`） |
 | 144 | IRG Secretary | ⑧ IRG 選組 | 選擇本次的 IRG 評審組 | → 系統自動加載 IRG 成員,進入 ⑨ |
 | 145 | IRG Member | ⑨ IRG 投票 (多實例) | 並行多人,各自投 `RECOMMEND` / `RESERVE` / `REJECT` | 全員投票完成 → auto: AI 生成 IRG 摘要 → ⑩ |
 | 145 | IRG Member | ⑨ IRG 投票 (多實例) | 同上 | 同上 |
@@ -749,6 +751,6 @@ flowchart TD
 | 147 | VPSLA Member | ⑫ VP 投票 (多實例) | 同上 | 同上 |
 | 147 | VPSLA Member | ⑫ VP 投票 (多實例) | 同上 | 同上 |
 | 146 | VPSLA Secretary | ⑬ VP 共識決定 | 審核 VP 投票結果,手動判定是否達成共識（共識判定參考：排除棄權票後,所有有效票一致為 `APPROVE` 或 `REJECT`） | 達成共識 → ⑭ ChairPerson 決定;未達共識且輪次 < 3 → 回到 ⑪ 重新選組投票（循環,最多 3 輪）;未達共識且為第 3 輪 → 強制進入 ⑭ |
-| 147 | VP ChairPerson | ⑭ 最終決定 | 由 VPSLA Secretary 在 ⑪ 階段指定的一位 VPSLA Member,作最終決定 | `PASS` → 系統自動發布,流程結束（`APPROVED`）;`REJECT` → 流程結束（`REJECTED`）;`RETURN` → ⚠️ 已知不一致(見 §1.5.4): 生成新主管待辦 + `activity.approvalStatus = RETURNED`,審核歷史下一個處理人顯示主管 |
+| 147 | VP ChairPerson | ⑭ 最終決定 | 由 VPSLA Secretary 在 ⑪ 階段指定的一位 VPSLA Member,作最終決定 | `PASS` → 先進入 `checkGuestGate`（有嘉賓 → ⑦；無嘉賓 → `APPROVED`）;`REJECT` → 流程結束（`REJECTED`）;`RETURN` → ⚠️ 已知不一致(見 §1.5.4): 生成新主管待辦 + `activity.approvalStatus = RETURNED`,審核歷史下一個處理人顯示主管 |
 
 > **多實例行說明**：上表中標 "多實例" 的角色（Supervisor、IRG Member、VP Member/VPSLA Member）以 3 行重複列出,僅作格式示意。實際運行時並行的人數依配置而定,可多可少。
