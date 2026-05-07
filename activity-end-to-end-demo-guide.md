@@ -14,9 +14,11 @@
 本次 Demo 建議拆成兩條主線：
 
 1. **NSOA 主線**
-   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → IRG → VP → Chair → VP(RD) / VP(RD) Delegate`
+   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → Dean/Delegate Activity Content Approval → IRG → VP → Chair → VP(RD) / VP(RD) Delegate`
 2. **非 NSOA 主線**
-   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → VP(RD) / VP(RD) Delegate`
+   - 覆蓋：`Coordinator → Checker → Supervisors → EO → Dean/Delegate Guest Endorsement → Dean/Delegate Sponsorship → Dean/Delegate Activity Content Approval → VP(RD) / VP(RD) Delegate`
+
+> 說明：`Dean / Delegate Activity Content Approval`（活動內容 / 預算審批）為**必經**節點，無論活動是否有嘉賓或贊助，Supervisor 通過後都會進入此節，由 `Dean` 或 `Delegate` 做 `Approve / Return / Reject` 決定。`Guest Endorsement` 與 `Sponsorship Approval` 則為條件節點，僅在有嘉賓 / 贊助時觸發。
 
 若時間有限，可優先演示 NSOA 主線；它能覆蓋 `IRG / VP / Chair` 以及 `VP(RD)` 最終嘉賓審批。
 
@@ -48,7 +50,7 @@
 | Activity Application Checker | `Activity Application Checker` | 詳細審查 |
 | Activity Application Referrer 1 / 2 | `Activity Application Referrer` | 並行投票與確認 |
 | EO Venue Reviewer | `EO Venue Reviewer` | EO 審批 |
-| Dean / Delegate | `Dean` / `Delegate` | 嘉賓背書 / 贊助審批 |
+| Dean / Delegate | `Dean` / `Delegate` | 嘉賓背書 / 贊助審批 / 活動內容審批（必經） |
 | VP(RD) / VP(RD) Delegate | `VP(RD)` 或 `VP(RD) Delegate` | 外部嘉賓審批 |
 | IRG Secretary | `IRG Secretary` | 選 IRG group、審核 IRG 摘要 |
 | IRG Member 1 / 2 | `IRG Member` | IRG 投票 |
@@ -390,8 +392,25 @@
 
 預期結果：
 
-1. `NSOA` 活動：直接進入 IRG / VP。
-2. `非 NSOA` 活動：如有外部嘉賓，進入 `VP(RD) / VP(RD) Delegate` 的 `Final Guest Approval`。
+1. 流程進入 `Activity Content Approval`（活動內容 / 預算審批）。
+2. 如無贊助，本節跳過，直接進入 `Activity Content Approval`。
+
+### 5.6.5 Dean / Delegate：活動內容 / 預算審批（必經）
+
+> 此節**無論**活動是否有嘉賓或贊助都會出現，Supervisor 通過後一定會走到。
+
+1. `Dean` 或 `Delegate` 打開 `Activity Content Approval`。
+2. 核對活動詳情、預算項目。
+3. 選擇 `Approve` / `Return`（退回申請人修改）/ `Reject`（駁回）。
+4. 提交。
+
+預期結果：
+
+1. `Approve`：
+   - `NSOA` 活動：進入 IRG / VP / Chair。
+   - `非 NSOA` 活動：如有外部嘉賓進入 `VP(RD) / VP(RD) Delegate`，否則直接發布。
+2. `Return`：申請被退回給申請人，可修改後重新提交。
+3. `Reject`：流程結束，活動申請被駁回。
 
 ### 5.7 VP(RD) / VP(RD) Delegate：最終外部嘉賓審批
 
