@@ -7,7 +7,7 @@
 
 ---
 
-## 10. 菜单 × 角色 详细矩阵（三语）/ Menu × Role Detailed Matrix (Trilingual)
+## 1. 菜单 × 角色 详细矩阵（三语）/ Menu × Role Detailed Matrix (Trilingual)
 
 > 视图说明：纵向 = 每一个菜单节点（仅 `TYPE∈{1,2}`，即目录与菜单页，不含按钮），横向 = 12 个代表性角色。
 > 单元格 `✓` 表示该角色被授权访问该菜单（来自 `SYSTEM_ROLE_MENU`），空白表示未授权。
@@ -37,27 +37,27 @@
 
 ---
 
-### 10.1 首页 / Home / 首頁
+### 1.1 首页 / Home / 首頁
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 首页 | 首頁 | Home | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-### 10.2 仪表盘 / Dashboard / 儀表板
+### 1.2 仪表盘 / Dashboard / 儀表板
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 仪表盘 | 儀表板 | Dashboard | | | | ✓ | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 控制台 | └ 控制台 | └ Console | | | | ✓ | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-### 10.3 待办事项 / To-do / 待辦事項
+### 1.3 待办事项 / To-do / 待辦事項
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 待办事项 | 待辦事項 | To-do | | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 待办事项 | └ 待辦事項 | └ To-do List | | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-### 10.4 事件中心 / Incident Center / 事件中心
+### 1.4 事件中心 / Incident Center / 事件中心
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -70,7 +70,7 @@
 | └ 呈报活动报告 | └ 呈報活動報告 | └ Report Activity Report | | | | ✓ | | | | | | | | |
 | └ 查看事件列表 | └ 查看事件列表 | └ View Event List | | | | | ✓ | | | | | | | |
 
-### 10.5 主办中心 / Organiser Center / 主辦中心
+### 1.5 主办中心 / Organiser Center / 主辦中心
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -83,7 +83,7 @@
 | └ 提交活动报告 | └ 提交活動報告 | └ Submit Activity Report | | | | ✓ | | | | | | | ✓ | ✓ |
 | └ 管理活动发布 | └ 管理活動發佈 | └ Manage Activity Publish | | | | ✓ | | | | | | | | ✓ |
 
-### 10.6 审核中心 (BPM) / Review Center / 審核中心
+### 1.6 审核中心 (BPM) / Review Center / 審核中心
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -94,7 +94,7 @@
 | └ 我的申请 | └ 我的申請 | └ My Applications | | | | | | | | | ✓ | ✓ | ✓ | ✓ |
 | └ 工作流管理 | └ 工作流管理 | └ Workflow Management | | | | | | | | | ✓ | ✓ | ✓ | ✓ |
 
-### 10.7 管理中心 / Admin Oversight Center / 管理中心
+### 1.7 管理中心 / Admin Oversight Center / 管理中心
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -110,7 +110,7 @@
 | └ 查阅黑名单 | └ 查閱黑名單 | └ View Blacklist | | | | | | | | | | ✓ | | |
 | └ Reviewer Management | └ Reviewer Management | └ Reviewer Management | | | | | | | | | | | | |
 
-### 10.8 用户管理 / User Management / 用戶管理
+### 1.8 用户管理 / User Management / 用戶管理
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -121,7 +121,7 @@
 | └ 审核设置 | └ 審核設定 | └ Review Settings | | | | | | | | | | ✓ | ✓ | ✓ |
 | └ 岗位管理 | └ 崗位管理 | └ Post Management | | | | | | | | | | | ✓ | ✓ |
 
-### 10.9 系统管理 / System Management / 系統管理
+### 1.9 系统管理 / System Management / 系統管理
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -140,7 +140,7 @@
 | └ └ 应用管理 | └ └ 應用管理 | └ └ Application Management | | | | | | | | | | | | ✓ |
 | └ └ 令牌管理 | └ └ 令牌管理 | └ └ Token Management | | | | | | | | | | | | ✓ |
 
-### 10.10 废弃 / Deprecated / 廢棄
+### 1.10 废弃 / Deprecated / 廢棄
 
 > ⚠️ 这些菜单已被 BPM 工作流取代，但仍绑定在多个角色上，建议清理。废弃角色与菜单不再维护。
 > Legacy menus replaced by BPM workflow but still bound to roles — cleanup candidates. Deprecated roles are no longer maintained.
@@ -157,7 +157,7 @@
 | └ 活动出席审核 | └ 活動出席審核 | └ Activity Attendance Review | | | | | | | | | ✓ | ✓ | ✓ | ✓ |
 | └ 活动推广审核 | └ 活動推廣審核 | └ Activity Promotion Review | | | | | | | | | ✓ | ✓ | ✓ | ✓ |
 
-### 10.11 个人中心 / For You / 個人中心
+### 1.11 个人中心 / For You / 個人中心
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -170,7 +170,7 @@
 | └ 我的活动 | └ 我的活動 | └ My Activities | | ✓ | ✓ | ✓ | | | | | | | | ✓ |
 | └ 喜欢的活动 | └ 喜歡的活動 | └ Liked Activities | | ✓ | ✓ | ✓ | | | | | | | | ✓ |
 
-### 10.12 关于 SLAS / About SLAS / 關於 SLAS
+### 1.12 关于 SLAS / About SLAS / 關於 SLAS
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -182,7 +182,7 @@
 | └ 隐私政策 | └ 私隱政策 | └ Privacy Policy | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 服务条款 | └ 服務條款 | └ Terms of Service | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-### 10.13 基础设施 / Infrastructure / 基礎設施
+### 1.13 基础设施 / Infrastructure / 基礎設施
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -205,7 +205,7 @@
 | └ └ 访问日志 | └ └ 訪問日誌 | └ └ Access Log | | | | | | | | | | | ✓ | ✓ |
 | └ └ 错误日志 | └ └ 錯誤日誌 | └ └ Error Log | | | | | | | | | | | ✓ | ✓ |
 
-### 10.14 BPM 工作流 / BPM Workflow / BPM 工作流
+### 1.14 BPM 工作流 / BPM Workflow / BPM 工作流
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Activity Application Referrer | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -217,7 +217,7 @@
 
 ---
 
-### 10.15 速读 / Quick Reading
+### 1.15 速读 / Quick Reading
 
 - 共通菜单（首页 / 个人中心 / 关于 SLAS）所有 12 个角色都能访问。
 - **Group Leader (`sg_leader`)** 是唯一进入「主办中心」的真正业务角色 — 12 列里只有 Group Leader + System Admin (OCIO) + SuperAdmin - Dev 三个有 ✓。
