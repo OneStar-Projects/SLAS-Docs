@@ -1,13 +1,7 @@
 # SLAS Roles × Menus × Permissions Matrix
-
-> 数据源 / Source / 數據源：DEV (Oracle 19c, schema=`SLAS`) — 2026-05-07
-> 范围 / Scope / 範圍：`SYSTEM_ROLE.STATUS=0 AND DELETED=0` 共 41 个活跃角色；`SYSTEM_MENU` 共 312 节点（14 目录 / 96 菜单 / 202 按钮）。
-> **角色名权威源 / Role-name source of truth**：DB **`SYSTEM_ROLE.NAME`**，与 [`activity-publish-workflow-design.md §2.1`](./activity-publish-workflow-design.md) 及 [`student-org-end-to-end-demo-guide.md §2`](./student-org-end-to-end-demo-guide.md) 对齐。文中如有 `code` 引用（如 `sg_leader`、`supervisor`），仅作技术对照；显示名一律使用 `SYSTEM_ROLE.NAME`。
-> 菜单名三语来源 / Menu i18n source：`SLAS_UI/src/language/locales/{en,zh-CN,zh-hk}/menus.json`。
-
 ---
 
-## 1. 菜单 × 角色 详细矩阵（三语）/ Menu × Role Detailed Matrix (Trilingual)
+## 1. 菜单 × 角色 详细矩阵（三语）/ Menu × Role Detailed Matrix
 
 > 视图说明：纵向 = 每一个菜单节点（仅 `TYPE∈{1,2}`，即目录与菜单页，不含按钮），横向 = 12 个代表性角色。
 > 单元格 `✓` 表示该角色被授权访问该菜单（来自 `SYSTEM_ROLE_MENU`），空白表示未授权。
