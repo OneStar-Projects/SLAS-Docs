@@ -57,7 +57,9 @@
 
 #### 1.5.1 高級審批節點：`approveTask(approved=false)` + BPMN gate 真正分支
 
-EO、Checker、Guest Endorsement、Sponsorship、Activity Content、Final Guest（VPRD）等審批節點，前端表單（`SimpleApprovalForm` / `ContentGuestApprovalForm`）的「通過」與「拒絕／退回」按鈕**統一調用** `PUT /bpm/task/approve`（[useApprovalFormBase.ts → submitApproval](https://example.invalid)），把使用者選擇通過 `variables: { approved: true | false }` 寫入流程變量。
+EO、Checker、Guest Endorsement、Sponsorship、Activity Content 等審批節點，前端表單（`SimpleApprovalForm` / `ContentGuestApprovalForm`）的「通過」與「拒絕／退回」按鈕**統一調用** `PUT /bpm/task/approve`（[useApprovalFormBase.ts → submitApproval](https://example.invalid)），把使用者選擇通過 `variables: { approved: true | false }` 寫入流程變量。
+
+> **例外**：⑦ Final Guest Approval（VPRD）已改為**專屬服務節點**，不走這條統一路徑——詳見 §1.5.3。
 
 ```ts
 await approveTask({
@@ -79,35 +81,34 @@ await approveTask({
 | ⑤ Guest Endorsement | `supervisorsReviewTask` | 回到 ③ Supervisor 重審 |
 | ⑥ Sponsorship | `supervisorsReviewTask` | 回到 ③ Supervisor 重審 |
 | ⑥' Activity Content | `supervisorsReviewTask` | 回到 ③ Supervisor 重審 |
-| ⑦ Final Guest（VPRD） | `endEventRejected` | 流程結束，活動申請被駁回 |
+| ⑦ Final Guest（VPRD） | `chairPersonDecisionTask`（NSOA, RETURN_TO_CHAIR） / `activityContentApprovalTask`（非 NSOA, RETURN_TO_DEAN） | VPRD 專屬服務節點，不走 `approveTask`；無 reject 路徑——只能 approve 或 return 給上一步審批人。詳見 §1.5.3 |
 
 > 注意：上述「回到 Supervisor」並非 bug 而是 BPMN `<!-- EO returns → back to Supervisors (no reject path) -->` 等明文設計。對需要「直接退回申請人」的場景，應由 ③ Supervisor 在重審時自行投 `RETURN` / `REJECT`，由聚合委托 + `supervisorsDecisionGate` 真正結束流程。
 
 #### 1.5.2 通用 `rejectTask` 短路機制（目前 activity_publish 流程**沒有節點調用**）
 
-`BpmTaskServiceImpl.rejectTask` 內部存在一段「若流程定義包含 ID 含 `returned` 的 EndEvent 則短路 `moveTaskToEnd` 到該 EndEvent」的邏輯，但 **`activity_publish` 流程的所有審批節點目前都不調用這條接口**——前端統一走 `approveTask`（見 §1.5.1），supervisor / chair 走自己的專屬服務方法（見 §1.5.3）。本節僅作框架行為記錄，方便排查時對齊；本流程文檔中**所有 reject/return 描述以 §1.5.1 / §1.5.3 為準**。
+`BpmTaskServiceImpl.rejectTask` 內部存在一段「若流程定義包含 ID 含 `returned` 的 EndEvent 則短路 `moveTaskToEnd` 到該 EndEvent」的邏輯，但 **`activity_publish` 流程的所有審批節點目前都不調用這條接口**——前端統一走 `approveTask`（見 §1.5.1），supervisor / chair / VPRD 走自己的專屬服務方法（見 §1.5.3）。本節僅作框架行為記錄，方便排查時對齊；本流程文檔中**所有 reject/return 描述以 §1.5.1 / §1.5.3 為準**。
 
-#### 1.5.3 專屬服務節點：`supervisorApprove` / `chairPersonDecision` 直接寫流程變量
+#### 1.5.3 專屬服務節點：`supervisorApprove` / `chairPersonDecision` / `guestApprovalDecision` 直接寫流程變量
 
 下列節點不通過 `SimpleApprovalForm`，而是各自的專屬表單 + 專屬服務方法封裝 `approveTask`，再把決定塞進流程變量讓 gate 真正分支：
 
-| 節點 | 服務方法 | 如何向 BPMN 表達"非通過"決定 |
-|:----|:--------|:-----------------------|
-| ③ Supervisor | `supervisorApprove(...)` | 設 `supvAggregateDecision = REJECT / RETURN`、`supervisorsAllApproved = false`，BPMN gate 真正按值分流 → `endEventRejected` 或 `endEventReturned` |
-| ⑭ ChairPerson | `chairPersonDecision(...)` | 設 `chairDecision = PASS / REJECT / RETURN`，BPMN gate 真正按值分流 |
+| 節點 | 服務方法 / 端點 | 前端表單 | 如何向 BPMN 表達"非通過"決定 |
+|:----|:---------------|:--------|:-----------------------|
+| ③ Supervisor | `supervisorApprove(...)` | `SupervisorVoteForm` | 設 `supvAggregateDecision = REJECT / RETURN`、`supervisorsAllApproved = false`，BPMN gate 真正按值分流 → `endEventRejected` 或 `endEventReturned` |
+| ⑭ ChairPerson | `chairPersonDecision(...)` | `ChairDecisionForm` | 設 `chairDecision = PASS / REJECT / RETURN`，BPMN gate 真正按值分流；`RETURN` → `endEventReturned`（已統一，見 §1.5.4） |
+| ⑦ VPRD | `guestApprovalDecision(...)` `POST /activity/approval/guest/decision` | `GuestApprovalForm.vue` | 設 `guestDecision = APPROVE / RETURN_TO_CHAIR / RETURN_TO_DEAN`（見 `GuestDecisionEnum`）；BPMN gate `guestDecisionGate` 真正按值分流：`APPROVE` → 發布，`RETURN_TO_CHAIR`（NSOA only）→ `chairPersonDecisionTask`，`RETURN_TO_DEAN`（非 NSOA only）→ `activityContentApprovalTask`。**無 reject 路徑** |
 
 > ⚠️ **已知 BUG `TODO[supv-agg-bug]`**：`supervisorApprove` 的多人聚合目前實際"最後一個投票人說了算"——`ActivitySupervisorAggregateDelegate` 想讀 `supvDecisions` 集合，但 BPMN 多實例任務沒有 `flowable:outputCollection` 配置、Java 端也沒有累積寫入該變量，聚合委托因此 fallback 到讀單個 `supvDecision`（每次投票覆蓋）。產品設計的「任一 RETURN → 整體 RETURN」規則在當前生產環境**未生效**。修法見 §1.5 頂部 TODO 框。**解決後請刪除本備註與 §1.5 頂部 TODO 框，並把 §4.1 `SuperGate` 節點的備註恢復成正常文案。**
 
-#### 1.5.4 ⑭ ChairPerson `RETURN` 已知不一致（待業務確認）
+#### 1.5.4 ⑭ ChairPerson `RETURN` 路徑（已統一到 `endEventReturned`）
 
-`chairPersonDecision` 在處理 `RETURN` 時做了**兩件事**，目前互相矛盾：
+`chairPersonDecision` 在處理 `RETURN` 時：
 
-1. **Java 同步更新活動狀態**：`updateActivityApprovalStatus(activityId, "RETURNED", comment)`（見 [`ActivityApprovalServiceImpl.java`](https://example.invalid) 中 chairPersonDecision 末尾），意圖是退回申請人。
-2. **BPMN 流轉**：`flow_chair_return` 的 `targetRef` 指向 `supervisorsReviewTask`，與其它 RETURN 路徑（Coordinator/Checker/Supervisor）一律 `→ endEventReturned` 不一致。
+1. **Java 同步更新活動狀態**：`updateActivityApprovalStatus(activityId, "RETURNED", comment)`，退回申請人。
+2. **BPMN 流轉**：`flow_chair_return` 的 `targetRef` 指向 `endEventReturned`，與其它 RETURN 路徑（Coordinator / Checker）一致——流程結束，申請人狀態為 `RETURNED`，**不再生成新的主管待辦**。
 
-實際表現：申請人那邊看到狀態變 `RETURNED`，**同時主管會收到一個新的待辦任務**，審核歷史的「下一個處理人」也顯示主管。
-
-> 本文後續涉及 ⑭ Chair `RETURN` 的描述均按目前實際行為標注，並保留「**待業務確認**」標記，等修正方向確定後再統一更新。
+> 歷史背景：早期版本 `flow_chair_return` 曾錯誤指向 `supervisorsReviewTask`，導致 Java 退回 + BPMN 重派 supervisor 的雙重行為。已於 commit `5edae8ab9` 統一為 `endEventReturned`，本文後續所有 ⑭ Chair `RETURN` 描述以當前 BPMN 為準。
 
 #### 1.5.5 supervisor 在 ③ 步勾選的"贊助／嘉賓"等附加標記不影響後續 gate
 
@@ -119,6 +120,79 @@ await approveTask({
 因此：
 - `checkSponsorshipGate` 永遠讀流程啟動時冻結的 `hasSponsorship`（來自申請人填的 `activity.hasSponsorship`），supervisor 即便勾選 `sponsorshipConfirmed=true` 也不會新增贊助分支。
 - 同理 `checkGuestEndorsementGate` / `checkGuestGate` 永遠讀啟動時的 `hasExternalGuest`。
+
+##### 1.5.5.1 場地硬約束：勾選"課後使用"必須先勾"校園公共場地"
+
+`venueAfterHoursConfirmed = true` **必須** 同時 `campusPublicVenueConfirmed = true`。否則：
+
+- **後端**：`supervisorApprove` 拋 `SUPERVISOR_AFTERHOURS_REQUIRES_CAMPUS_VENUE` 業務錯誤碼（commit `82124be71`），返回本地化訊息（不再是不透明的 500）。
+- **前端**：`SupervisorVoteForm` 把「Use Venue After Hours」開關 gate 在「Use Campus Public Venue」開關後（commit `05b346f3`）；前者只有在後者勾選時才能變 true。
+
+業務含義：課後場地審批必然發生在校園公共場地的範疇內；只勾「課後使用」而不勾「校園公共場地」是不合法的組合。
+
+### 1.6 活動編輯鎖（Editing Lock）
+
+> 引入時間：commit `51359c9cc`（後端基礎設施，2026-05-05）+ `4b8a19ec1`（主動釋放端點，2026-05-07）+ `f0398a015`（暴露鎖欄位）。
+> 前端配套：`20239e1e`（`lockHeld` 與 `beforeunload` 釋放）+ `809ca6cf`（活動列表編輯中徽章）+ `eae9f2b0`（鎖文案）。
+
+#### 1.6.1 目標
+
+防止多個 OC（學生組織負責人）同時編輯同一活動草稿、或同時觸發 `acquire-editing` 後相互覆蓋。
+
+#### 1.6.2 數據模型
+
+`ActivityDO` 新增列（SQL patch `0004_018_add_activity_editing_lock.sql`）：
+
+| 列名 | 含義 |
+|:----|:----|
+| `editing_user_id` | 當前持鎖人 user id |
+| `editing_expire_at` | 鎖的 SQL 端 TTL（30 分鐘） |
+
+`RespVO` 同步暴露 `editingUserId / editingExpireAt`，活動列表據此渲染「編輯中」徽章。
+
+#### 1.6.3 端點
+
+| 動作 | 端點 | 行為 |
+|:----|:----|:----|
+| 取鎖 | `POST /activity/acquire-editing` | 進入編輯頁時調用；若無鎖則寫 `editing_user_id` + `editing_expire_at = NOW + 30min`；若已被他人持鎖則 409；若鎖屬於自己則續期 |
+| 釋鎖 | `POST /activity/release-editing` | 提交 / 路由切換 / `beforeunload` 時調用；Mapper 用 `editing_user_id` 過濾後再清空，**冪等且只允許持鎖人釋放** |
+
+#### 1.6.4 釋鎖時機
+
+前端三層保險（`useCreateActivity.ts`）：
+
+1. **正常提交成功**：在 update 成功 callback 中調 `releaseEditing`。
+2. **路由內導航離開**：`cleanupComponent` 用 axios（best-effort）釋鎖。
+3. **`beforeunload`（關閉 tab / 刷新 / 硬導航）**：用 `fetch keepalive`（注意：不能用 `sendBeacon`，因為它**不帶 `Authorization` header**），請求會在頁面卸載時繼續發送。
+
+兜底：30 分鐘 SQL TTL 過期後鎖自動失效，下一個 OC 可以取鎖。
+
+#### 1.6.5 與審批流的關係
+
+編輯鎖只作用於**草稿態 / 退回後重新編輯態**，與 BPMN 流程完全解耦——流程中的審批節點不關心鎖。鎖唯一的關聯是：當活動處於 `RETURNED` 等待修改時，OC 必須先取鎖才能進入編輯頁。
+
+### 1.7 Endorse 模式（OC 互審不阻塞編輯）
+
+> 引入時間：commit `20239e1e`（前端，2026-05-07）。
+
+#### 1.7.1 為什麼需要
+
+學生組織內常有多位 OC 角色用戶（`Group Leader`），其中一人在編輯草稿時，**另一位想預覽 / 確認內容**——但 §1.6 的編輯鎖會阻塞第二人進入編輯頁。
+
+#### 1.7.2 設計
+
+`CreateActivities` 路由參數 `mode` 新增 `endorse` 值：
+
+| `mode=` | 行為 |
+|:-------|:----|
+| `edit` | 取編輯鎖，可填寫 / 提交 / 上一步 / 保存草稿 |
+| `endorse` | **不取編輯鎖**；隱藏 step navigator + save / prev / submit 按鈕；顯示 endorse-specific 標題與描述；`navigateToStep` 只 gate 在預覽步 |
+
+活動列表頁有一個 `navigateToEndorse` action，從那裡進入時自動帶上 `mode=endorse`。
+
+#### 1.7.3 與編輯鎖的交互
+
+`isEndorse` computed 在 `useCreateActivity.ts` 裡判斷 `mode === 'endorse'`，據此跳過 `acquireEditingLock` 與後續所有 `releaseEditing` 邏輯——endorse 模式整個鎖機制都不參與，因此**不阻塞當前持鎖的編輯者**。
 
 ---
 
@@ -305,9 +379,10 @@ flowchart TD
         FinalGuestCheck -->|"否"| PublishTask
 
         Guest["⑦ 最終嘉賓審批<br/>(VP(RD) / VP(RD) Delegate)"]
-        Guest --> GuestGate{是否通過?}
-        GuestGate -->|"通過"| PublishTask
-        GuestGate -.->|"拒絕<br/>(流程結束, 見 §1.5.1)"| EndRejected
+        Guest --> GuestGate{guestDecision?}
+        GuestGate -->|"APPROVE"| PublishTask
+        GuestGate -.->|"RETURN_TO_DEAN<br/>(非 NSOA, 見 §1.5.3)"| ContentApproval
+        GuestGate -.->|"RETURN_TO_CHAIR<br/>(NSOA, 見 §1.5.3)"| Chair
 
         ParallelFork(["Parallel Fork"])
         ParallelFork --> IRGSelect
@@ -354,7 +429,7 @@ flowchart TD
         Chair --> ChairGate{Chair 決定?}
         ChairGate -->|"PASS"| FinalGuestCheck
         ChairGate -->|"REJECT"| EndRejected
-        ChairGate -.->|"RETURN<br/>(已知不一致, 見 §1.5.4)"| Supervisors
+        ChairGate -.->|"RETURN<br/>(見 §1.5.4)"| EndReturned
     end
 
     PublishTask[/"auto: 發布活動"/]
@@ -376,7 +451,7 @@ flowchart TD
     style Phase6 fill:#FCE4EC,stroke:#AD1457
 ```
 
-> 圖中虛線 `-.->` 表示非主路徑，分四類：① 高級審批節點 EO / Guest Endorsement / Sponsorship / Activity Content 拒絕／退回時，由 BPMN gate 真正回到 ③ Supervisors 重審（見 §1.5.1）；⑦ Final Guest Approval（VPRD）拒絕時走 `endEventRejected`、流程結束；② ⑫ VP 投票超時自動 ABSTAIN；③ IRG 完成後解鎖 VP 投票提交；④ ⑭ Chair `RETURN` 目前實際指向 ③ Supervisors（已知不一致，見 §1.5.4）。
+> 圖中虛線 `-.->` 表示非主路徑，分四類：① 高級審批節點 EO / Guest Endorsement / Sponsorship / Activity Content 拒絕／退回時，由 BPMN gate 真正回到 ③ Supervisors 重審（見 §1.5.1）；⑦ Final Guest Approval（VPRD）已改為專屬服務節點，無 reject 路徑——`RETURN_TO_DEAN`（非 NSOA）退回 ⑥' Dean / Delegate 活動內容審批；`RETURN_TO_CHAIR`（NSOA）退回 ⑭ Chair（見 §1.5.3）；② ⑫ VP 投票超時自動 ABSTAIN；③ IRG 完成後解鎖 VP 投票提交；④ ⑭ Chair `RETURN` 走 `endEventReturned`，與其他 RETURN 一致（見 §1.5.4）。
 
 ### 4.2 非 NSOA 簡化路徑
 
@@ -458,10 +533,12 @@ flowchart TD
     Chair --> FinalGate{Chair 決定?}
     FinalGate -->|"PASS"| FinalGuestCheck{有外部嘉賓?}
     FinalGate -->|"REJECT"| EndRejected(["End: REJECTED"])
-    FinalGate -.->|"RETURN<br/>(已知不一致, 見 §1.5.4)<br/>實際:回 ③ Supervisor + status=RETURNED"| ChairReturnNode(["回 ③ Supervisor<br/>(BPMN 實際路徑,<br/>同時 status=RETURNED)"])
+    FinalGate -.->|"RETURN<br/>(見 §1.5.4)"| EndReturned(["End: RETURNED<br/>(申請人可修改)"])
     FinalGuestCheck -->|"是"| FinalGuest["⑦ 最終嘉賓審批<br/>(VP(RD) / VP(RD) Delegate)"]
     FinalGuestCheck -->|"否"| EndApproved(["End: APPROVED<br/>(發布活動)"])
-    FinalGuest --> EndApproved
+    FinalGuest --> FinalGuestGate{guestDecision?}
+    FinalGuestGate -->|"APPROVE"| EndApproved
+    FinalGuestGate -.->|"RETURN_TO_CHAIR<br/>(回 ⑭ Chair, 見 §1.5.3)"| Chair
 
     style Entry fill:#2196F3,color:#fff
     style EndApproved fill:#4CAF50,color:#fff
@@ -573,10 +650,17 @@ flowchart TD
 - **觸發條件**：活動聲明有外部嘉賓，且：
   - `非 NSOA`：在一般高級審批後進入
   - `NSOA`：在 `Chair PASS` 後進入
-- **動作**：對外部嘉賓安排作最終審批
+- **服務方法**：`guestApprovalDecision(...)` `POST /activity/approval/guest/decision`（專屬端點，**不走** `approveTask`，見 §1.5.3）
+- **前端表單**：`GuestApprovalForm.vue`
+- **動作**：對外部嘉賓安排作最終決定，決定值由 `GuestDecisionEnum` 限定為以下三選一：
+  - `APPROVE`
+  - `RETURN_TO_CHAIR`（**僅 NSOA**）
+  - `RETURN_TO_DEAN`（**僅非 NSOA**）
 - **結果**：
-  - 通過 → 直接發布（`APPROVED`）
-  - 拒絕 → 流程結束（`REJECTED`），終局，不可重新提交（見 §1.5.1）
+  - `APPROVE` → 直接發布（`APPROVED`）
+  - `RETURN_TO_CHAIR`（NSOA only）→ 退回 ⑭ Chair 重審；Chair 可再次決定 `PASS / REJECT / RETURN`
+  - `RETURN_TO_DEAN`（非 NSOA only）→ 退回 ⑥' Dean / Delegate 活動內容審批；流程繼續按一般高級審批的 RETURN 邏輯走（見 §1.5.1）
+  - **無 reject 路徑**——VPRD 不能在此節點直接駁回流程；如需駁回，由 NSOA 路徑下的 ⑭ Chair `REJECT` 完成，或由非 NSOA 路徑下退回 Dean 後再經 supervisor 重審觸發
 
 > **注意**：`NSOA` 活動不是跳過 ⑦，而是將 ⑦ 延後到 `Chair PASS` 之後。
 
@@ -635,7 +719,7 @@ flowchart TD
     - 如 `hasExternalGuest == true` → 進入 ⑦ 最終嘉賓審批
     - 如 `hasExternalGuest == false` → 系統自動發布活動,流程結束（`APPROVED`）
   - `REJECT` → 流程結束（`REJECTED`）
-  - `RETURN` → ⚠️ **已知不一致(見 §1.5.4)**：BPMN 實際指向 `supervisorsReviewTask`，會生成新的主管待辦任務；同時 Java 將 `activity.approvalStatus` 置為 `RETURNED`、發退回通知給申請人。審核歷史「下一個處理人」顯示主管。等業務確認最終語義後再統一
+  - `RETURN` → 流程結束（`RETURNED`）：BPMN `flow_chair_return → endEventReturned`；Java 同步將 `activity.approvalStatus` 置為 `RETURNED` 並發退回通知給申請人；**不再生成新的主管待辦**（見 §1.5.4）
 
 ---
 
@@ -651,10 +735,12 @@ flowchart TD
 | ⑤ Guest Endorsement | 拒絕 | （回到 ③ 重審；最終狀態由重審結果決定） | 等 ③ 重審結束後再看（見 §1.5.1） |
 | ⑥ Sponsorship | 拒絕 | （回到 ③ 重審；最終狀態由重審結果決定） | 等 ③ 重審結束後再看（見 §1.5.1） |
 | ⑥' Activity Content | `Return` / `Reject` | （回到 ③ 重審；最終狀態由重審結果決定） | 等 ③ 重審結束後再看（兩按鈕當前都走 `approveTask(approved=false)`，流程上等價，見 §1.5.1） |
-| ⑦ Final Guest Approval | 拒絕 | `REJECTED` | — 終局，不可重新提交（見 §1.5.1） |
+| ⑦ Final Guest Approval（VPRD） | `APPROVE` | `APPROVED`（活動發布） | — |
+| ⑦ Final Guest Approval（VPRD） | `RETURN_TO_CHAIR`（NSOA only） | （回到 ⑭ Chair；最終狀態由 Chair 重新決定） | 等 ⑭ 重新決定後再看（見 §1.5.3） |
+| ⑦ Final Guest Approval（VPRD） | `RETURN_TO_DEAN`（非 NSOA only） | （回到 ⑥' Dean / Delegate 活動內容審批；最終狀態由其重審結果決定） | 等 ⑥' 重審結束後再看（見 §1.5.3） |
 | ⑭ ChairPerson | `PASS` | （如有外部嘉賓則進入 ⑦，否則 `APPROVED`） | — |
 | ⑭ ChairPerson | `REJECT` | `REJECTED` | — |
-| ⑭ ChairPerson | `RETURN` | ⚠️ 已知不一致(見 §1.5.4): 同時生成新主管待辦 + `activity.approvalStatus = RETURNED` | 待業務確認最終語義 |
+| ⑭ ChairPerson | `RETURN` | `RETURNED`（`flow_chair_return → endEventReturned`，已統一，見 §1.5.4） | 修改後重新提交 |
 
 ---
 
@@ -737,8 +823,8 @@ flowchart TD
 | 141 | EO Venue Reviewer | ④ EO 審批 | 審批 `campus public venue` 與課後使用（僅當 Supervisor 在 ③ 確認其中任一項成立時觸發） | 通過 → 進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;退回 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
 | 149 | Dean | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 對外部嘉賓先作背書，承接贊助審批，並對活動內容 / 預算作必經的最終把關 | ⑤ 通過 → ⑥（如有贊助）或 ⑥'；⑥ 通過 → ⑥'；⑥' 通過 → 進入 NSOA / 非 NSOA 分流；⑤/⑥/⑥' 任一拒絕 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
 | 150 | Delegate | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 與 Dean 共用候選組，先到先審 | 同 ⑤ / ⑥ / ⑥' 各自的下一環節 |
-| 151 | VP(RD) | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的最終外部嘉賓審批角色；`非 NSOA` 直接進入，`NSOA` 於 `Chair PASS` 後進入 | 通過 → 直接發布;拒絕 → 流程結束（`REJECTED`，終局，見 §1.5.1） |
-| 152 | VP(RD) Delegate | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的最終外部嘉賓審批委派角色；`非 NSOA` 直接進入，`NSOA` 於 `Chair PASS` 後進入 | 通過 → 直接發布;拒絕 → 流程結束（`REJECTED`，終局，見 §1.5.1） |
+| 151 | VP(RD) | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的最終外部嘉賓審批角色；`非 NSOA` 直接進入，`NSOA` 於 `Chair PASS` 後進入；走 `guestApprovalDecision` 專屬端點 | `APPROVE` → 直接發布;`RETURN_TO_DEAN`（非 NSOA only）→ 回到 ⑥' Dean / Delegate 活動內容審批;`RETURN_TO_CHAIR`（NSOA only）→ 回到 ⑭ Chair（見 §1.5.3） |
+| 152 | VP(RD) Delegate | ⑦ 最終嘉賓審批 (候選組之一) | VP(RD) 委派角色，與 VP(RD) 共候選組 | 同 VP(RD) |
 | - | （系統判斷）| 是否為 NSOA? | 根據活動是否標記為 NSOA 分流 | 是 → 進入並行 IRG / VP 評審分支;否 → 進入 `checkGuestGate`（有嘉賓 → ⑦；無嘉賓 → `APPROVED`） |
 | 144 | IRG Secretary | ⑧ IRG 選組 | 選擇本次的 IRG 評審組 | → 系統自動加載 IRG 成員,進入 ⑨ |
 | 145 | IRG Member | ⑨ IRG 投票 (多實例) | 並行多人,各自投 `RECOMMEND` / `RESERVE` / `REJECT` | 全員投票完成 → auto: AI 生成 IRG 摘要 → ⑩ |
@@ -750,6 +836,6 @@ flowchart TD
 | 147 | VPSLA Member | ⑫ VP 投票 (多實例) | 同上 | 同上 |
 | 147 | VPSLA Member | ⑫ VP 投票 (多實例) | 同上 | 同上 |
 | 146 | VPSLA Secretary | ⑬ VP 共識決定 | 審核 VP 投票結果,手動判定是否達成共識（共識判定參考：排除棄權票後,所有有效票一致為 `APPROVE` 或 `REJECT`） | 達成共識 → ⑭ ChairPerson 決定;未達共識且輪次 < 3 → 回到 ⑪ 重新選組投票（循環,最多 3 輪）;未達共識且為第 3 輪 → 強制進入 ⑭ |
-| 147 | VP ChairPerson | ⑭ 最終決定 | 由 VPSLA Secretary 在 ⑪ 階段指定的一位 VPSLA Member,作最終決定 | `PASS` → 先進入 `checkGuestGate`（有嘉賓 → ⑦；無嘉賓 → `APPROVED`）;`REJECT` → 流程結束（`REJECTED`）;`RETURN` → ⚠️ 已知不一致(見 §1.5.4): 生成新主管待辦 + `activity.approvalStatus = RETURNED`,審核歷史下一個處理人顯示主管 |
+| 147 | VP ChairPerson | ⑭ 最終決定 | 由 VPSLA Secretary 在 ⑪ 階段指定的一位 VPSLA Member,作最終決定 | `PASS` → 先進入 `checkGuestGate`（有嘉賓 → ⑦；無嘉賓 → `APPROVED`）;`REJECT` → 流程結束（`REJECTED`）;`RETURN` → 流程結束（`RETURNED`，`flow_chair_return → endEventReturned`，已統一，見 §1.5.4） |
 
 > **多實例行說明**：上表中標 "多實例" 的角色（Supervisor、IRG Member、VP Member/VPSLA Member）以 3 行重複列出,僅作格式示意。實際運行時並行的人數依配置而定,可多可少。

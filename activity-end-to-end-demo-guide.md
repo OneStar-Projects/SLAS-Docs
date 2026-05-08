@@ -282,16 +282,20 @@
 
 ### 4.3 OC 成員：完成 OC Endorsement
 
-1. 申請人先停留在 `Preview` 頁面。
+> **編輯鎖與 endorse 模式說明**：申請人開啟編輯頁時系統會獲取一個 30 分鐘的編輯鎖（`POST /activity/acquire-editing`），其他 OC 進入 **編輯** 模式會被阻塞；但本步驟用的是 **endorse 模式**（從活動列表的 `Endorse` 按鈕進入，URL 帶 `mode=endorse`），endorse 模式**不申請鎖**，因此 OC 互審不會與申請人編輯衝突。詳見 `activity-publish-workflow-design.md §1.6 / §1.7`。
+
+1. 申請人先停留在 `Preview` 頁面（持鎖）。
 2. 依序用各 OC 成員帳號登入。
-3. 每位 OC 成員打開該活動的 `Preview / OC Endorsement` 區塊。
-4. 點擊 `Submit Endorsement`。
-5. 直到狀態變成 `all endorsed`。
+3. 每位 OC 成員從活動列表點 `Endorse` 進入該活動（**不要**點 `Edit`，否則會撞鎖）。
+4. 該頁面只允許瀏覽 + endorsement，沒有 save / submit 按鈕。
+5. 點擊 `Submit Endorsement`。
+6. 直到狀態變成 `all endorsed`。
 
 預期結果：
 
 1. `OC Endorsement` 進度顯示全部完成。
 2. 申請人可以正式提交活動申請。
+3. Endorse 過程中申請人的編輯鎖維持有效，互不干擾。
 
 ### 4.4 申請人：提交活動
 
@@ -415,16 +419,52 @@
 
 ### 5.7 VP(RD) / VP(RD) Delegate：最終外部嘉賓審批
 
+VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（前端 `GuestApprovalForm.vue`），三選一：
+
+| 決定 | 適用場景 | 後續走向 |
+|:----|:--------|:--------|
+| `APPROVE` | 通用 | 直接發布活動 → `APPROVED` |
+| `RETURN_TO_DEAN` | **僅非 NSOA** | 退回 ⑥' Dean / Delegate 活動內容審批 |
+| `RETURN_TO_CHAIR` | **僅 NSOA** | 退回 ⑭ Chair 重新決定 |
+
+> ⚠️ 此節點**沒有 reject 路徑**——VP(RD) 不能在此直接駁回流程；如需駁回，由 NSOA 路徑下的 ⑭ Chair `REJECT` 完成，或由非 NSOA 路徑下退回 Dean 後再經 supervisor 重審觸發。
+
+#### 5.7.1 場景 A：通過
+
 1. `VP(RD)` 或 `VP(RD) Delegate` 打開 `Guest Approval`。
 2. 核對外部嘉賓名單。
-3. 選擇 `Approve`。
-4. 提交。
+3. 選擇 `Approve` 並提交。
 
-預期結果：
+**預期結果**：流程直接發布活動。
 
-1. 流程直接發布活動。
-2. `非 NSOA`：本節會在一般高級審批後出現。
-3. `NSOA`：本節會在 `Chair PASS` 後出現。
+#### 5.7.2 場景 B：退回 Dean（非 NSOA）
+
+1. `VP(RD)` 打開 `Guest Approval`。
+2. 選擇 `Return to Dean / Delegate` 並填寫意見。
+3. 提交。
+
+**預期結果**：
+
+1. 任務退回 ⑥' Dean / Delegate 活動內容審批。
+2. Dean / Delegate 看到新的 `Activity Content Approval` 待辦。
+3. Dean 重新審批後，流程再次按 §1.5.1 的 RETURN 邏輯走（如 Dean 退回 → ③ Supervisor 重審）。
+
+#### 5.7.3 場景 C：退回 Chair（NSOA）
+
+1. `VP(RD)` 打開 `Guest Approval`。
+2. 選擇 `Return to VP ChairPerson` 並填寫意見。
+3. 提交。
+
+**預期結果**：
+
+1. 任務退回 ⑭ Chair。
+2. ChairPerson 看到新的 `Final Decision` 待辦，可重新決定 `PASS / REJECT / RETURN`。
+3. 若 Chair 再次 `PASS` 且活動仍有外部嘉賓，會再次回到 ⑦ VPRD（理論上有可能形成短循環，業務上請避免）。
+
+#### 5.7.4 觸發條件回顧
+
+- `非 NSOA`：本節在一般高級審批後出現。
+- `NSOA`：本節在 `Chair PASS` 後出現。
 
 ---
 
