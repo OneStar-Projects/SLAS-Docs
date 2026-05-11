@@ -220,7 +220,7 @@ RETURN > REJECT > RECOMMEND
 |:-------:|:-------------------|:-----|
 | 115 | Coordinator | 初審；判斷是否需要 Checker；指派 Checker |
 | 142 | Activity Application Checker | 對活動內容作詳細審查（由 Coordinator 指派） |
-| 116 | Activity Application Referrer | 對組織與活動的第一級審核員；多人並行（由活動數據逐活動指派） |
+| 116 | Supervisor | 對組織與活動的第一級審核員；多人並行（由活動數據逐活動指派） |
 | 141 | EO Venue Reviewer | 審批校園場地相關使用 |
 | 149 | Dean | 外部嘉賓背書、贊助審批與活動內容 / 預算審批 |
 | 150 | Delegate | 外部嘉賓背書、贊助審批與活動內容 / 預算審批 |
@@ -241,7 +241,7 @@ RETURN > REJECT > RECOMMEND
 | Sponsorship Approval | 由 `Dean`、`Delegate` 承擔；僅在活動有贊助時出現 |
 | Activity Content Approval | 由 `Dean`、`Delegate` 承擔；**必經**節點，無論活動是否有嘉賓 / 贊助；對活動整體內容與預算作 `Approve / Return / Reject` 決定 |
 | Final Guest Approval | 由 `VP(RD)`、`VP(RD) Delegate` 承擔；只要活動有外部嘉賓就可能出現。`非 NSOA` 在一般高級審批後進入；`NSOA` 在 `Chair PASS` 後進入 |
-| Supervisor 多實例 | `Activity Application Referrer` 是當前系統角色名稱；具體本次審核的 Supervisor 名單由活動數據（`activity_supervisor` 表）逐活動指派 |
+| Supervisor 多實例 | `Supervisor` 是當前系統角色名稱；具體本次審核的 Supervisor 名單由活動數據（`activity_supervisor` 表）逐活動指派 |
 | VP ChairPerson | 由 `VPSLA Secretary` 在 ⑩ 選組階段指定的一位 `VPSLA Member` |
 
 > **實作備註【开发参考】**
@@ -838,9 +838,9 @@ flowchart TD
 | - | Group Leader | 發起申請 | 學生組織負責人,提交活動申請以觸發審批流程 | ① Coordinator 審核 |
 | 115 | Coordinator | ① Coordinator 審核 | 初審活動基本信息;判斷是否需要 Activity Application Checker;如需要則指派一位 Checker | 通過且需 Checker → ② Activity Application Checker 審核;通過且無需 → ③ Supervisor 審核;退回 → 流程結束（`RETURNED`,可修改後重新提交） |
 | 142 | Activity Application Checker | ② Checker 審核 | 由 Coordinator 指派,對活動內容作詳細審查 | 通過 → ③ Supervisor 審核;退回 → 流程結束（`RETURNED`,可修改後重新提交） |
-| 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 並行多人,各自給 `RECOMMEND` / `REJECT` / `RETURN` 個人決定;同時確認場地是否課後使用 | 全員提交後系統按聚合規則得出最終結果（見 §5） |
-| 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
-| 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
+| 116 | Supervisor | ③ Supervisor 審核 (多實例) | 並行多人,各自給 `RECOMMEND` / `REJECT` / `RETURN` 個人決定;同時確認場地是否課後使用 | 全員提交後系統按聚合規則得出最終結果（見 §5） |
+| 116 | Supervisor | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
+| 116 | Supervisor | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
 | - | （系統聚合）| auto: 聚合 Supervisor 投票 | 規則：任一 `RETURN` → 整體 `RETURN`;全員 `RECOMMEND` → 整體 `RECOMMEND`;含 `REJECT` 但無 `RETURN` → 整體 `REJECT`。實現為增量 Java 聚合（commit `5edae8ab9`），詳見 §1.5.3.1 | `RECOMMEND` → ④ EO 審批（如涉及 `campus public venue` 或課後使用）或進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;`RETURN` → 流程結束（`RETURNED`）;`REJECT` → 流程結束（`REJECTED`） |
 | 141 | EO Venue Reviewer | ④ EO 審批 | 審批 `campus public venue` 與課後使用（僅當 Supervisor 在 ③ 確認其中任一項成立時觸發） | 通過 → 進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;退回 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
 | 149 | Dean | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 對外部嘉賓先作背書，承接贊助審批，並對活動內容 / 預算作必經的最終把關 | ⑤ 通過 → ⑥（如有贊助）或 ⑥'；⑥ 通過 → ⑥'；⑥' 通過 → 進入 NSOA / 非 NSOA 分流；⑤/⑥/⑥' 任一拒絕 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |

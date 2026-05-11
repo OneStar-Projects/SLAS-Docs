@@ -48,7 +48,7 @@
 | OC 成員 A / B | 活動 OC 成員 | 完成 OC Endorsement |
 | Coordinator | `Coordinator` | 初審、指派 Checker / Supervisors |
 | Activity Application Checker | `Activity Application Checker` | 詳細審查 |
-| Activity Application Referrer 1 / 2 | `Activity Application Referrer` | 並行投票與確認 |
+| Supervisor 1 / 2 | `Supervisor` | 並行投票與確認 |
 | EO Venue Reviewer | `EO Venue Reviewer` | EO 審批 |
 | Dean / Delegate | `Dean` / `Delegate` | 嘉賓背書 / 贊助審批 / 活動內容審批（必經） |
 | VP(RD) / VP(RD) Delegate | `VP(RD)` 或 `VP(RD) Delegate` | 外部嘉賓審批 |
@@ -72,9 +72,9 @@
 | `hro-test-071` | 115 | Coordinator | N | 活動協調審核 | 一審 / 指派 Checker |
 | `hro-test-072` | 141 | EO Venue Reviewer | N | 場地審批 | EO |
 | `hro-test-073` | 142 | Activity Application Checker | N | 活動審核 | Checker |
-| `hro-test-074` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 1 |
-| `hro-test-075` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 2 |
-| `hro-test-076` | 116 | Activity Application Referrer | N | 主管投票（多實例） | Supervisor 3 |
+| `hro-test-074` | 116 | Supervisor | N | 主管投票（多實例） | Supervisor 1 |
+| `hro-test-075` | 116 | Supervisor | N | 主管投票（多實例） | Supervisor 2 |
+| `hro-test-076` | 116 | Supervisor | N | 主管投票（多實例） | Supervisor 3 |
 | `hro-test-091` | 149 | Dean | Y | 嘉賓背書 / 贊助審批 / 活動內容審批 | Guest Endorsement / Sponsorship / Activity Content Approval |
 | `hro-test-092` | 150 | Delegate | - | 嘉賓背書 / 贊助審批 / 活動內容審批 | 與 Dean 共用候選組，先到先審 |
 | `hro-test-077` | 144 | IRG Secretary | N | IRG 秘書 | IRG 選組 / 摘要審核 |
@@ -107,8 +107,8 @@
 4. 申請人
 5. Coordinator
 6. Activity Application Checker
-7. Activity Application Referrer 1
-8. Activity Application Referrer 2
+7. Supervisor 1
+8. Supervisor 2
 9. EO Venue Reviewer
 10. Dean / Delegate
 11. VP(RD) / VP(RD) Delegate
@@ -708,7 +708,7 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 5. 依次走：
    - Coordinator
    - Activity Application Checker
-   - 1 名 Activity Application Referrer
+   - 1 名 Supervisor
    - EO Venue Reviewer
    - Sponsorship Approval
    - VP(RD) / VP(RD) Delegate
