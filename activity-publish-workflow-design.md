@@ -43,18 +43,6 @@
 
 > 本節為**全文後續所有"拒絕 / 退回"描述**提供統一語義基礎。讀後續 §4 流程圖、§5 步驟詳述與 §6 結果表時請以本節為準。
 
-> ⚠️ **已知 BUG 待修（解決後請刪除本框並同步全文相關備註，搜索關鍵字 `TODO[supv-agg-bug]`）**
->
-> **`supervisorApprove` 多人聚合不工作**（詳見 §1.5.3）。`ActivitySupervisorAggregateDelegate` 想讀的 `supvDecisions` 集合在當前代碼裡**沒有任何地方寫入**——BPMN 多實例任務沒配 `flowable:outputCollection`，Java 端也沒累積寫回。聚合委托 fallback 到讀單個 `supvDecision`，**最後一個投票人說了算**。
->
-> 影響：產品設計的「任一 RETURN → 整體 RETURN」與「任一 REJECT 且無 RETURN → REJECT」規則在生產環境**完全失效**。實測 3 人投 [RECOMMEND, RETURN, RECOMMEND] 會聚合成 RECOMMEND 並繼續走到 EO，而不是退回申請人。
->
-> 修法（兩選一，以 BPMN 改動為首選）：
-> 1. 在 `supervisorsReviewTask` 的 `multiInstanceLoopCharacteristics` 加 `flowable:outputCollection="supvDecisions"` + `flowable:outputElement="${supvDecision}"`，由 Flowable 自動累積；無需 Java 改動
-> 2. 在 `ActivityApprovalServiceImpl.supervisorApprove` 裡讀現有 `supvDecisions` list、append 當前 decision、`variables.put` 寫回；要注意並發 lost-update
->
-> 解決後需要同步更新的位置：本節 §1.5.3 已知問題塊、§4.1 流程圖 `SuperGate` 節點備註、§7 各場景中關於 supervisor 聚合的描述。
-
 #### 1.5.1 高級審批節點：`approveTask(approved=false)` + BPMN gate 真正分支
 
 EO、Checker、Guest Endorsement、Sponsorship、Activity Content 等審批節點，前端表單（`SimpleApprovalForm` / `ContentGuestApprovalForm`）的「通過」與「拒絕／退回」按鈕**統一調用** `PUT /bpm/task/approve`（[useApprovalFormBase.ts → submitApproval](https://example.invalid)），把使用者選擇通過 `variables: { approved: true | false }` 寫入流程變量。
@@ -99,7 +87,31 @@ await approveTask({
 | ⑭ ChairPerson | `chairPersonDecision(...)` | `ChairDecisionForm` | 設 `chairDecision = PASS / REJECT / RETURN`，BPMN gate 真正按值分流；`RETURN` → `endEventReturned`（已統一，見 §1.5.4） |
 | ⑦ VPRD | `guestApprovalDecision(...)` `POST /activity/approval/guest/decision` | `GuestApprovalForm.vue` | 設 `guestDecision = APPROVE / RETURN_TO_CHAIR / RETURN_TO_DEAN`（見 `GuestDecisionEnum`）；BPMN gate `guestDecisionGate` 真正按值分流：`APPROVE` → 發布，`RETURN_TO_CHAIR`（NSOA only）→ `chairPersonDecisionTask`，`RETURN_TO_DEAN`（非 NSOA only）→ `activityContentApprovalTask`。**無 reject 路徑** |
 
-> ⚠️ **已知 BUG `TODO[supv-agg-bug]`**：`supervisorApprove` 的多人聚合目前實際"最後一個投票人說了算"——`ActivitySupervisorAggregateDelegate` 想讀 `supvDecisions` 集合，但 BPMN 多實例任務沒有 `flowable:outputCollection` 配置、Java 端也沒有累積寫入該變量，聚合委托因此 fallback 到讀單個 `supvDecision`（每次投票覆蓋）。產品設計的「任一 RETURN → 整體 RETURN」規則在當前生產環境**未生效**。修法見 §1.5 頂部 TODO 框。**解決後請刪除本備註與 §1.5 頂部 TODO 框，並把 §4.1 `SuperGate` 節點的備註恢復成正常文案。**
+##### 1.5.3.1 ③ Supervisor 多人聚合 — 增量 Java 聚合(已修復)
+
+`supervisorApprove` 採用**增量單變量聚合**而非 multi-instance outputCollection:每位 supervisor 提交時呼叫 `resolveSupervisorAggregateDecision`,讀目前 `supvAggregateDecision` 流程變量,按下列**sticky 升級規則**算出新值寫回:
+
+```
+RETURN > REJECT > RECOMMEND
+- 已經 RETURN → 永遠保持 RETURN
+- 已經 REJECT 且當前不是 RETURN → 保持 REJECT
+- 否則 → 採用當前決定
+```
+
+`ActivitySupervisorAggregateDelegate` 在多實例完成後作為 safety net:若 `supvAggregateDecision` 已是 RETURN/REJECT 則信任並保留;否則 fallback 到從 `supvDecisions` 集合(或單個 `supvDecision`)重新聚合。
+
+四種代表性組合的驗證:
+
+| 投票順序 | 最終 `supvAggregateDecision` | 流程走向 |
+|:--------|:----------------------------|:---------|
+| `[RECOMMEND, RECOMMEND, RECOMMEND]` | RECOMMEND | → ④ EO / ⑤ 嘉賓 / ⑥ 贊助 / ⑥' 內容 |
+| `[RECOMMEND, RETURN, RECOMMEND]` | RETURN | → `endEventReturned`(申請人可修改) |
+| `[REJECT, REJECT, REJECT]` | REJECT | → `endEventRejected` |
+| `[REJECT, RETURN, RECOMMEND]` | RETURN(覆蓋 REJECT)| → `endEventReturned` |
+
+> **歷史背景**:早期版本因 `supvDecisions` 集合既無 BPMN `flowable:outputCollection` 配置又無 Java 累積寫入,聚合 fallback 到「最後一個投票人說了算」。已於 commit `5edae8ab9`(2026-05-07)透過上述增量聚合修復,**不採用** SLAS-Docs 早期建議的 BPMN outputCollection 或 Java list append 方案。
+>
+> 弱點:理論上並發 lost-update(兩位 supervisor 同時提交)依賴 Flowable 樂觀鎖兜底,生產環境未見實際 issue。
 
 #### 1.5.4 ⑭ ChairPerson `RETURN` 路徑（已統一到 `endEventReturned`）
 
@@ -110,16 +122,17 @@ await approveTask({
 
 > 歷史背景：早期版本 `flow_chair_return` 曾錯誤指向 `supervisorsReviewTask`，導致 Java 退回 + BPMN 重派 supervisor 的雙重行為。已於 commit `5edae8ab9` 統一為 `endEventReturned`，本文後續所有 ⑭ Chair `RETURN` 描述以當前 BPMN 為準。
 
-#### 1.5.5 supervisor 在 ③ 步勾選的"贊助／嘉賓"等附加標記不影響後續 gate
+#### 1.5.5 supervisor 在 ③ 步勾選的附加標記如何影響後續 gate
 
 主管審批表單裡的 `sponsorshipConfirmed` / `campusPublicVenueConfirmed` / `venueAfterHoursConfirmed` / `elatEligible` 等欄位中：
 
-- `campusPublicVenueConfirmed` / `venueAfterHoursConfirmed` 會以 sticky-OR 語意寫入流程變量 `supvCampusPublicVenue` / `supvVenueAfterhrs`，**真正驅動** `checkEoAfterHoursGate`。
-- 其餘欄位（含 `sponsorshipConfirmed`、`elatEligible` 等）**只寫回 `ActivityDO` 的 `supv*` 列**，**不更新對應流程變量**。
+- **`campusPublicVenueConfirmed` / `venueAfterHoursConfirmed`** 以 sticky-OR 語意寫入流程變量 `supvCampusPublicVenue` / `supvVenueAfterhrs`，**真正驅動** `checkEoAfterHoursGate`。
+- **`sponsorshipConfirmed`**(commit `3c653be94`, PR #125, 2026-05-11)以 sticky-OR 語意寫入流程變量 `hasSponsorship`,**真正驅動** `checkSponsorshipGate`。即便申請人提交時填 `hasSponsorship=false`,supervisor 勾選 `sponsorshipConfirmed=true` 也會補救觸發 ⑥ 贊助審批分支。**任一 supervisor 勾選即生效**(sticky-OR 跨多實例),且**不可降級**(一旦寫入 true,後續勾選 false 不會回退)。
+- **`elatEligible` / `elatCategory`** 與其他留痕欄位 **只寫回 `ActivityDO` 的 `supv*` 列**，**不更新流程變量**(無對應 gate)。
 
 因此：
-- `checkSponsorshipGate` 永遠讀流程啟動時冻結的 `hasSponsorship`（來自申請人填的 `activity.hasSponsorship`），supervisor 即便勾選 `sponsorshipConfirmed=true` 也不會新增贊助分支。
-- 同理 `checkGuestEndorsementGate` / `checkGuestGate` 永遠讀啟動時的 `hasExternalGuest`。
+- `checkSponsorshipGate` 讀 sticky-OR 後的 `hasSponsorship`(申請人提交值 OR 任一 supervisor 勾選)。
+- `checkGuestEndorsementGate` / `checkGuestGate` 仍只讀流程啟動時冻結的 `hasExternalGuest`(supervisor 表單無對應 `externalGuestConfirmed` 欄位,如需此補救機制需先在 `SupervisorApprovalReqVO` 加字段)。
 
 ##### 1.5.5.1 場地硬約束：勾選"課後使用"必須先勾"校園公共場地"
 
@@ -328,7 +341,7 @@ flowchart TD
 
     subgraph Phase2["Phase 2: Supervisor 審核"]
         Supervisors["③ Supervisors 審核<br/>(Supervisors, 並行)"]
-        Supervisors --> SuperAggregate[/"auto: 聚合 Supervisor 投票<br/>⚠️ 當前實際:最後一個投票人說了算<br/>(已知 BUG, 見 §1.5)"/]
+        Supervisors --> SuperAggregate[/"auto: 聚合 Supervisor 投票<br/>RETURN > REJECT > RECOMMEND<br/>(增量 Java 聚合, 見 §1.5.3.1)"/]
         SuperAggregate --> SuperGate{聚合結果?}
         SuperGate -->|"RECOMMEND"| EoCheck
         SuperGate -->|"RETURN"| EndReturned
@@ -392,6 +405,8 @@ flowchart TD
         IRGSelect --> LoadIRG[/"auto: 加載 IRG 成員"/]
         LoadIRG --> IRGVote["⑨ IRG 投票<br/>(IRG Member, 並行)"]
         IRGVote --> IRGAiSummary[/"auto: AI 生成 IRG 摘要"/]
+        IRGVote -.->|"超時 (未投票自動 RECOMMEND)"| IRGTimeout[/"auto: IRG 超時處理"/]
+        IRGTimeout --> IRGAiSummary
         IRGAiSummary --> IRGReview["⑩ IRG 摘要審核<br/>(IRG Secretary)"]
         IRGReview --> IRGCompletion[/"auto: IRG 完成"/]
         IRGCompletion --> ParallelJoin
@@ -504,6 +519,8 @@ flowchart TD
         IRGSelect --> LoadIRG[/"auto: 加載 IRG 成員"/]
         LoadIRG --> IRGVote["⑨ IRG 投票<br/>(IRG Member, 並行)<br/>RECOMMEND / RESERVE / REJECT"]
         IRGVote --> IRGSummary[/"auto: AI 生成 IRG 摘要"/]
+        IRGVote -.->|"超時 (未投自動 RECOMMEND)"| IRGTimeoutTask[/"auto: IRG 超時處理"/]
+        IRGTimeoutTask --> IRGSummary
         IRGSummary --> IRGReview["⑩ IRG 摘要審核<br/>(IRG Secretary)"]
         IRGReview --> IRGDone[/"auto: IRG 完成"/]
     end
@@ -675,7 +692,12 @@ flowchart TD
 
 - **執行人**：所有 IRG Member 並行
 - **動作**：每位投 `RECOMMEND` / `RESERVE` / `REJECT`
-- **結果**：全部完成後進入「auto: AI 生成 IRG 摘要」, 再進入 ⑩
+- **截止時間**：`irgVoteDeadline`(IRG Secretary 在 ⑧ 設定)
+- **結果**：
+  - 正常路徑:全部完成後進入「auto: AI 生成 IRG 摘要」, 再進入 ⑩
+  - 超時路徑(commit `7faa9acc2`, 2026-05-12 引入):若 deadline 前未全部投票,boundary timer event 取消多實例任務,觸發 `activityIrgTimeoutDelegate` 把未投票者標記為預設 `RECOMMEND`,**跳過剩餘多實例**直接進入 AI 摘要 → ⑩
+- **對 ⑩ Secretary 摘要審核的影響**:超時路徑下,Secretary 仍然會看到 ⑩ 任務,但摘要中部分 IRG Member 的決定來自系統預設而非實際投票
+- **對 §4.3.2 VP 投票提交鎖的影響**:超時路徑下,`irgCompletionNotifyTask` 仍照常執行,VP 提交鎖照常解除
 
 ### ⑩ IRG 摘要審核
 
@@ -819,7 +841,7 @@ flowchart TD
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 並行多人,各自給 `RECOMMEND` / `REJECT` / `RETURN` 個人決定;同時確認場地是否課後使用 | 全員提交後系統按聚合規則得出最終結果（見 §5） |
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
 | 116 | Activity Application Referrer | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
-| - | （系統聚合）| auto: 聚合 Supervisor 投票 | 設計規則：任一 `RETURN` → 整體 `RETURN`;全員 `RECOMMEND` → 整體 `RECOMMEND`;含 `REJECT` 但無 `RETURN` → 整體 `REJECT`。⚠️ **當前實際:最後一個投票人說了算**（已知 BUG `TODO[supv-agg-bug]`，見 §1.5 頂部 TODO 框與 §1.5.3） | `RECOMMEND` → ④ EO 審批（如涉及 `campus public venue` 或課後使用）或進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;`RETURN` → 流程結束（`RETURNED`）;`REJECT` → 流程結束（`REJECTED`） |
+| - | （系統聚合）| auto: 聚合 Supervisor 投票 | 規則：任一 `RETURN` → 整體 `RETURN`;全員 `RECOMMEND` → 整體 `RECOMMEND`;含 `REJECT` 但無 `RETURN` → 整體 `REJECT`。實現為增量 Java 聚合（commit `5edae8ab9`），詳見 §1.5.3.1 | `RECOMMEND` → ④ EO 審批（如涉及 `campus public venue` 或課後使用）或進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;`RETURN` → 流程結束（`RETURNED`）;`REJECT` → 流程結束（`REJECTED`） |
 | 141 | EO Venue Reviewer | ④ EO 審批 | 審批 `campus public venue` 與課後使用（僅當 Supervisor 在 ③ 確認其中任一項成立時觸發） | 通過 → 進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;退回 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
 | 149 | Dean | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 對外部嘉賓先作背書，承接贊助審批，並對活動內容 / 預算作必經的最終把關 | ⑤ 通過 → ⑥（如有贊助）或 ⑥'；⑥ 通過 → ⑥'；⑥' 通過 → 進入 NSOA / 非 NSOA 分流；⑤/⑥/⑥' 任一拒絕 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
 | 150 | Delegate | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 與 Dean 共用候選組，先到先審 | 同 ⑤ / ⑥ / ⑥' 各自的下一環節 |
@@ -827,7 +849,7 @@ flowchart TD
 | 152 | VP(RD) Delegate | ⑦ 最終嘉賓審批 (候選組之一) | VP(RD) 委派角色，與 VP(RD) 共候選組 | 同 VP(RD) |
 | - | （系統判斷）| 是否為 NSOA? | 根據活動是否標記為 NSOA 分流 | 是 → 進入並行 IRG / VP 評審分支;否 → 進入 `checkGuestGate`（有嘉賓 → ⑦；無嘉賓 → `APPROVED`） |
 | 144 | IRG Secretary | ⑧ IRG 選組 | 選擇本次的 IRG 評審組 | → 系統自動加載 IRG 成員,進入 ⑨ |
-| 145 | IRG Member | ⑨ IRG 投票 (多實例) | 並行多人,各自投 `RECOMMEND` / `RESERVE` / `REJECT` | 全員投票完成 → auto: AI 生成 IRG 摘要 → ⑩ |
+| 145 | IRG Member | ⑨ IRG 投票 (多實例) | 並行多人,各自投 `RECOMMEND` / `RESERVE` / `REJECT`;有截止時間 `irgVoteDeadline` | 全員投票完成 → auto: AI 生成 IRG 摘要 → ⑩;或超時 → `activityIrgTimeoutDelegate` 將未投票者標記為預設 `RECOMMEND` → 直接進 AI 摘要(跳過剩餘多實例) |
 | 145 | IRG Member | ⑨ IRG 投票 (多實例) | 同上 | 同上 |
 | 145 | IRG Member | ⑨ IRG 投票 (多實例) | 同上 | 同上 |
 | 144 | IRG Secretary | ⑩ IRG 摘要審核 | 審核系統 AI 自動生成的 IRG 投票摘要 | 完成 → IRG 分支結束 + 解鎖 VP 投票提交 + 進入並行 Join |
