@@ -347,14 +347,14 @@
 
 建議示範輸入：
 
-1. `Decision = RECOMMEND`
+1. `Decision = RECOMMEND`(也可選 `REJECT` / `RETURN` 示範非通過路徑)
 2. Sponsorship 區塊：
-   - `sponsorshipConfirmed = Yes`
+   - `sponsorshipConfirmed = Yes`(如想觸發 §5.6 ⑥ 贊助審批,即使申請人未填贊助也能補救觸發,sticky-OR 寫入 `hasSponsorship` 流程變量,見設計文檔 §1.5.5)
    - 填 sponsor amount / source
 3. Venue 區塊：
    - 至少 **1 名 Supervisor** 勾選場地相關確認，以便觸發 EO
 4. ELAT 區塊：
-   - 可根據 Demo 需要選 `Yes` 並填 category
+   - 可根據 Demo 需要選 `Yes` 並填 category(僅留痕,不影響流程)
 5. 填 comment
 6. 提交
 
@@ -362,6 +362,18 @@
 
 1. 所有 Supervisor 都提交後，系統聚合結果為 `RECOMMEND`。
 2. 因至少 1 人觸發場地確認，流程進入 EO。
+
+#### 5.3.1 聚合規則（多人投票示範時）
+
+當 supervisor 投票不一致時,系統按 **sticky 升級** 算最終 `supvAggregateDecision`(實現:增量 Java 聚合,commit `5edae8ab9`,詳設計文檔 §1.5.3.1):
+
+| 投票組合 | 最終聚合 | 流程走向 |
+|:--------|:--------|:--------|
+| 全員 `RECOMMEND` | `RECOMMEND` | → ④ EO / ⑤ 嘉賓 / ⑥ 贊助 / ⑥' 內容 |
+| 任一 `RETURN`(其他任意) | `RETURN`(可覆蓋 REJECT)| → `endEventReturned`,申請人可修改後重提 |
+| 任一 `REJECT` 且無 `RETURN` | `REJECT` | → `endEventRejected`,流程結束 |
+
+> Demo 提示:若想演示 RETURN 路徑,讓 1 位 Supervisor 投 `RETURN`,其餘投 `RECOMMEND`,聚合結果為 `RETURN`。
 
 ### 5.4 EO：場地審批
 
@@ -391,13 +403,23 @@
 
 1. `Dean` 或 `Delegate` 打開 `Sponsorship Approval`。
 2. 查看贊助資訊區塊。
-3. 選擇 `Approve`。
+3. 選擇 `Approve`（或 `Reject` / `Return`,退回 ③ Supervisor 重審,見設計文檔 §1.5.1）。
 4. 提交。
 
 預期結果：
 
-1. 流程進入 `Activity Content Approval`（活動內容 / 預算審批）。
-2. 如無贊助，本節跳過，直接進入 `Activity Content Approval`。
+1. `Approve` → 流程進入 `Activity Content Approval`（活動內容 / 預算審批）。
+2. `Reject` / `Return` → 退回 ③ Supervisor 重新審核。
+
+#### 5.6.1 觸發條件 — supervisor 可在 ③ 補救觸發本節
+
+本節是否出現由流程變量 `hasSponsorship` 決定,該變量採 sticky-OR 寫入(commit `3c653be94`, PR #125):
+
+- **申請人提交時** `activity.hasSponsorship=true` → 進入本節
+- **申請人提交時** `hasSponsorship=false`,但 **任一 supervisor 在 ③ 勾選 `sponsorshipConfirmed=true`** → sticky-OR 把 `hasSponsorship` 升級為 true → 進入本節
+- 申請人 false 且 所有 supervisor 也沒勾選 → 跳過本節,直接進入 `Activity Content Approval`
+
+> Demo 提示:若想演示「supervisor 補救觸發贊助審批」場景,讓申請人在 §4.2 把贊助欄位留空,然後在 §5.3 中讓任一 supervisor 勾選 `sponsorshipConfirmed=true`,本節即會出現。詳見設計文檔 §1.5.5。
 
 ### 5.6.5 Dean / Delegate：活動內容 / 預算審批（必經）
 
@@ -474,12 +496,14 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 
 1. 打開 `IRG Select Group`。
 2. 從下拉中選擇 `IRG Demo Group`。
-3. 設定 vote deadline。
+3. 設定 vote deadline（流程變量 `irgVoteDeadline`,驅動超時 boundary timer event）。
 4. 提交。
 
 預期結果：
 
 1. IRG Member 收到投票任務。
+
+> **超時行為**(commit `7faa9acc2`, 2026-05-12):若 deadline 前未全部投票完成,系統 `activityIrgTimeoutDelegate` 把未投票者標記為預設 `RECOMMEND`,**跳過剩餘多實例任務**,直接進入「auto: AI 生成 IRG 摘要」 → ⑩ 摘要審核。Demo 中如要演示此分支,把 deadline 設成幾分鐘後,故意只讓部分 IRG Member 投票,等超時觸發。
 
 ### 6.2 IRG Members：完成投票
 
@@ -489,6 +513,8 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 2. IRG Member 2：`RECOMMEND`
 
 提交後，IRG Secretary 進入摘要審核節點。
+
+> 若部分 IRG Member 未在 deadline 前提交,該成員的決定會由系統補為 `RECOMMEND`(見 §6.1 超時行為)。
 
 ### 6.3 IRG Secretary：審核 AI Summary
 
@@ -509,13 +535,15 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 3. 頁面會展示：
    - ChairPerson
    - 組員列表
-4. 設定 vote deadline。
+4. 設定 vote deadline（流程變量 `vpVoteDeadline`,驅動超時 boundary timer event）。
 5. 提交。
 
 預期結果：
 
 1. `VPSLA Member` 收到投票任務。
 2. ChairPerson 不參與本輪投票，只保留最終決策節點。
+
+> **超時行為**:若 deadline 前未全部投票,系統 `activityVpTimeoutDelegate` 把未投票者標記為 **`ABSTAIN`**(注意:跟 IRG timeout 不同,VP 超時是棄權而非 RECOMMEND),透過 `vpBranchMergeGateway` 匯流到 `parallelJoinGateway`。Demo 中如要演示此分支,把 deadline 設成幾分鐘後,讓部分 VP Member 不投票,等超時觸發。
 
 ### 6.5 VPSLA Members：投票
 
