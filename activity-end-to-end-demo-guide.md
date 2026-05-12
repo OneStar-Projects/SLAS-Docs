@@ -327,8 +327,8 @@
 
 預期結果：
 
-1. Checker 收到任務。
-2. Supervisor 收到並行任務。
+- `Assign Checker = Yes`:Checker 收到任務(單實例,只一位 Checker)。此時 Supervisors **尚未**收到任務 — 必須等 Checker 通過後才會派發;屆時所選的多名 Supervisors 會 **multi-instance 並行** 各自收到一份任務。
+- `Assign Checker = No`:跳過 Checker,所選的多名 Supervisors 立即 multi-instance 並行收到任務。
 
 ### 5.2 Checker：詳細審查
 
