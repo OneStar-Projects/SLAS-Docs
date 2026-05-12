@@ -207,6 +207,14 @@ RETURN > REJECT > RECOMMEND
 
 `isEndorse` computed 在 `useCreateActivity.ts` 裡判斷 `mode === 'endorse'`，據此跳過 `acquireEditingLock` 與後續所有 `releaseEditing` 邏輯——endorse 模式整個鎖機制都不參與，因此**不阻塞當前持鎖的編輯者**。
 
+#### 1.7.4 申請人自動 endorse(2026-05-12)
+
+(commit `d92ea5685` / PR #140)申請人本人在提交活動時**自動視為已 endorse**:
+
+- `getEndorsementStatus` 返回的「待 endorse list」會剔除申請人 user_id;UI 不會顯示「等申請人自己 endorse」這種冗餘狀態
+- 後端 `submitActivity` 路徑下,若申請人本身屬於該組的 OC 角色,系統自動寫入一條 endorsement 記錄,避免單人 OC 申請時流程卡在「等申請人自己 endorse 自己」死循環
+- **bypass 防御**:提交時校驗「除申請人本人外的其他 OC 全部 endorsed」,確保多人 OC 場景下不能繞過互審直接提交
+
 ---
 
 ## 2. 角色與職責
@@ -572,6 +580,7 @@ flowchart TD
 1. 流程從 ⑫ 之後的網關回跳到 ⑩ VP 選組，僅 VP 分支重新執行（IRG 分支首輪結束時已完成,不會再次觸發）。
 2. 第二、第三輪 VP 分支完成後到達 Parallel Join 時，IRG 分支保持已完成狀態,因此 Join 立即通過。
 3. 最多執行 3 輪。第 3 輪結束時無論共識與否都強制進入 ⑬ ChairPerson 決定。
+4. **舊輪 stale vote 拒絕**(commit `c8eb2a554`, 2026-05-12):進入新一輪後,前一輪 VPSLA Member 遲到的投票會被服務端拒絕(`VP_VOTE_STALE_ROUND` 業務錯誤碼);確保新輪聚合結果不被舊輪污染。
 
 #### 4.3.2 跨分支依賴：VP 投票提交鎖
 
@@ -690,7 +699,7 @@ flowchart TD
 
 ### ⑨ IRG 投票（並行）
 
-- **執行人**：所有 IRG Member 並行
+- **執行人**：所有 IRG Member 並行(**不含 IRG Secretary**;Secretary 在 ⑧ 選組 + ⑩ 摘要審核,不參與投票) ([#135](https://github.com/OneStar-Projects/SLAS_PRO/issues/135))
 - **動作**：每位投 `RECOMMEND` / `RESERVE` / `REJECT`
 - **截止時間**：`irgVoteDeadline`(IRG Secretary 在 ⑧ 設定)
 - **結果**：
@@ -712,15 +721,16 @@ flowchart TD
 - **執行人**：VPSLA Secretary
 - **觸發條件**：NSOA 活動進入並行評審；或 ⑬ 判定未達共識時回跳重新選組
 - **動作**：選擇本次的 VP 評審組;設定 VP 投票截止時間
-- **結果**：系統自動加載成員、計算截止時間、識別並排除 ChairPerson,進入 ⑫
+- **結果**:系統自動加載成員、計算截止時間、識別並**排除 VPSLA Secretary 與 ChairPerson**(他們不投票,只負責 ⑪ 選組 / ⑬ 共識決定 / ⑭ 最終決定),進入 ⑫ ([#135](https://github.com/OneStar-Projects/SLAS_PRO/issues/135))
 
 ### ⑫ VP 投票（並行,有截止時間）
 
-- **執行人**：所有 VPSLA Member 並行（不含 ChairPerson）
-- **動作**：每位投 `APPROVE` / `REJECT` / `ABSTAIN`
-- **業務約束**：在 ⑩ IRG 摘要審核完成之前無法提交投票（見 §4.3.2）
-- **超時處理**：投票截止時間到達時,系統自動為未投票成員記為 `ABSTAIN`,並推進流程
-- **結果**：全部投票完成（或超時觸發後）→ 進入並行 Join
+- **執行人**:所有 VPSLA Member 並行(**不含 VPSLA Secretary 與 ChairPerson**) ([#135](https://github.com/OneStar-Projects/SLAS_PRO/issues/135))
+- **動作**:每位投 `APPROVE` / `REJECT` / `ABSTAIN`
+- **業務約束 1**:在 ⑩ IRG 摘要審核完成之前無法提交投票(見 §4.3.2)
+- **業務約束 2(多輪 stale 拒絕)**:每張票帶 `voteRound`;若 ⑬ 判定未達共識並進入下一輪(`vpRoundNumber++`),前一輪未提交的投票會被拒絕(`VP_VOTE_STALE_ROUND` 業務錯誤碼),確保新輪聚合不被舊輪污染 (commit `c8eb2a554`, 2026-05-12)
+- **超時處理**:投票截止時間到達時,系統自動為未投票成員記為 `ABSTAIN`,並推進流程
+- **結果**:全部投票完成(或超時觸發後)→ 進入並行 Join
 
 ### ⑬ VP 共識決定
 
