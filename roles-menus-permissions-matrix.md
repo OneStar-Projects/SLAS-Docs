@@ -28,6 +28,7 @@
 > 注 / Note：
 > - 「Dean」(id=149) 是活动发布工作流中的院长角色，与「Dean of Students」(id=129) **是两个不同角色**，不要混淆。
 > - 「Supervisor」(id=116, `code=supervisor`) 是活动审批 ③ 步骤的多人并行审核角色,Java 代码与 BPMN 均以此命名。
+> - 自 `sql/patch/0004_021_add_ori_app_period_menu.sql`（2026-05-14/15）起，`Coordinator`（115）会继承 `Dean`（149）当前生效的菜单绑定，用于补齐 To-do / Review / incident query 等流程入口；下表已按**补丁执行后状态**同步。
 
 ---
 
@@ -41,25 +42,25 @@
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| 仪表盘 | 儀表板 | Dashboard | | | | ✓ | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| └ 控制台 | └ 控制台 | └ Console | | | | ✓ | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 仪表盘 | 儀表板 | Dashboard | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| └ 控制台 | └ 控制台 | └ Console | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### 1.3 待办事项 / To-do / 待辦事項
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| 待办事项 | 待辦事項 | To-do | | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| └ 待办事项 | └ 待辦事項 | └ To-do List | | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 待办事项 | 待辦事項 | To-do | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| └ 待办事项 | └ 待辦事項 | └ To-do List | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### 1.4 事件中心 / Incident Center / 事件中心
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 事件中心 | 事件中心 | Incident Center | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| └ 查询突发事件 | └ 查詢突發事件 | └ Query Incidents | | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| └ 查询突发事件 | └ 查詢突發事件 | └ Query Incidents | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 突发事件报告 | └ 突發事件報告 | └ Incident Report | | | | | | | | | | | | |
 | └ 呈报突发事件 | └ 呈報突發事件 | └ Report Incident | | | | | | | | | ✓ | | ✓ | ✓ |
-| └ 事件详情 | └ 事件詳情 | └ Incident Detail | | | | ✓ | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| └ 事件详情 | └ 事件詳情 | └ Incident Detail | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 提交处理报告 | └ 提交處理報告 | └ Submit Handling Report | | | | ✓ | | ✓ | | | ✓ | ✓ | ✓ | ✓ |
 | └ 呈报活动报告 | └ 呈報活動報告 | └ Report Activity Report | | | | ✓ | | | | | | | | |
 | └ 查看事件列表 | └ 查看事件列表 | └ View Event List | | | | | ✓ | | | | | | | |
@@ -81,10 +82,10 @@
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| 审核中心 | 審核中心 | Review Center | | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| 审核中心 | 審核中心 | Review Center | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 待办总览 | └ 待辦總覽 | └ Todo Overview | | | | | | ✓ | | | ✓ | ✓ | ✓ | ✓ |
-| └ 我的待办 | └ 我的待辦 | └ My Todo | | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| └ 我的已办 | └ 我的已辦 | └ My Done | | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| └ 我的待办 | └ 我的待辦 | └ My Todo | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| └ 我的已办 | └ 我的已辦 | └ My Done | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 我的申请 | └ 我的申請 | └ My Applications | | | | | | | | | ✓ | ✓ | ✓ | ✓ |
 | └ 工作流管理 | └ 工作流管理 | └ Workflow Management | | | | | | | | | ✓ | ✓ | ✓ | ✓ |
 
@@ -98,6 +99,7 @@
 | └ 查阅组织清单 | └ 查閱組織清單 | └ View Organisation List | | | | | | | | | | ✓ | ✓ | ✓ |
 | └ 查阅活动清单 | └ 查閱活動清單 | └ View Activity List | | | | | | | | | | ✓ | ✓ | ✓ |
 | └ 查阅事件报告 | └ 查閱事件報告 | └ View Incident Reports | | | | | | | | | | ✓ | ✓ | ✓ |
+| └ 新生迎新申请期管理 | └ 新生迎新申請期管理 | └ Orientation Application Period Management | | | | | | | | | | ✓ | | ✓ |
 | └ 管理出席 | └ 管理出席 | └ Manage Attendance | | | | | | | | | ✓ | | | |
 | └ 管理报名 | └ 管理報名 | └ Manage Enrolment | | | | | | | | | | | | |
 | └ 管理推广可见性 | └ 管理推廣可見性 | └ Manage Promotion Visibility | | | | | | | | | | ✓ | | |
@@ -216,6 +218,7 @@
 - 共通菜单（首页 / 个人中心 / 关于 SLAS）所有 12 个角色都能访问。
 - **Group Leader (`sg_leader`)** 是唯一进入「主办中心」的真正业务角色 — 12 列里只有 Group Leader + System Admin (OCIO) + SuperAdmin - Dev 三个有 ✓。
 - 「废弃」一栏在 11 个角色上仍然有 ✓（包括 Student 看到「事件报告审核」），是 dead-code 包袱。
+- **Coordinator (`coordinator`)** 自 `0004_021_add_ori_app_period_menu.sql` 起继承 `Dean` 的当前生效菜单集，因此现在也能看到 To-do / Review Center / incident query / incident detail 等流程入口；这是一种 SQL 侧授权补丁，不是 BPM 角色重命名。
 - **Dean (id=149)**（活动发布工作流中的 Dean，与 id=129 `Dean of Students` **不同角色**）在这张表里看起来很"窄"：除了通用菜单外，只在 待办 / 事件中心 / 审核中心 见到 ✓ — 因为它是 BPM 流程角色，真正的"批准"动作发生在 BPM 任务节点（candidate-group 绑定），不依赖菜单可见性。
 - **System Admin (OCIO)** ≈ **SuperAdmin - Dev**：除 BPM 工作流引擎管理 + 部分系统配置（OAuth/字典/邮件）外几乎相同。
 - All 12 roles share the common menus (Home / For You / About).

@@ -715,6 +715,8 @@ flowchart TD
 - **結果**：完成後 IRG 分支結束;觸發兩件事：
   1. 解鎖 VP 投票的提交（見 §4.3.2）
   2. 進入並行 Join
+- **VP 參考摘要來源**：⑩ 完成時，系統會優先讀取 `activity_ai_summary_cache` 中該 `activityId + processInstanceId` 的**最新 IRG 摘要**，再寫入 VP 端可見的 `irgSummaryForVp`。因此，若 Secretary 在 ⑩ 前重新生成 / 覆核過摘要，VP 與後續 Chair 看到的會是**最新缓存版本**，而不是最早那份 runtime 變量副本。
+- **AI 失敗容錯**（commit `9345f771e`, 2026-05-14）：若 EdUHK AI 未配置、返回空白，或只產生失敗佔位文案，系統現在會**清空 `irgAiSummary` / `irgSummaryForVp` 相關 runtime 變量**，而不是把 `AI summary generation failed: ...` 這類錯誤字串繼續帶到 VP 流程。此時 ⑩ 任務與後續 VP 提交解鎖**仍可正常完成**，但 VP / Chair 端可能看不到 IRG AI 摘要，需要改為人工閱讀 IRG 原始投票與評論。
 - **完成後回看**：IRG Secretary 在審核完成、流程推進到後續節點後,仍然可以打開該活動回看自己審核過的 AI 摘要;歷史 IRG Member 也能查閱自己參與過的那次投票摘要。這方便事後追溯與覆審。
 
 ### ⑪ VP 選組
