@@ -405,23 +405,26 @@ flowchart TD
         GuestEndorsementCheck -->|"否"| SponsorCheck
 
         GuestEndorsement["⑤ 嘉賓背書<br/>(Dean / Delegate)"]
-        GuestEndorsement --> GuestEndorsementGate{是否通過?}
-        GuestEndorsementGate -->|"通過"| SponsorCheck
-        GuestEndorsementGate -.->|"拒絕<br/>(回 ③ Supervisor 重審, 見 §1.5.1)"| Supervisors
+        GuestEndorsement --> GuestEndorsementGate{deanDecision?<br/>見 §1.5.1 B}
+        GuestEndorsementGate -->|"APPROVE"| SponsorCheck
+        GuestEndorsementGate -.->|"RETURN<br/>(回 ③ Supervisor 重審)"| Supervisors
+        GuestEndorsementGate -.->|"REJECT<br/>(通知歷史審批人)"| EndRejected
 
         SponsorCheck{是否有贊助?}
         SponsorCheck -->|"是"| Sponsor
         SponsorCheck -->|"否"| ContentApproval
 
         Sponsor["⑥ 贊助審批<br/>(Dean / Delegate)"]
-        Sponsor --> SponsorGate{是否通過?}
-        SponsorGate -->|"通過"| ContentApproval
-        SponsorGate -.->|"拒絕<br/>(回 ③ Supervisor 重審, 見 §1.5.1)"| Supervisors
+        Sponsor --> SponsorGate{deanDecision?<br/>見 §1.5.1 B}
+        SponsorGate -->|"APPROVE"| ContentApproval
+        SponsorGate -.->|"RETURN<br/>(回 ③ Supervisor 重審)"| Supervisors
+        SponsorGate -.->|"REJECT<br/>(通知歷史審批人)"| EndRejected
 
         ContentApproval["⑥' 活動內容審批 (必經)<br/>(Dean / Delegate)"]
-        ContentApproval --> ContentGate{是否通過?}
-        ContentGate -->|"通過"| NsoaCheck
-        ContentGate -.->|"拒絕 / 退回<br/>(回 ③ Supervisor 重審, 見 §1.5.1)"| Supervisors
+        ContentApproval --> ContentGate{deanDecision?<br/>見 §1.5.1 B}
+        ContentGate -->|"APPROVE"| NsoaCheck
+        ContentGate -.->|"RETURN<br/>(回 ③ Supervisor 重審)"| Supervisors
+        ContentGate -.->|"REJECT<br/>(通知歷史審批人)"| EndRejected
     end
 
     subgraph Phase4["Phase 4: NSOA / 非 NSOA 分流"]
@@ -508,7 +511,12 @@ flowchart TD
     style Phase6 fill:#FCE4EC,stroke:#AD1457
 ```
 
-> 圖中虛線 `-.->` 表示非主路徑，分四類：① 高級審批節點 EO / Guest Endorsement / Sponsorship / Activity Content 拒絕／退回時，由 BPMN gate 真正回到 ③ Supervisors 重審（見 §1.5.1）；⑦ Final Guest Approval（VPRD）已改為專屬服務節點，無 reject 路徑——`RETURN_TO_DEAN`（非 NSOA）退回 ⑥' Dean / Delegate 活動內容審批；`RETURN_TO_CHAIR`（NSOA）退回 ⑭ Chair（見 §1.5.3）；② ⑫ VP 投票超時自動 ABSTAIN；③ IRG 完成後解鎖 VP 投票提交；④ ⑭ Chair `RETURN` 走 `endEventReturned`，與其他 RETURN 一致（見 §1.5.4）。
+> 圖中虛線 `-.->` 表示非主路徑，分五類：
+> ① **④ EO** 退回時走 `${approved == false}`，回 ③ Supervisor 重審（見 §1.5.1 A，二值 boolean）。
+> ② **⑤/⑥/⑥' Dean 三節點** 自 2026-05-15（commit `6213a252d`）改為三選項 `deanDecision`，**RETURN 與 REJECT 不再等價**：`RETURN` 仍回 ③ Supervisor 重審；`REJECT` 直接終止到 `endEventRejected` 並通知申請人 + 歷史已參與審批人員（見 §1.5.1 B）。
+> ③ **⑦ Final Guest Approval（VPRD）** 已改為專屬服務節點，無 reject 路徑——`RETURN_TO_DEAN`（非 NSOA）退回 ⑥' Dean / Delegate 活動內容審批；`RETURN_TO_CHAIR`（NSOA）退回 ⑭ Chair（見 §1.5.3）。
+> ④ **⑫ VP 投票** 超時自動 ABSTAIN；**IRG 完成**後解鎖 VP 投票提交。
+> ⑤ **⑭ Chair `RETURN`** 走 `endEventReturned`，與其他 RETURN 一致（見 §1.5.4）。
 
 ### 4.2 非 NSOA 簡化路徑
 
