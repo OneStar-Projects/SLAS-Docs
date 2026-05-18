@@ -226,4 +226,50 @@
 - The "Deprecated" group still shows ✓ on 11 roles incl. Student — clear cleanup target.
 - **Dean (id=149)** is the activity-publish workflow Dean, **not** `Dean of Students` (id=129) — its narrow row reflects BPM-task-driven approval rather than menu visibility.
 
+---
+
+## 2. 按钮权限 / Button-level RBAC 注解状态
+
+> §1 矩阵只覆盖 `TYPE∈{1,2}` 的目录与菜单页。`TYPE=3` 的"按钮权限"（即后端 `@PreAuthorize("@ss.hasPermission('xxx')")` 校验）不在表内。
+> §1 only covers menu directories/pages (`TYPE∈{1,2}`). Button-level permissions (`TYPE=3`) enforced by backend `@PreAuthorize` annotations are listed here.
+
+### 2.1 P2 审批流相关按钮权限的现状
+
+自 2026-05-15 起，多处 P2 审批流接口的 RBAC 注解被**移除**，权限校验下沉到 service 层（任务 assignee / 候选组校验）。这是为了避免 UAT/PROD 部署后因 menu seed 数据未同步导致 403 阻断流程。
+
+| Endpoint | Permission 字符串 | RBAC 注解状态 | 业务层兜底校验 | 改动 commit |
+|---|---|---|---|---|
+| `POST /activity/approval/supervisor/approve` | `activity:approval:supervisor-approve` | **已移除** | `validateTaskAndUser` 校验当前用户是该 BPM task 的 assignee/candidate | `aaff128ff` (2026-05-15) |
+| `POST /activity/ori-app-period/create` | `activity:ori-app-period:create` | **已移除** | （无） | `6213a252d` (2026-05-15) |
+| `PUT /activity/ori-app-period/update` | `activity:ori-app-period:update` | **已移除** | （无） | `6213a252d` |
+| `DELETE /activity/ori-app-period/delete` | `activity:ori-app-period:delete` | **已移除** | （无） | `6213a252d` |
+| `POST /activity/role-delegate/create` | `activity:role-delegate:create` | **已移除** | （无） | `6213a252d` |
+| `PUT /activity/role-delegate/update` | `activity:role-delegate:update` | **已移除** | （无） | `6213a252d` |
+| `DELETE /activity/role-delegate/delete` | `activity:role-delegate:delete` | **已移除** | （无） | `6213a252d` |
+| `POST /activity/unit-coordinator/create` | `activity:unit-coordinator:create` | **已移除** | （无） | `6213a252d` |
+| `PUT /activity/unit-coordinator/update` | `activity:unit-coordinator:update` | **已移除** | （无） | `6213a252d` |
+| `DELETE /activity/unit-coordinator/delete` | `activity:unit-coordinator:delete` | **已移除** | （无） | `6213a252d` |
+
+> Menu 层仍可在管理后台为相关角色配置可见性（控制 UI 是否显示入口）；但**接口层不再做 RBAC 闸门**——任何已登录用户调到 `/ori-app-period/create` 之类接口都会被后端接受，需要靠 menu 侧不暴露入口来事实上限制访问。
+> Background：commit `ae6aff405` (2026-04-24, P2 大版本) 一次性新增 21 个 `@PreAuthorize` 注解，但没有配套的 menu seed SQL；导致 UAT 上 `supervisor-approve` 等接口直接 403。修复方式是移除注解，而不是补 14 角色的菜单授权数据。
+
+### 2.2 仍保留 `@PreAuthorize` 的关键审批接口
+
+仅作参考，下列接口**仍**做 RBAC 校验（截至 2026-05-18，p2 分支）：
+
+| Endpoint | Permission | 备注 |
+|---|---|---|
+| `POST /activity/approval/irg/select-group` | `activity:approval:irg-select-group` | |
+| `POST /activity/approval/irg/vote` | `activity:approval:irg-vote` | |
+| `POST /activity/approval/irg/review-summary` | `activity:approval:irg-review-summary` | |
+| `POST /activity/approval/vp/select-group` | `activity:approval:vp-select-group` | |
+| `POST /activity/approval/vp/vote` | `activity:approval:vp-vote` | |
+| `POST /activity/approval/vp/check-consensus` | `activity:approval:vp-check-consensus` | |
+| `POST /activity/approval/vp/secretary-decision` | `activity:approval:vp-secretary-decision` | |
+| `POST /activity/approval/chair/decision` | `activity:approval:chair-decision` | |
+| `GET /activity/approval/query` 系列 | `activity:approval:query` | |
+| `POST /activity/approval/ai-summary` | `activity:approval:ai-summary` | |
+
+> ⚠️ 这些接口若部署到 UAT/PROD 且未补对应 menu seed，会以同样方式 403。部署前请用 `tools/perm-diagnostic/perm-diff.sh diff 146 uat 'activity:approval'` 比对。
+
 — end —

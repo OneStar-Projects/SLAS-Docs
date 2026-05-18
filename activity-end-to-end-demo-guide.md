@@ -389,27 +389,27 @@
 
 ### 5.5 Dean / Delegate：外部嘉賓背書
 
+> 自 commit `6213a252d` / `27d90191`（2026-05-15）起，Dean 端的 ⑤ / ⑥ / ⑥' 三個審批節點統一改為**三選項決策**：`Approve` / `Return` / `Reject`；前端使用 `DeanComboApprovalForm.vue`。
+
 1. `Dean` 或 `Delegate` 打開 `Guest Endorsement`。
 2. 核對外部嘉賓名單。
-3. 選擇 `Approve`。
+3. 三選一：
+   - `Approve` → 進入 Sponsorship Approval（如活動有贊助）；無贊助則直接進入 `Activity Content Approval`。
+   - `Return` → 退回 ③ Supervisor 重審（填寫退回原因）。
+   - `Reject` → **流程直接結束**，狀態 `REJECTED`；申請人 + 歷史已參與審批的人員會收到通知。
 4. 提交。
-
-預期結果：
-
-1. 流程進入 Sponsorship Approval（如活動有贊助）。
-2. 如無贊助，流程直接進入 `Activity Content Approval`。
 
 ### 5.6 Dean / Delegate：贊助審批
 
 1. `Dean` 或 `Delegate` 打開 `Sponsorship Approval`。
-2. 查看贊助資訊區塊。
-3. 選擇 `Approve`（或 `Reject` / `Return`,退回 ③ Supervisor 重審,見設計文檔 §1.5.1）。
+2. 查看贊助資訊區塊（金額 / 來源）。
+3. 三選一：
+   - `Approve` → 進入 `Activity Content Approval`。
+   - `Return` → 退回 ③ Supervisor 重審（UI 標籤：「退回監督員」）。
+   - `Reject` → 流程結束 `REJECTED`（UI 標籤：「不同意並通知申請人」），通知申請人 + 歷史審批人。
 4. 提交。
 
-預期結果：
-
-1. `Approve` → 流程進入 `Activity Content Approval`（活動內容 / 預算審批）。
-2. `Reject` / `Return` → 退回 ③ Supervisor 重新審核。
+> ⚠️ **`Return` 與 `Reject` 不再等價**（這是 2026-05-15 之前的舊行為）。當前 BPMN 的 `flow_sponsorship_returned` → `supervisorsReviewTask`，`flow_sponsorship_rejected` → `endEventRejected`，是兩條獨立路徑。詳見設計文檔 §1.5.1。
 
 #### 5.6.1 觸發條件 — supervisor 可在 ③ 補救觸發本節
 
@@ -427,17 +427,23 @@
 
 1. `Dean` 或 `Delegate` 打開 `Activity Content Approval`。
 2. 核對活動詳情、預算項目。
-3. 選擇 `Approve`，或在當前實作中使用 `Return / Reject` 其中之一把流程退回給 Supervisor 重審。
-4. 提交。
+3. 三選一：
+   - `Approve` → 進入下一階段（見下方預期結果）。
+   - `Return` → 退回 ③ Supervisor 重審（標籤：「退回監督員」，需填退回原因）。
+   - `Reject` → **直接終止流程**（標籤：「不同意並通知申請人」，需填不同意原因）。
+4. 提交。提交前會根據按鈕類型彈出確認框（`Reject` 為紅色危險樣式）。
 
 預期結果：
 
 1. `Approve`：
    - `NSOA` 活動：進入 IRG / VP / Chair。
    - `非 NSOA` 活動：如有外部嘉賓進入 `VP(RD) / VP(RD) Delegate`，否則直接發布。
-2. `Return / Reject`（當前 UI 兩個按鈕流程上等價）：
-   - BPMN 實際都會回到 `Supervisors Review`
-   - 最終是否變成 `RETURNED / REJECTED`，取決於 Supervisor 重審後的聚合結果
+2. `Return`：
+   - BPMN 走 `flow_activity_content_returned` → `supervisorsReviewTask`，回到 ③ Supervisor 重新審核。
+   - 申請人不會直接收到「退回」通知，需等 Supervisor 重審聚合後才生效。
+3. `Reject`（**自 2026-05-15 起與 Return 不再等價**）：
+   - BPMN 走 `flow_activity_content_rejected` → `endEventRejected`，活動狀態變 `REJECTED`，流程結束。
+   - 申請人 + 該流程歷史已參與審批的人員（IRG / VP / Supervisor 等）**都會收到「申請已被駁回」通知**，由 `BpmTaskNotificationAsyncService.notifyActivityPublishDeanRejectParticipants` 處理（commit `6213a252d`）。
 
 ### 5.7 VP(RD) / VP(RD) Delegate：最終外部嘉賓審批
 
@@ -565,6 +571,10 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 3. 第二輪重新選同一個 VP Group
 4. 第二輪兩位 VP Member 都投 `APPROVE`
 5. `VPSLA Secretary` 再提交 Chair
+
+> **第二輪 BPMN 流轉變化**（commit `ca89f930c`, 2026-05-18）：第二輪及以後，VP 分支完成後**直接進入 `VP AI Summary`，不再經過 Parallel Join Gateway**——`vpBranchMergeGateway` 上的 `vpRoundNumber > 1` 條件分支會把 token 路由到 `vpAiSummaryTask`。
+>
+> Demo 觀察：方式 B 第二輪結束時，不應在流程定義圖上看到 token 停留在 Parallel Join 上等 IRG 匯流；如果你跑過第一輪 IRG 後重啟容器或回放歷史，這條 round 2+ 短路會避免流程死等。詳見設計文檔 §4.3.1。
 
 ### 6.6 VPSLA Secretary：檢查共識
 

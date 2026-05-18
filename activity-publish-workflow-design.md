@@ -43,11 +43,13 @@
 
 > 本節為**全文後續所有"拒絕 / 退回"描述**提供統一語義基礎。讀後續 §4 流程圖、§5 步驟詳述與 §6 結果表時請以本節為準。
 
-#### 1.5.1 高級審批節點：`approveTask(approved=false)` + BPMN gate 真正分支
+#### 1.5.1 高級審批節點：`approveTask` + BPMN gate 真正分支
 
-EO、Checker、Guest Endorsement、Sponsorship、Activity Content 等審批節點，前端表單（`SimpleApprovalForm` / `ContentGuestApprovalForm`）的「通過」與「拒絕／退回」按鈕**統一調用** `PUT /bpm/task/approve`（[useApprovalFormBase.ts → submitApproval](https://example.invalid)），把使用者選擇通過 `variables: { approved: true | false }` 寫入流程變量。
+EO、Checker、Guest Endorsement、Sponsorship、Activity Content 等審批節點，前端表單（`SimpleApprovalForm` / `DeanComboApprovalForm`）的「通過 / 退回 / 不同意」按鈕**統一調用** `PUT /bpm/task/approve`，把使用者決定寫入流程變量。
 
 > **例外**：⑦ Final Guest Approval（VPRD）已改為**專屬服務節點**，不走這條統一路徑——詳見 §1.5.3。
+
+##### A) ② Checker / ④ EO — 仍是二值 `approved`
 
 ```ts
 await approveTask({
@@ -58,20 +60,50 @@ await approveTask({
 })
 ```
 
-→ BPMN 上的 `flow_xxx_approved` / `flow_xxx_rejected`（或對應命名）**會真正按 `${approved == true/false}` 分流**，到哪個目標完全由 BPMN 定義決定，並非短路到 `endEventReturned`。
+BPMN 上的 `flow_xxx_approved` / `flow_xxx_rejected` 按 `${approved == true/false}` 分流。
 
-具體每個節點 reject/return 的去向，請看以下對照表（以 `activity_publish.bpmn20.xml` 為準）：
+##### B) ⑤ Guest Endorsement / ⑥ Sponsorship / ⑥' Activity Content — 改為三值 `deanDecision`（commit `6213a252d`, 2026-05-15）
 
-| 節點 | reject/return 後實際去向 | 業務含義 |
-|:----|:----------------------|:--------|
-| ② Checker | `endEventReturned` | 流程結束，申請人可修改後重新提交 |
-| ④ EO | `supervisorsReviewTask` | 回到 ③ Supervisor 多實例**重新審核** |
-| ⑤ Guest Endorsement | `supervisorsReviewTask` | 回到 ③ Supervisor 重審 |
-| ⑥ Sponsorship | `supervisorsReviewTask` | 回到 ③ Supervisor 重審 |
-| ⑥' Activity Content | `supervisorsReviewTask` | 回到 ③ Supervisor 重審 |
-| ⑦ Final Guest（VPRD） | `chairPersonDecisionTask`（NSOA, RETURN_TO_CHAIR） / `activityContentApprovalTask`（非 NSOA, RETURN_TO_DEAN） | VPRD 專屬服務節點，不走 `approveTask`；無 reject 路徑——只能 approve 或 return 給上一步審批人。詳見 §1.5.3 |
+Dean 端的三個審批節點自 2026-05-15 改為**三選項**：`APPROVE` / `RETURN` / `REJECT`。前端 [DeanComboApprovalForm.vue](file:///Users/hugo/codes/project/asl/slas/SLAS_UI/src/views/review/ActivityPublishReview/components/DeanComboApprovalForm.vue) 提交時同時寫入 `decision` 和兼容的 `approved`：
 
-> 注意：上述「回到 Supervisor」並非 bug 而是 BPMN `<!-- EO returns → back to Supervisors (no reject path) -->` 等明文設計。對需要「直接退回申請人」的場景，應由 ③ Supervisor 在重審時自行投 `RETURN` / `REJECT`，由聚合委托 + `supervisorsDecisionGate` 真正結束流程。
+```ts
+await approveTask({
+  id: props.taskId,
+  reason,
+  variables: {
+    decision: formData.decision,            // 'APPROVE' | 'RETURN' | 'REJECT'
+    approved: formData.decision === 'APPROVE',
+    ...variables
+  },
+  taskStatus: formData.decision === 'APPROVE' ? undefined : BpmTaskStatus.RETURN
+})
+```
+
+BPMN 上的三個 gate（`guestEndorsementDecisionGate` / `sponsorshipDecisionGate` / `activityContentDecisionGate`）按 `${deanDecision == 'APPROVE' | 'RETURN' | 'REJECT'}` 分流，**`REJECT` 是真正的終止路徑**（→ `endEventRejected`），不再像舊版那樣與 `RETURN` 等價回到 Supervisor。
+
+##### 各節點 reject/return 的去向對照表
+
+以當前 [`activity_publish.bpmn20.xml`](file:///Users/hugo/codes/project/asl/slas/SLAS_PRO/slas-server/src/main/resources/processes/activity_publish.bpmn20.xml) 為準：
+
+| 節點 | RETURN 去向 | REJECT 去向 | 業務含義 |
+|:----|:----------|:----------|:--------|
+| ② Checker | `endEventReturned` | （無獨立 REJECT） | 二值 `approved`：通過或退回申請人 |
+| ④ EO | `supervisorsReviewTask` | （無獨立 REJECT） | 二值 `approved`：回到 ③ Supervisor **重新審核** |
+| ⑤ Guest Endorsement | `supervisorsReviewTask` | `endEventRejected` | **三值** `deanDecision`：`RETURN` 回 ③ Supervisor；`REJECT` 直接終止 |
+| ⑥ Sponsorship | `supervisorsReviewTask` | `endEventRejected` | 同上 |
+| ⑥' Activity Content | `supervisorsReviewTask` | `endEventRejected` | 同上 |
+| ⑦ Final Guest（VPRD） | `chairPersonDecisionTask`（NSOA, RETURN_TO_CHAIR）/ `activityContentApprovalTask`（非 NSOA, RETURN_TO_DEAN） | （無 reject 路徑） | VPRD 專屬服務節點，詳見 §1.5.3 |
+
+> 注意：上述 ④ EO「回到 Supervisor」並非 bug 而是 BPMN `<!-- EO returns → back to Supervisors (no reject path) -->` 等明文設計；⑤⑥⑥' Dean 自 `6213a252d` 起新增了**獨立 REJECT 路徑**，與 RETURN 不再等價，UI 也分為三個按鈕並有不同確認文案（見 [zh-hk approval.json](file:///Users/hugo/codes/project/asl/slas/SLAS_UI/src/language/locales/zh-hk/approval.json) 的 `returnToSupervisors` / `rejectToApplicant`）。
+
+##### Dean `REJECT` 路徑的通知行為（commit `6213a252d`）
+
+當 Dean 在 ⑤/⑥/⑥' 任一節點選擇 `REJECT`，[`BpmTaskNotificationAsyncService`](file:///Users/hugo/codes/project/asl/slas/SLAS_PRO/slas-module-bpm/slas-module-bpm-biz/src/main/java/hk/eduhk/sao/slas/module/bpm/service/task/BpmTaskNotificationAsyncService.java) 會額外通知**歷史已參與此流程的審批人**：
+
+- 申請人本人（一定通知）
+- 該流程啟動以來所有已完成的 IRG / VP / Supervisor 等審批人（透過 `resolveHistoricActivityPublishParticipantIds` 從 `historyService` 提取）
+
+業務含義：Dean 駁回 ≠ 退回；駁回意味著流程結束，所有已投入時間的審批人都應被告知最終結果，避免重複勞動。
 
 #### 1.5.2 通用 `rejectTask` 短路機制（目前 activity_publish 流程**沒有節點調用**）
 
@@ -162,6 +194,8 @@ RETURN > REJECT > RECOMMEND
 | `editing_expire_at` | 鎖的 SQL 端 TTL（30 分鐘） |
 
 `RespVO` 同步暴露 `editingUserId / editingExpireAt`，活動列表據此渲染「編輯中」徽章。
+
+**`editingUserName` 字段**（commit `ca89f930c`, 2026-05-18）：列表接口 `GET /activity/page` 額外返回 `editingUserName`，由後端 `populateEditingUserNames` 透過 [`UserDisplayNameUtils.resolve(user)`](file:///Users/hugo/codes/project/asl/slas/SLAS_PRO/slas-module-activity/slas-module-activity-biz/src/main/java/hk/eduhk/sao/slas/module/activity/util/UserDisplayNameUtils.java) 解析持鎖人的顯示名（`nickname → username` fallback）。解析時用 `DataPermissionUtils.executeIgnore` **繞過數據權限**，確保即使當前用戶看不到該持鎖人所在部門，徽章也能展示「正被 XXX 編輯」而不是只顯示 ID。解析失敗時 `editingUserName = null`，前端應 fallback 顯示 ID 或「他人」字樣。
 
 #### 1.6.3 端點
 
@@ -578,7 +612,11 @@ flowchart TD
 當 ⑫ VPSLA Secretary 判定**未達成共識**時：
 
 1. 流程從 ⑫ 之後的網關回跳到 ⑩ VP 選組，僅 VP 分支重新執行（IRG 分支首輪結束時已完成,不會再次觸發）。
-2. 第二、第三輪 VP 分支完成後到達 Parallel Join 時，IRG 分支保持已完成狀態,因此 Join 立即通過。
+2. **第二輪及以後跳過 Parallel Join Gateway，直接進入 VP AI Summary**（commit `ca89f930c`, 2026-05-18）：BPMN 的 `vpBranchMergeGateway` 增加了基於 `vpRoundNumber` 流程變量的條件分支——
+   - `vpRoundNumber == null || ≤ 1`：→ `parallelJoinGateway`（首輪需與 IRG 分支匯流）
+   - `vpRoundNumber > 1`：→ `vpAiSummaryTask`（IRG 分支首輪已完成,跳過 join 避免死等）
+
+   舊版（2026-05-18 之前）所有輪次都走 `parallelJoinGateway`,依賴 IRG 分支已 token 留在 join 上才能匯流；該假設在重啟流程或某些異常路徑下不成立。新版顯式判斷輪次,更穩健。
 3. 最多執行 3 輪。第 3 輪結束時無論共識與否都強制進入 ⑬ ChairPerson 決定。
 4. **新一輪開始後,前一輪未提交的投票即失效**:當 VP Secretary 宣告未達共識並進入下一輪,前一輪沒及時提交投票的成員,在新一輪開始後再提交舊輪投票會被系統拒絕。這確保新一輪的共識判斷只看本輪實際結果,不被遲到的舊輪投票影響。
 
@@ -643,19 +681,21 @@ flowchart TD
 
 - **執行人**：Dean / Delegate（候選組,先到先審）
 - **觸發條件**：活動聲明有外部嘉賓
-- **動作**：對外部嘉賓安排作前置背書
+- **動作**：對外部嘉賓安排作前置背書；三選一決策（`APPROVE` / `RETURN` / `REJECT`，commit `6213a252d`）
 - **結果**：
-  - 通過 → 進入 ⑥ 贊助審批檢查
-  - 拒絕 → 回到 ③ Supervisor 多實例**重新審核**（見 §1.5.1）
+  - `APPROVE` → 進入 ⑥ 贊助審批檢查
+  - `RETURN` → 回到 ③ Supervisor 多實例**重新審核**（見 §1.5.1）
+  - `REJECT` → 流程結束（`endEventRejected`），通知申請人及歷史已參與審批的人員
 
 ### ⑥ 贊助審批
 
 - **執行人**：Dean / Delegate（候選組,先到先審）
 - **觸發條件**：活動聲明有贊助
-- **動作**：審批贊助相關內容
+- **動作**：審批贊助相關內容；三選一決策（`APPROVE` / `RETURN` / `REJECT`，commit `6213a252d`）
 - **結果**：
-  - 通過 → 進入 ⑥' 活動內容審批
-  - 拒絕 → 回到 ③ Supervisor 多實例**重新審核**（見 §1.5.1）
+  - `APPROVE` → 進入 ⑥' 活動內容審批
+  - `RETURN` → 回到 ③ Supervisor 多實例**重新審核**
+  - `REJECT` → 流程結束（`endEventRejected`），通知申請人及歷史已參與審批的人員
 
 ### ⑥' 活動內容審批（必經）
 
@@ -663,6 +703,11 @@ flowchart TD
 - **觸發條件**：**無條件**——Supervisor 通過後一定會進入此節（無論活動是否有嘉賓 / 贊助）
   - 若有嘉賓 / 贊助，則 ⑤ ⑥ 先執行，最後匯流到 ⑥'
   - 若都沒有，則 EO 通過後直接進入 ⑥'
+- **動作**：核對活動詳情與預算；三選一決策（`APPROVE` / `RETURN` / `REJECT`，commit `6213a252d`）
+- **結果**：
+  - `APPROVE` → 進入 NSOA / 非 NSOA 分支
+  - `RETURN` → 回到 ③ Supervisor 多實例**重新審核**
+  - `REJECT` → 流程結束（`endEventRejected`），通知申請人及歷史已參與審批的人員
 - **動作**：對活動內容與預算等整體資訊作 `Approve` / `Return` / `Reject` 決定
 - **結果**：
   - `Approve` → 進入 NSOA / 非 NSOA 分流
