@@ -224,6 +224,28 @@ BPMN 上的三個 gate（`guestEndorsementDecisionGate` / `sponsorshipDecisionGa
 
 編輯鎖只作用於**草稿態 / 退回後重新編輯態**，與 BPMN 流程完全解耦——流程中的審批節點不關心鎖。鎖唯一的關聯是：當活動處於 `RETURNED` 等待修改時，OC 必須先取鎖才能進入編輯頁。
 
+#### 1.6.6 編輯權限（`canEdit` / `ActivityAccessGuard`）
+
+> 引入時間：commit `e04f7546a`（2026-05-18，編輯權限 + 強制鎖）+ `f40ce691b`（OC 自動補位僅限創建者）。前端配套：`11364420`（前端讀後端 `canEdit` 隱藏編輯按鈕 + 本地化權限錯誤）。
+
+在 `e04f7546a` 之前，活動編輯**沒有任何身份範圍校驗**：任何持 `activity:activity:update` 權限的用戶都能取鎖並改任意活動，且編輯鎖只是「建議性」的（update 接受無鎖請求）。本次收緊：
+
+**編輯權限規則（`ActivityAccessGuard.canEdit(activityId, userId)`）：**
+
+1. **狀態門檻**：活動必須是 `DRAFT`。提交後（`SUBMITTED` / `PUBLISHED` / `ONGOING` / `COMPLETED` / `CANCELLED`）一律不可編輯；被退回（`RETURNED`）的活動會回滾到 `DRAFT`（見 §1.7.5）後再次可編輯。
+2. **身份白名單**：編輯者 = 申請人(`creatorId`) ∪ `activity_oc_member` ∪ `activity_supervisor`（**該活動的**）。Coordinator / 系統管理員 / 任何其他角色一律拒絕（`ACTIVITY_NO_EDIT_PERMISSION` 1_003_001_021）。
+   - ⚠️ Supervisor 仍在**編輯白名單**內，但被產品規則排除在 endorsement reset 之外。
+3. **後台批量導入**直接走 `activityMapper.insert`，不經過本方法。
+
+**配套收緊：**
+
+- **強制編輯鎖**：用戶上下文下 `acquire-editing` 與 `updateActivity` 都要求持鎖，`validateCurrentUserEditingLock` 拒絕無鎖請求（`ACTIVITY_EDITING_LOCK_REQUIRED` 1_003_001_022）。BPMN 任務與其他內部調用（無 `LoginUser` 上下文）繞過。
+- **`updateActivity` 狀態門檻**收緊為用戶上下文僅 `DRAFT` 可改；系統調用（如 `ActivityPublishTask`）因無登入用戶仍可通過。
+- **提交防繞過**：提交審批路徑改為**先 sync OC 成員 + endorsement、再對刷新後的名單跑 `isAllEndorsed`**，堵住「在提交同一請求裡新增一個 OC」把未簽 OC 帶進流程的漏洞（`f40ce691b` 進一步把 OC 自動補位安全網僅限創建者，避免 supervisor / 其他編輯者誤觸發補位）。
+- **`canEdit` 字段**（`ActivityRespVO.canEdit`）：僅在 `GET /activity/get` 響應時計算填充（列表接口不填），詳情頁據此隱藏編輯按鈕。
+- **移除 OC 時釋鎖**：`syncOcMembersFromActivityMembers` 先快照舊 OC 名單，對本次被移除的 OC 強制釋放編輯鎖（Mapper SQL 按鎖主過濾，對未持鎖者是安全 no-op）。
+- **釋鎖時機**：`releaseEditingLock` 移到 `updateActivity` 最後，所有關聯表寫入成功後才釋放。
+
 ### 1.7 Endorse 模式（OC 互審不阻塞編輯）
 
 > 引入時間：commit `20239e1e`（前端，2026-05-07）。
@@ -254,6 +276,72 @@ BPMN 上的三個 gate（`guestEndorsementDecisionGate` / `sponsorshipDecisionGa
 - 「待 endorse 名單」上不會顯示申請人自己,UI 上看到的都是還沒 endorse 的其他 OC 成員。
 - 若該組織只有一位 OC(也就是申請人自己),活動可以直接提交,不會卡在「等自己 endorse 自己」。
 - 多人 OC 的組織提交活動時,**其他 OC 仍必須完成 endorse** 才能提交,確保互審不被繞過。
+
+#### 1.7.5 退回後重置 endorsement + 回滾 DRAFT
+
+> 引入時間：commit `e04f7546a`（2026-05-18）。
+
+在此之前，活動被退回時只更新了 `approvalStatus`，`status` 仍停在 `SUBMITTED`，導致申請人無法重新編輯，且舊的 endorsement 殘留。本次：
+
+- `updateApprovalStatus("RETURNED", ...)` 現在**同時把 `activity.status` 回滾到 `DRAFT`** 並調用 `resetAllEndorsements(activityId)`：申請人可重新進入編輯流程，**每位 OC 必須對修改後的內容重新 endorse** 才能再次提交。`ActivityApprovalServiceImpl` 內的私有 `updateActivityApprovalStatus` 重構為委派到此處，副作用邏輯集中一處。
+
+**endorsement reset 的觸發範圍（按當前代碼）：**
+
+| 觸發點 | 行為 |
+|:------|:----|
+| 活動被退回（`RETURNED`） | `resetAllEndorsements`：所有 OC 的 endorsed 置回 false，全員須重簽 |
+| DRAFT 保存（`syncEndorsements`） | **只**為新增 OC 創建待簽記錄、為移除 OC 刪記錄；**不**因內容變更重置已有 endorsement |
+
+> ⚠️ 注意：當前實現**沒有**「內容(material)變更即選擇性重置 endorsement」的細粒度規則（例如申請人改動 reset 其他人、其他 OC 改動 reset 全員）。唯一會清空已簽 endorsement 的路徑是活動被退回。若日後需要 material-change 觸發的選擇性 reset，需另行實現。
+
+### 1.8 待辦可見性與 claim 規則（框架級，跨所有 BPM 流程）
+
+> 引入 / 演進：commit `34af49147`（排除 dept 數據權限，2026-05-20）→ `eb8b8c51d`（按角色 dept 權限收緊可見性）→ `d754ae903`（任一登入角色都能看到該用戶應辦的全部任務）→ `61a1fdb87`（已分配任務只對 assignee 可見）。實現在 `BpmTaskServiceImpl`，**作用於所有 activity_publish / 學生組織等 BPM 流程**，非本流程專屬。
+
+決定「誰能在待辦列表看到一個任務、誰能 claim / 辦理」的邏輯分兩段：**Flowable 並集查詢** + **內存後置過濾**。
+
+#### 1.8.1 並集查詢 `createOperableTaskQuery`
+
+`OR` 條件（命中任一即進入候選集）：
+
+1. `taskCandidateOrAssigned(userId)` — 直接 assignee 或候選用戶
+2. `taskCandidateGroupIn(用戶的角色 IDs)` — 候選組（角色）
+3. `processVariableValueEquals("supervisor_<uid>", true)`
+4. `processVariableValueEquals("admin_checker_<uid>", true)`
+5. `processVariableValueEquals("academic_checker_<uid>", true)`
+
+第 3–5 的 marker 變量是協調員 / 秘書在上一節點審批時**動態指派**具體某人的標記（任務本身可能只掛 candidateGroup、無 assignee）。任意登入角色都會跑同一條查詢——**角色只作授權，不限制可見性**（`d754ae903` 的意圖）。
+
+#### 1.8.2 後置過濾鏈
+
+候選集依次經過三個內存過濾器：
+
+| 過濾器 | 作用 |
+|:------|:----|
+| `filterTasksByApprovalGroup` | IRG / VP 投票任務只對被選中的投票成員可見 |
+| `filterTasksByCheckerDesignation` | 學生組織註冊的 checker 指派過濾 |
+| `filterTasksByRoleDeptScope` | 角色 dept 數據權限邊界（見下） |
+
+#### 1.8.3 `filterTasksByRoleDeptScope` 的判定順序
+
+對每個任務：
+
+1. **已分配任務（`assignee` 非空）→ 只對該 assignee 可見**（`61a1fdb87`）。
+   - 這是修掉「一個 supervisor 看到兄弟 supervisor 多實例任務」的關鍵：marker 變量活在整個流程實例上，若不在此短路，會讓同輪多實例互相可見。activity_publish 的 supervisor 多實例 `flowable:assignee=${supervisorUserId}` 都有 assignee，因此每人只看到自己那條。
+2. **未分配任務**：
+   - 顯式指派（candidateUser 身份鏈，或 `supervisor_/admin_checker_/academic_checker_` marker）→ 可見，**marker 故意繞過 dept 數據權限**（agency-wide oversight 不應被部門權限擋住）。
+   - 否則走候選組角色匹配：用戶角色須命中任務的 candidateGroup，**且**該角色的 dept 數據權限覆蓋任務的 `deptId` 才可見（`eb8b8c51d`）。
+
+> **設計要點**（`34af49147`）：「與用戶同部門」本身**不**授予可見性 / claim 權——必須是上面某種顯式指派。dept 權限只用於收窄 candidate-group 任務的範圍，不單獨開門。
+
+#### 1.8.4 claim / 辦理一致性
+
+`validateTask` 與可見性同源：
+
+- 任務**已有 assignee** → 只有該 assignee 能辦理（`assignee != userId` 直接拋 `TASK_OPERATE_FAIL_ASSIGN_NOT_SELF`）。
+- 任務**無 assignee** → 跑與待辦列表相同的並集查詢 + 過濾鏈，通過才自動簽收（`claim`）給當前用戶。
+
+因此「看得到」與「能辦」用同一套規則，不會出現看得到卻點不開、或反之。
 
 ---
 
