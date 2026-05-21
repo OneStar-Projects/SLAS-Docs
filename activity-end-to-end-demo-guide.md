@@ -365,15 +365,17 @@
 
 #### 5.3.1 聚合規則（多人投票示範時）
 
-當 supervisor 投票不一致時,系統按 **sticky 升級** 算最終 `supvAggregateDecision`(實現:增量 Java 聚合,commit `5edae8ab9`,詳設計文檔 §1.5.3.1):
+系統按 **first-wins 短路** 算最終 `supvAggregateDecision`:第一個投終局票(RETURN/REJECT)的 supervisor 說了算,即時取消其餘待辦(commit `82443a610`,詳設計文檔 §1.5.3.1):
 
-| 投票組合 | 最終聚合 | 流程走向 |
+| 投票情形(按時間先後) | 最終聚合 | 流程走向 |
 |:--------|:--------|:--------|
 | 全員 `RECOMMEND` | `RECOMMEND` | → ④ EO / ⑤ 嘉賓 / ⑥ 贊助 / ⑥' 內容 |
-| 任一 `RETURN`(其他任意) | `RETURN`(可覆蓋 REJECT)| → `endEventReturned`,申請人可修改後重提 |
-| 任一 `REJECT` 且無 `RETURN` | `REJECT` | → `endEventRejected`,流程結束 |
+| 第一個 `RETURN`(其餘投不了)| `RETURN` | → `endEventReturned`,申請人可修改後重提 |
+| 第一個 `REJECT`(其餘投不了)| `REJECT` | → `endEventRejected`,流程結束 |
 
-> Demo 提示:若想演示 RETURN 路徑,讓 1 位 Supervisor 投 `RETURN`,其餘投 `RECOMMEND`,聚合結果為 `RETURN`。
+> Demo 提示:
+> - 演示 RETURN 路徑:讓第 1 位 Supervisor 投 `RETURN` → 立即短路,其餘 Supervisor 待辦消失,聚合 = `RETURN`。
+> - 注意先後:若第 1 位投 `REJECT`、第 2 位想投 `RETURN`,**第 2 位已無待辦可投**,聚合 = `REJECT`(終局)。結果取決於誰先提交,不再有 RETURN 覆蓋 REJECT 的舊行為。
 
 ### 5.4 EO：場地審批
 

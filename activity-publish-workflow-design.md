@@ -119,31 +119,37 @@ BPMN 上的三個 gate（`guestEndorsementDecisionGate` / `sponsorshipDecisionGa
 | ⑭ ChairPerson | `chairPersonDecision(...)` | `ChairDecisionForm` | 設 `chairDecision = PASS / REJECT / RETURN`，BPMN gate 真正按值分流；`RETURN` → `endEventReturned`（已統一，見 §1.5.4） |
 | ⑦ VPRD | `guestApprovalDecision(...)` `POST /activity/approval/guest/decision` | `GuestApprovalForm.vue` | 設 `guestDecision = APPROVE / RETURN_TO_CHAIR / RETURN_TO_DEAN`（見 `GuestDecisionEnum`）；BPMN gate `guestDecisionGate` 真正按值分流：`APPROVE` → 發布，`RETURN_TO_CHAIR`（NSOA only）→ `chairPersonDecisionTask`，`RETURN_TO_DEAN`（非 NSOA only）→ `activityContentApprovalTask`。**無 reject 路徑** |
 
-##### 1.5.3.1 ③ Supervisor 多人聚合 — 增量 Java 聚合(已修復)
+##### 1.5.3.1 ③ Supervisor 多人聚合 — first-wins 短路(最新規則)
 
-`supervisorApprove` 採用**增量單變量聚合**而非 multi-instance outputCollection:每位 supervisor 提交時呼叫 `resolveSupervisorAggregateDecision`,讀目前 `supvAggregateDecision` 流程變量,按下列**sticky 升級規則**算出新值寫回:
+**業務規則(2026-05-20 起,commit `82443a610`):第一個投終局票的 supervisor 說了算,即時短路。**
 
 ```
-RETURN > REJECT > RECOMMEND
-- 已經 RETURN → 永遠保持 RETURN
-- 已經 REJECT 且當前不是 RETURN → 保持 REJECT
-- 否則 → 採用當前決定
+- 第一個投 RETURN → 整體 RETURN,立即取消其他 supervisor 待辦
+- 第一個投 REJECT → 整體 REJECT,立即取消其他 supervisor 待辦
+- 全部投 RECOMMEND → 整體 RECOMMEND,繼續下一步
 ```
 
-`ActivitySupervisorAggregateDelegate` 在多實例完成後作為 safety net:若 `supvAggregateDecision` 已是 RETURN/REJECT 則信任並保留;否則 fallback 到從 `supvDecisions` 集合(或單個 `supvDecision`)重新聚合。
+實現由三部分協同:
 
-四種代表性組合的驗證:
+1. **`resolveSupervisorAggregateDecision`**:每位 supervisor 提交時讀目前 `supvAggregateDecision`,**第一個非 RECOMMEND 值鎖死、不再升級或降級**(已是 RETURN/REJECT 就保留,否則採用當前決定)。
+2. **BPMN `supervisorsReviewTask` completionCondition**:`${nrOfCompletedInstances == nrOfInstances || supvAggregateDecision == 'RETURN' || supvAggregateDecision == 'REJECT'}` — 一旦聚合值變成 RETURN/REJECT,Flowable **取消尚未完成的兄弟 supervisor 多實例任務**(他們的待辦消失);全 RECOMMEND 時則要靠 `nrOfCompletedInstances == nrOfInstances` 等全員投完。
+3. **`ActivitySupervisorAggregateDelegate`** (多實例後的 service task):若 `supvAggregateDecision` 已是 RETURN/REJECT 則信任保留;否則(RECOMMEND/null)從單個 `supvDecision` 兜底重算。它的內部 `aggregate()` 仍保留 RETURN>REJECT 優先級代碼,但在短路模型下**多個終局票無法並存**,該分支實際只在全 RECOMMEND 或單 supervisor 場景被觸及。
 
-| 投票順序 | 最終 `supvAggregateDecision` | 流程走向 |
+代表性組合驗證(★ 標出與舊規則的差異):
+
+| 投票順序(按時間) | 最終 `supvAggregateDecision` | 流程走向 |
 |:--------|:----------------------------|:---------|
 | `[RECOMMEND, RECOMMEND, RECOMMEND]` | RECOMMEND | → ④ EO / ⑤ 嘉賓 / ⑥ 贊助 / ⑥' 內容 |
-| `[RECOMMEND, RETURN, RECOMMEND]` | RETURN | → `endEventReturned`(申請人可修改) |
-| `[REJECT, REJECT, REJECT]` | REJECT | → `endEventRejected` |
-| `[REJECT, RETURN, RECOMMEND]` | RETURN(覆蓋 REJECT)| → `endEventReturned` |
+| `[RECOMMEND, RETURN, …]` | RETURN(RETURN 一出現即短路,第 3 人投不了)| → `endEventReturned`(申請人可修改) |
+| `[REJECT, …, …]` | REJECT(第一個 REJECT 即短路)| → `endEventRejected` |
+| ★ `[REJECT, RETURN, …]` | **REJECT**(第一個 REJECT 鎖死,RETURN 根本投不了)| → `endEventRejected`(終局,不可重提)|
 
-> **歷史背景**:早期版本因 `supvDecisions` 集合既無 BPMN `flowable:outputCollection` 配置又無 Java 累積寫入,聚合 fallback 到「最後一個投票人說了算」。已於 commit `5edae8ab9`(2026-05-07)透過上述增量聚合修復,**不採用** SLAS-Docs 早期建議的 BPMN outputCollection 或 Java list append 方案。
+> **歷史背景 / 規則演進**:
+> - commit `5edae8ab9`(2026-05-07)曾實現 **RETURN > REJECT > RECOMMEND 優先級 sticky 升級**:全員投票後聚合,且 REJECT 可被後來的 RETURN 覆蓋(當時 `[REJECT, RETURN, RECOMMEND]` → RETURN)。
+> - commit `82443a610`(2026-05-20)按產品決定改為上述 **first-wins 短路**,**推翻**了優先級規則。差異點在 `[REJECT 先, RETURN 後]`:舊規則 → RETURN(可重提),新規則 → REJECT(終局)。結果現在取決於投票先後,不再順序無關。
+> - 並發(兩位 supervisor 幾乎同時提交):靠 `resolveSupervisorAggregateDecision` 第一個非 RECOMMEND 鎖死 + Flowable 樂觀鎖,保證 first-wins。
 >
-> 弱點:理論上並發 lost-update(兩位 supervisor 同時提交)依賴 Flowable 樂觀鎖兜底,生產環境未見實際 issue。
+> ⚠️ **部署提醒**:short-circuit completionCondition 隨 `82443a610` 才進 BPMN。若現網跑的 `activity_publish` 流程定義版本早於該 commit 部署,supervisor 退回/拒絕後兄弟待辦不會消失(需重新部署讓 Flowable 生成新版本)。
 
 #### 1.5.4 ⑭ ChairPerson `RETURN` 路徑（已統一到 `endEventReturned`）
 
@@ -296,7 +302,7 @@ RETURN > REJECT > RECOMMEND
 
 | 任務 | 規則 |
 |:----|:----|
-| Supervisor 審核 | 所有 Supervisor 並行審核,全部完成後系統按聚合規則得出最終結果（見 §5） |
+| Supervisor 審核 | 所有 Supervisor 並行審核,first-wins 短路:第一個 RETURN/REJECT 即終局並取消其餘待辦,全 RECOMMEND 才需全員投完（見 §1.5.3.1 / §5） |
 | 嘉賓背書 / 贊助審批 / 活動內容審批 | 候選組（`Dean / Delegate`）內任一審批人可認領並審批,採「先到先審」 |
 | IRG 投票 | 所有 IRG Member 並行投票 |
 | VP 投票 | 所有 `VPSLA Member` 並行投票（不含 ChairPerson）；VP 投票有截止時間,超時自動視為棄權 |
@@ -383,7 +389,7 @@ flowchart TD
 
     subgraph Phase2["Phase 2: Supervisor 審核"]
         Supervisors["③ Supervisors 審核<br/>(Supervisors, 並行)"]
-        Supervisors --> SuperAggregate[/"auto: 聚合 Supervisor 投票<br/>RETURN > REJECT > RECOMMEND<br/>(增量 Java 聚合, 見 §1.5.3.1)"/]
+        Supervisors --> SuperAggregate[/"auto: 聚合 Supervisor 投票<br/>first-wins 短路: 第一個 RETURN/REJECT 說了算<br/>全 RECOMMEND 才繼續 (見 §1.5.3.1)"/]
         SuperAggregate --> SuperGate{聚合結果?}
         SuperGate -->|"RECOMMEND"| EoCheck
         SuperGate -->|"RETURN"| EndReturned
@@ -664,11 +670,11 @@ flowchart TD
 
 - **執行人**：所有 Supervisor 並行
 - **動作**：每位 Supervisor 給出個人決定（`RECOMMEND` / `REJECT` / `RETURN`）；同時確認場地是否涉及課後使用
-- **聚合規則**（系統自動執行）：
-  1. 任何一位投 `RETURN` → 聚合 = `RETURN`（最高優先級）
-  2. 全部投 `RECOMMEND` → 聚合 = `RECOMMEND`
-  3. 有 `REJECT` 但無 `RETURN` → 聚合 = `REJECT`
-  4. `RECOMMEND` 與 `REJECT` 混合 → 聚合 = `REJECT`
+- **聚合規則**（first-wins 短路，系統自動執行；詳見 §1.5.3.1）：
+  1. 第一個投 `RETURN` → 聚合 = `RETURN`，即時取消其他 supervisor 待辦
+  2. 第一個投 `REJECT` → 聚合 = `REJECT`，即時取消其他 supervisor 待辦
+  3. 全部投 `RECOMMEND` → 聚合 = `RECOMMEND`
+  > 結果取決於投票先後：第一個終局票（RETURN/REJECT）說了算，後續投票無法覆蓋。例如先 `REJECT` 後 `RETURN` → 整體 `REJECT`（終局）。
 - **結果**：
   - `RECOMMEND` → 進入 Phase 3
   - `RETURN` → 流程結束（`RETURNED`）
@@ -904,10 +910,10 @@ flowchart TD
 | - | Group Leader | 發起申請 | 學生組織負責人,提交活動申請以觸發審批流程 | ① Coordinator 審核 |
 | 115 | Coordinator | ① Coordinator 審核 | 初審活動基本信息;判斷是否需要 Activity Application Checker;如需要則指派一位 Checker | 通過且需 Checker → ② Activity Application Checker 審核;通過且無需 → ③ Supervisor 審核;退回 → 流程結束（`RETURNED`,可修改後重新提交） |
 | 142 | Activity Application Checker | ② Checker 審核 | 由 Coordinator 指派,對活動內容作詳細審查 | 通過 → ③ Supervisor 審核;退回 → 流程結束（`RETURNED`,可修改後重新提交） |
-| 116 | Supervisor | ③ Supervisor 審核 (多實例) | 並行多人,各自給 `RECOMMEND` / `REJECT` / `RETURN` 個人決定;同時確認場地是否課後使用 | 全員提交後系統按聚合規則得出最終結果（見 §5） |
+| 116 | Supervisor | ③ Supervisor 審核 (多實例) | 並行多人,各自給 `RECOMMEND` / `REJECT` / `RETURN` 個人決定;同時確認場地是否課後使用 | first-wins 短路:第一個 RETURN/REJECT 即終局並取消其餘待辦,全 RECOMMEND 才需全員投完（見 §1.5.3.1 / §5） |
 | 116 | Supervisor | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
 | 116 | Supervisor | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
-| - | （系統聚合）| auto: 聚合 Supervisor 投票 | 規則：任一 `RETURN` → 整體 `RETURN`;全員 `RECOMMEND` → 整體 `RECOMMEND`;含 `REJECT` 但無 `RETURN` → 整體 `REJECT`。實現為增量 Java 聚合（commit `5edae8ab9`），詳見 §1.5.3.1 | `RECOMMEND` → ④ EO 審批（如涉及 `campus public venue` 或課後使用）或進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;`RETURN` → 流程結束（`RETURNED`）;`REJECT` → 流程結束（`REJECTED`） |
+| - | （系統聚合）| auto: 聚合 Supervisor 投票 | 規則(first-wins 短路)：第一個 `RETURN` → 整體 `RETURN`;第一個 `REJECT` → 整體 `REJECT`(即時取消其他待辦);全員 `RECOMMEND` → 整體 `RECOMMEND`。第一個終局票說了算、後續無法覆蓋（commit `82443a610`），詳見 §1.5.3.1 | `RECOMMEND` → ④ EO 審批（如涉及 `campus public venue` 或課後使用）或進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;`RETURN` → 流程結束（`RETURNED`）;`REJECT` → 流程結束（`REJECTED`） |
 | 141 | EO Venue Reviewer | ④ EO 審批 | 審批 `campus public venue` 與課後使用（僅當 Supervisor 在 ③ 確認其中任一項成立時觸發） | 通過 → 進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;退回 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
 | 149 | Dean | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 對外部嘉賓先作背書，承接贊助審批，並對活動內容 / 預算作必經的最終把關 | ⑤ 通過 → ⑥（如有贊助）或 ⑥'；⑥ 通過 → ⑥'；⑥' 通過 → 進入 NSOA / 非 NSOA 分流；⑤/⑥/⑥' 任一拒絕 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
 | 150 | Delegate | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 與 Dean 共用候選組，先到先審 | 同 ⑤ / ⑥ / ⑥' 各自的下一環節 |
