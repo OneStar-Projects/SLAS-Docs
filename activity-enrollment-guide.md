@@ -47,6 +47,22 @@
 - 報名最終名冊（`APPROVED`）是「活動出席」識別應到名單、判定缺席（`ABSENT`）的依據。
 - 報名可由「活動推廣」的報名窗口導流。
 
+### 1.6 報名入口路徑 vs 名冊審批啟動時機（活動導入 / 活動推廣）
+
+報名記錄有**兩條來源路徑**，它們對「活動層 `enrollment_status`」與「主管審批 UI 可見性」的影響截然不同，務必分清：
+
+| 來源路徑 | 報名記錄怎麼產生 | 是否自動啟動名冊審批流程 | 活動層 `enrollment_status` |
+|:--|:--|:--|:--|
+| **活動導入**（OC 名單隨活動匯入） | 匯入時自動把 OC 成員建為 `PENDING`，**緊接著自動發起** `enrollment_list_approval`（`ActivityServiceImpl` 匯入後呼叫 `startRosterApprovalProcess`），並把這批記錄置為 `REVIEW_PENDING` | **會**（匯入後一次性發起，一個活動只發起一次） | 被置為 **`FROZEN_WITH_REVIEW`（4）** |
+| **活動推廣 / 一般報名** | 學生經推廣報名窗口提交 → `PENDING`；組織者**逐條推薦**（`recommend` / `batch-recommend`）→ `REVIEW_PENDING` | **不會**（`recommend` 只在流程已存在時補發通知，流程不存在時僅記 warning，不啟動） | 保持 **`NULL`**（從未被置為 4） |
+
+**對可見性的關鍵影響：**
+
+- 主管（`Supervisor`）的「批量通過 / 拒絕」按鈕，**可見性只取決於「待許可（`pendingApproval`）分頁是否有 `REVIEW_PENDING` 記錄」**，**不**依賴活動層是否為 `FROZEN_WITH_REVIEW`（4）。後端 `approveEnrollment` 也只校驗個人層 `status ∈ {REVIEW_PENDING, …}`，不檢查活動層狀態。
+- 因此「活動推廣 / 一般報名」的活動雖然 `enrollment_status` 為 `NULL`，只要組織者推薦過、產生了 `REVIEW_PENDING` 記錄，主管即可正常看到並執行審批。
+- 歷史問題：前端曾以「活動層 `enrollment_status===4`」作為主管審批按鈕的顯示前提，導致推廣來源活動（`enrollment_status=NULL`）即使已有 `REVIEW_PENDING` 記錄、後端也願意放行，主管仍看不到審批按鈕。此前提已移除（拿活動層凍結旗標去管個人層審批動作屬於兩個維度誤用）。
+- `submit-roster-approval` 端點仍存在，但 OC「管理報名」頁的「提交名冊審批」按鈕已移除、主管端對應函式亦未綁定按鈕；故目前**實務上唯一**會把活動層置為 4 的入口是活動導入。
+
 ---
 
 ## 2. 角色與職責
@@ -135,8 +151,9 @@ flowchart TD
 4. **主管**在 `SupervisorManageEnrollment` 審核被推薦名單，點「通過」→ `APPROVED`。
 5. **組織者**「凍結名冊」（`convert-to-participation`）→ 活動層轉 `FROZEN_WITH_REVIEW`，開始 30 分鐘窗口。
    - 驗證點：`check-review-window` 回傳窗口開啟；窗口內仍可更正。
-6. 窗口到期或手動關閉後 → 活動層 `FROZEN`；組織者「提交名冊審批」（`submit-roster-approval`）啟動 `enrollment_list_approval`。
-   - 驗證點：BPMN 任務生成，最終名冊確認後鎖定。
+6. 窗口到期或手動關閉後 → 活動層 `FROZEN`；最終名冊確認後鎖定。
+   - 注意：上述 5–6 的「凍結 → 提交名冊審批」是**活動導入**情境下的完整流程（導入時即自動發起 `enrollment_list_approval`，活動層為 `FROZEN_WITH_REVIEW`）。**活動推廣 / 一般報名**情境下不會自動發起該流程、活動層維持 `NULL`，主管直接在「待許可」分頁逐條/批量審批 `REVIEW_PENDING` 記錄即可（見 §1.6）。
+   - OC「管理報名」頁已無「提交名冊審批」按鈕；`submit-roster-approval` 端點僅供既有/特殊路徑使用。
 
 ### 6.3 容量與退出旁支
 
@@ -150,3 +167,4 @@ flowchart TD
 - 活動層 `CLOSED`/`FROZEN` 後學生無法再報名。
 - 30 分鐘 review window 是更正名冊的最後機會，逾時需走 unfreeze 才能再調整。
 - 個人層與活動層狀態互相獨立：個人 `APPROVED` 不代表整體名冊已 `FROZEN`/審批完成。
+- 活動層 `enrollment_status=NULL`（推廣 / 一般報名來源）**不代表**主管不能審批；主管審批可見性只看是否有 `REVIEW_PENDING` 記錄，與活動層是否為 4 無關（見 §1.6）。
