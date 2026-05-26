@@ -81,6 +81,14 @@ await approveTask({
 
 BPMN 上的三個 gate（`guestEndorsementDecisionGate` / `sponsorshipDecisionGate` / `activityContentDecisionGate`）按 `${deanDecision == 'APPROVE' | 'RETURN' | 'REJECT'}` 分流，**`REJECT` 是真正的終止路徑**（→ `endEventRejected`），不再像舊版那樣與 `RETURN` 等價回到 Supervisor。
 
+###### Dean Combo `APPROVE` 必填每段評論（commit `8dc0b49e4`, 2026-05-22）
+
+Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）獨立記錄評論**。本次新增業務規則：
+
+- **`APPROVE` 時，每個觸達的段都必須帶非空評論**（透過 `resolveDeanComboTaskKeys` 在**任一段被 complete 前**統一校驗），否則拋出 `DEAN_COMBO_APPROVE_REASON_REQUIRED`。前置校驗的目的是避免「先 complete 第一段 → 第二段空評論失敗」造成 Flowable 副作用無法乾淨回滾。
+- `RETURN` / `REJECT` 不受此規則限制（可只填一段評論）。
+- `completeDeanSection` 不再用 `nullToEmpty` 兜底寫入固定英文字串 `"Dean comprehensive approval"`——空評論在 `APPROVE` 已被前置攔截，其他決定路徑保留段別空評論的原樣。
+
 ##### 各節點 reject/return 的去向對照表
 
 以當前 [`activity_publish.bpmn20.xml`](file:///Users/hugo/codes/project/asl/slas/SLAS_PRO/slas-server/src/main/resources/processes/activity_publish.bpmn20.xml) 為準：
@@ -232,7 +240,7 @@ BPMN 上的三個 gate（`guestEndorsementDecisionGate` / `sponsorshipDecisionGa
 
 **編輯權限規則（`ActivityAccessGuard.canEdit(activityId, userId)`）：**
 
-1. **狀態門檻**：活動必須是 `DRAFT`。提交後（`SUBMITTED` / `PUBLISHED` / `ONGOING` / `COMPLETED` / `CANCELLED`）一律不可編輯；被退回（`RETURNED`）的活動會回滾到 `DRAFT`（見 §1.7.5）後再次可編輯。
+1. **狀態門檻**：活動必須是 `DRAFT`。提交後（`SUBMITTED` / `PUBLISHED` / `ONGOING` / `COMPLETED` / `CANCELLED`）一律不可編輯；被退回（`RETURNED`）的活動會回滾到 `DRAFT`（見 §1.7.6）後再次可編輯。
 2. **身份白名單**：編輯者 = 申請人(`creatorId`) ∪ `activity_oc_member` ∪ `activity_supervisor`（**該活動的**）。Coordinator / 系統管理員 / 任何其他角色一律拒絕（`ACTIVITY_NO_EDIT_PERMISSION` 1_003_001_021）。
    - ⚠️ Supervisor 仍在**編輯白名單**內，但被產品規則排除在 endorsement reset 之外。
 3. **後台批量導入**直接走 `activityMapper.insert`，不經過本方法。
@@ -269,15 +277,28 @@ BPMN 上的三個 gate（`guestEndorsementDecisionGate` / `sponsorshipDecisionGa
 
 `isEndorse` computed 在 `useCreateActivity.ts` 裡判斷 `mode === 'endorse'`，據此跳過 `acquireEditingLock` 與後續所有 `releaseEditing` 邏輯——endorse 模式整個鎖機制都不參與，因此**不阻塞當前持鎖的編輯者**。
 
-#### 1.7.4 申請人不需 endorse 自己
+#### 1.7.4 全員 endorse 模型（包含申請人）
 
-學生組織提交活動申請時,**申請人本人自動視為已 endorse**:
+> 業務變更：commit `989c3e0db`（2026-05-23）改為**循環 OC endorsement 模型** —— `initializeEndorsements` 不再自動把申請人標為已 endorse，每位 OC 成員（**包括申請人本人**）都必須在 endorse 面板上明確完成 endorse 才能提交。
 
-- 「待 endorse 名單」上不會顯示申請人自己,UI 上看到的都是還沒 endorse 的其他 OC 成員。
-- 若該組織只有一位 OC(也就是申請人自己),活動可以直接提交,不會卡在「等自己 endorse 自己」。
-- 多人 OC 的組織提交活動時,**其他 OC 仍必須完成 endorse** 才能提交,確保互審不被繞過。
+- 舊行為（已棄）：申請人自動視為已 endorse、單 OC 組織可直接提交。
+- 新行為：
+  - 編輯頁（`mode=edit`）**只負責保存草稿**，不再承擔提交動作。
+  - 申請人可選擇「保存並 endorse 自己」（`ActivitySaveReqVO.endorseOnSave=true` → `endorseAsEditor` 在保存事務內記錄申請人 endorsement）作為便捷入口。
+  - 提交按鈕由 **endorse 面板**獨佔，僅在**所有 OC 都完成 endorse** 且 OC 名冊已全員映射到用戶帳號（`isAllEndorsed` 新增 `userId!=null` 與 endorsement 行數=成員數雙重校驗）後才顯示。
+  - 即使單 OC 組織也需要該 OC 在面板上點一次 endorse 才能露出提交按鈕。
 
-#### 1.7.5 退回後重置 endorsement + 回滾 DRAFT
+#### 1.7.5 內容變更失效（cyclic re-endorse）
+
+> 引入時間：commit `989c3e0db`（2026-05-23）。
+
+`updateActivity` 在保存草稿時對「實質欄位」（material-fields）做差異比對，若任一欄位變動 → 呼叫 `invalidateForContentChange`：
+
+- **欄位範圍**：標題 / 描述 / 日期 / 場地 / 贊助 / 預算 / 嘉賓（可由 `sys_config` 鍵 `activity.endorsement.material-fields` 覆寫，否則用程式碼預設）。預算比對採規範化 `(type|category|item|description|amount)` 列表，而非僅比較總額。
+- **效果**：所有 OC 的 `endorsed` 一鍵翻回 `false`，但**保留先前的 `endorsedTime`**——面板可顯示「內容已更新，請重新 endorse（上次 endorse: <時間>）」，協助 OC 識別差異。
+- **語意**：將 endorsement 從「一次性蓋章」改為「對當前內容版本的承諾」——任何 material 修改都會觸發全員重簽。
+
+#### 1.7.6 退回後重置 endorsement + 回滾 DRAFT
 
 > 引入時間：commit `e04f7546a`（2026-05-18）。
 
@@ -285,14 +306,26 @@ BPMN 上的三個 gate（`guestEndorsementDecisionGate` / `sponsorshipDecisionGa
 
 - `updateApprovalStatus("RETURNED", ...)` 現在**同時把 `activity.status` 回滾到 `DRAFT`** 並調用 `resetAllEndorsements(activityId)`：申請人可重新進入編輯流程，**每位 OC 必須對修改後的內容重新 endorse** 才能再次提交。`ActivityApprovalServiceImpl` 內的私有 `updateActivityApprovalStatus` 重構為委派到此處，副作用邏輯集中一處。
 
-**endorsement reset 的觸發範圍（按當前代碼）：**
+**endorsement reset / invalidation 的觸發範圍（按當前代碼）：**
 
 | 觸發點 | 行為 |
 |:------|:----|
-| 活動被退回（`RETURNED`） | `resetAllEndorsements`：所有 OC 的 endorsed 置回 false，全員須重簽 |
-| DRAFT 保存（`syncEndorsements`） | **只**為新增 OC 創建待簽記錄、為移除 OC 刪記錄；**不**因內容變更重置已有 endorsement |
+| 活動被退回（`RETURNED`） | `resetAllEndorsements`：所有 OC 的 `endorsed` 置回 false（不保留時間戳），全員須重簽 |
+| DRAFT 保存且 material 欄位變動（§1.7.5） | `invalidateForContentChange`：所有 OC 的 `endorsed` 翻 false，**保留 `endorsedTime`** 以利「內容已更新，請重新 endorse」提示 |
+| DRAFT 保存且僅 OC 名冊變動（`syncEndorsements`） | 為新增 OC 創建待簽記錄、為移除 OC 刪記錄；不重置其他人已有的 endorsement |
+| 申請人「保存並 endorse 自己」（`endorseOnSave=true`） | `endorseAsEditor` 在保存事務內為申請人記錄 endorsement（其他 OC 不受影響） |
 
-> ⚠️ 注意：當前實現**沒有**「內容(material)變更即選擇性重置 endorsement」的細粒度規則（例如申請人改動 reset 其他人、其他 OC 改動 reset 全員）。唯一會清空已簽 endorsement 的路徑是活動被退回。若日後需要 material-change 觸發的選擇性 reset，需另行實現。
+#### 1.7.7 提交審批入口（lock-free `submitForApproval`）
+
+> 引入時間：commit `989c3e0db`（2026-05-23）。
+
+舊版透過 `createActivity` / `updateActivity` 路徑攜帶 `status='SUBMITTED'` 觸發提交，與編輯鎖、material-diff 等流程混在一起；新版拆出獨立入口：
+
+- 端點來自 endorse 面板「提交審批」按鈕，呼叫 `ActivityService.submitForApproval`。
+- **無編輯鎖要求**：提交來自 endorse 面板（從不持鎖），因此 lock guard **拒絕任何未過期的編輯鎖（包括申請人自己持有的）**——若有鎖存在，意味著另一人正在編輯，提交應退讓。
+- **悲觀行鎖 + 原子升態**：以 `selectByIdForUpdate` 鎖列，避免「讀後其他人改料」窗口；再以 `promoteDraftToSubmitted`（`UPDATE ... WHERE status='DRAFT'`）原子升態為 `SUBMITTED`；同事務內啟動 BPM 工作流。
+- **BPM 啟動失敗回滾**：`startActivityApprovalWorkflow` 改為 rethrow（錯誤碼 `ACTIVITY_APPROVAL_WORKFLOW_START_FAILED` 1_003_001_024），整個提交事務回滾——之前是「catch 後僅記日誌」，會留下無流程實例的 `SUBMITTED` 殭屍活動。
+- **`createActivity` 不再支援提交分支**：即使請求帶 `status='SUBMITTED'` 也只記日誌並落 `DRAFT`，提交動作完全由 `submitForApproval` 統一驅動。
 
 ### 1.8 待辦可見性與 claim 規則（框架級，跨所有 BPM 流程）
 
@@ -544,7 +577,7 @@ flowchart TD
         IRGSelect --> LoadIRG[/"auto: 加載 IRG 成員"/]
         LoadIRG --> IRGVote["⑨ IRG 投票<br/>(IRG Member, 並行)"]
         IRGVote --> IRGAiSummary[/"auto: AI 生成 IRG 摘要"/]
-        IRGVote -.->|"超時 (未投票自動 RECOMMEND)"| IRGTimeout[/"auto: IRG 超時處理"/]
+        IRGVote -.->|"超時 (未投票自動 RESERVE)"| IRGTimeout[/"auto: IRG 超時處理"/]
         IRGTimeout --> IRGAiSummary
         IRGAiSummary --> IRGReview["⑩ IRG 摘要審核<br/>(IRG Secretary)"]
         IRGReview --> IRGCompletion[/"auto: IRG 完成"/]
@@ -663,7 +696,7 @@ flowchart TD
         IRGSelect --> LoadIRG[/"auto: 加載 IRG 成員"/]
         LoadIRG --> IRGVote["⑨ IRG 投票<br/>(IRG Member, 並行)<br/>RECOMMEND / RESERVE / REJECT"]
         IRGVote --> IRGSummary[/"auto: AI 生成 IRG 摘要"/]
-        IRGVote -.->|"超時 (未投自動 RECOMMEND)"| IRGTimeoutTask[/"auto: IRG 超時處理"/]
+        IRGVote -.->|"超時 (未投自動 RESERVE)"| IRGTimeoutTask[/"auto: IRG 超時處理"/]
         IRGTimeoutTask --> IRGSummary
         IRGSummary --> IRGReview["⑩ IRG 摘要審核<br/>(IRG Secretary)"]
         IRGReview --> IRGDone[/"auto: IRG 完成"/]
@@ -851,7 +884,7 @@ flowchart TD
 - **截止時間**：`irgVoteDeadline`(IRG Secretary 在 ⑧ 設定)
 - **結果**：
   - 正常路徑:全部完成後進入「auto: AI 生成 IRG 摘要」, 再進入 ⑩
-  - 超時路徑(commit `7faa9acc2`, 2026-05-12 引入):若 deadline 前未全部投票,boundary timer event 取消多實例任務,觸發 `activityIrgTimeoutDelegate` 把未投票者標記為預設 `RECOMMEND`,**跳過剩餘多實例**直接進入 AI 摘要 → ⑩
+  - 超時路徑(commit `7faa9acc2`, 2026-05-12 引入;commit `0f06c3f3a`, 2026-05-23 將預設由 RECOMMEND 改為 RESERVE):若 deadline 前未全部投票,boundary timer event 取消多實例任務,觸發 `activityIrgTimeoutDelegate` 把未投票者標記為預設 `RESERVE`(中性、不計為背書,呼應 2026-04-14 會議備忘 filter #13),**跳過剩餘多實例**直接進入 AI 摘要 → ⑩
 - **對 ⑩ Secretary 摘要審核的影響**:超時路徑下,Secretary 仍然會看到 ⑩ 任務,但摘要中部分 IRG Member 的決定來自系統預設而非實際投票
 - **對 §4.3.2 VP 投票提交鎖的影響**:超時路徑下,`irgCompletionNotifyTask` 仍照常執行,VP 提交鎖照常解除
 
