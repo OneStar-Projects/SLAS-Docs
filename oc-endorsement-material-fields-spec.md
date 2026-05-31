@@ -277,7 +277,18 @@ diff_rules:
 ### 6.1 Lazy migration 處理
 
 老活動的 `endorsed_at_version IS NULL`：視為 **古早 endorse**，被本次 reset 涵蓋。
-老活動的 `content_version IS NULL`：Save 時隱式初始化為 1，之後 +1。
+
+老活動的 `content_version IS NULL`：
+- **對前端暴露為 0**（pre-versioning era）— `getEndorsementStatus` 回傳 contentVersion=0；endorse 寫入 endorsedAtVersion=0
+- **第一次 Save Draft 寫入 1**（不是維持 1）— 後續每次 Save +1
+
+⚠️ **為什麼不能對外當作 1**：如果 NULL 對外暴露 1、第一次 Save 也寫 1，會出現「pre-save 視圖」的 race window：
+- t1: B 載入 panel → 拿 clientContentVersion=1
+- t2: A 改 material + Save → DB 1（NULL→1）
+- t3: B 提交 endorse with clientVersion=1 → 後端 dbVersion=1 → **校驗誤通過**
+- B 認可的是 A 改前的內容，但版本號巧合一致 → STALE_CONTENT 失守
+
+採 NULL→0 對外、Save→1 寫入後，t3 的 clientVersion=0 vs dbVersion=1 不匹配 → STALE_CONTENT 拒 → B reload → 重 endorse 正確版本。
 
 ### 6.2 並發場景時序示意
 
