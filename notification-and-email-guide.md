@@ -89,8 +89,11 @@
 | 待審推送（`supervisorApprovalTask` / `saoAdminTask` 創建） | 對應審核人 / 候選人 | 雙發* | D | `ACTIVITY_PROMOTION_REVIEW_NOTIFICATION`（DB 模板） |
 | 審核通過 | 推廣建立人 | 雙發 | B | `BPM_ACTIVITY_PROMOTION_APPROVAL_APPROVED` |
 | 拒絕 / 取消 | 推廣建立人 | 雙發 | B | `..._REJECTED` |
+| 審核完成同步告知（RM-275，2026-05-31） | 其他 supervisors + 學生組織 group leader（**排除申請人與本次審批者**） | 雙發 | B | `BPM_ACTIVITY_PROMOTION_INFO_APPROVED` / `..._INFO_REJECTED`（內容程式碼組裝） |
 
 > \* 路徑 D 經 DB 模板發送者（提交確認、待審推送）最終渠道仍取決於對應 `notify_template.channels`（見 §1.3）。
+>
+> 「審核完成同步告知」是 2026-05-31 起加入的補充通知（commit `ce958dce7`）：推廣審批終態後，把結果同時推給該活動的其他 supervisor 與學生組織 leader（從 `activityApi.getSupervisorsByActivityId` + `getGroupLeaderUserIdsByActivityId` 聚合），讓未直接參與審批的相關人也能即時得知狀態變更。已經收到主通知的人（申請人、本次審批者）會被排除。
 
 ### 2.3 活動報名 / 名單審批 `enrollment`
 
@@ -115,11 +118,13 @@
 |:--|:--|:--|:--:|
 | 待審推送（`supervisorApprove` 任務創建） | 該節點 supervisor / 候選人 | 雙發* | D（`SLAS_ENROLLMENT_LIST_REVIEW_NOTIFICATION`，DB 模板） |
 | 其餘審批節點（coordinator 等）任務創建 | 對應候選人 | （僅待辦） | — |
-| 名單通過 | **全體已報名學生**（批次） | 郵件 | A（批次） |
-| 名單通過 | 活動組織者 | 雙發 | B |
+| 名單通過 | 活動組織者（提交人，FIX-002） | 雙發* | A（`SLAS_ENROLLMENT_APPROVED`，DB 模板） |
+| 名單通過 | **全體已報名學生**（批次，FIX-003） | 郵件 | A（批次） |
+| 名單拒絕 / 取消 | 活動組織者（提交人） | 雙發* | A（`SLAS_ENROLLMENT_REJECTED`，DB 模板） |
 | 名單拒絕 / 取消 | **全體 PENDING 學生**（批次） | 郵件 | A（批次） |
-| 名單拒絕 / 取消 | 活動組織者 | 雙發 | B |
 | 名單凍結 / 最終確認 | 模板配置對象 | 雙發* | A（`ENROLLMENT_FROZEN_NOTIFICATION` / `..._FINAL_CONFIRMED_NOTIFICATION`） |
+
+> 名單審批完成的活動組織者通知（FIX-002，commit `4a14bdacf`，2026-06-01）走的是路徑 A（`unifiedNotificationService.sendMultilingualNotificationToAdmin`），最終渠道由 `SLAS_ENROLLMENT_APPROVED` / `SLAS_ENROLLMENT_REJECTED` 模板的 `channels` 決定；組織者通知與下一行的學生批次通知是兩條獨立發送調用,順序為 **先組織者後學生批次**。
 
 ### 2.4 活動報告 / 事故報告 `incident_report_audit`
 
