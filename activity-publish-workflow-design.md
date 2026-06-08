@@ -329,7 +329,7 @@ Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）
 
 ### 1.8 待辦可見性與 claim 規則（框架級，跨所有 BPM 流程）
 
-> 引入 / 演進：commit `34af49147`（排除 dept 數據權限，2026-05-20）→ `eb8b8c51d`（按角色 dept 權限收緊可見性）→ `d754ae903`（任一登入角色都能看到該用戶應辦的全部任務）→ `61a1fdb87`（已分配任務只對 assignee 可見）。實現在 `BpmTaskServiceImpl`，**作用於所有 activity_publish / 學生組織等 BPM 流程**，非本流程專屬。
+> 引入 / 演進：commit `34af49147`（排除 dept 數據權限，2026-05-20）→ `eb8b8c51d`（按角色 dept 權限收緊可見性）→ `d754ae903`（任一登入角色都能看到該用戶應辦的全部任務）→ `61a1fdb87`（已分配任務只對 assignee 可見）→ `98567d04c`（candidateUser + candidateGroup 同時存在時仍強制走角色 dept 範圍）。實現在 `BpmTaskServiceImpl`，**作用於所有 activity_publish / 學生組織等 BPM 流程**，非本流程專屬。
 
 決定「誰能在待辦列表看到一個任務、誰能 claim / 辦理」的邏輯分兩段：**Flowable 並集查詢** + **內存後置過濾**。
 
@@ -364,6 +364,7 @@ Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）
 2. **未分配任務**：
    - 顯式指派（candidateUser 身份鏈，或 `supervisor_/admin_checker_/academic_checker_` marker）→ 可見，**marker 故意繞過 dept 數據權限**（agency-wide oversight 不應被部門權限擋住）。
    - 否則走候選組角色匹配：用戶角色須命中任務的 candidateGroup，**且**該角色的 dept 數據權限覆蓋任務的 `deptId` 才可見（`eb8b8c51d`）。
+   - **最新收緊**（`98567d04c`）：若同一任務同時帶 `candidateUser` 與 `candidateGroup` identity link，不能只因 candidateUser 命中就繞過 candidateGroup 的 dept 範圍；仍需命中候選組角色且該角色 dept 權限覆蓋任務 `deptId`。只有完全沒有 candidateGroup 的純 candidateUser 任務，才按「顯式指派」直接可見。
 
 > **設計要點**（`34af49147`）：「與用戶同部門」本身**不**授予可見性 / claim 權——必須是上面某種顯式指派。dept 權限只用於收窄 candidate-group 任務的範圍，不單獨開門。
 
@@ -377,6 +378,21 @@ Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）
 因此「看得到」與「能辦」用同一套規則，不會出現看得到卻點不開、或反之。
 
 ---
+
+### 1.9 最新審核頁與詳情卡 UI 行為（SLAS_UI）
+
+以下為 `ActivityPublishReview` / `ActivityDetailCard` 近期前端行為，便於 UAT 對照畫面：
+
+- **活動詳情卡內容語言切換**：Learning Objectives / Other Information 等三語欄位使用卡片內的內容語言切換器，而不是切換整個系統 UI 語言；預設看英文，方便審批人逐語比較。
+- **Programme & Logistics 英文口徑**：Programme 名稱與內容在詳情卡中只展示英文欄位（`nameEn` / `contentEn`）；已移除 programme day session-count 的舊殘留顯示。
+- **Manpower Projection 可折疊**：每個 programme 下的人手表可展開 / 收起，審批頁預設可用折疊模式減少首屏負擔。
+- **Other Information 可折疊**：Other Information 的各個子項（如共融元素、綠色實踐等）按申請表順序展示，審批人可逐項展開。
+- **附件空狀態**：附件區若沒有檔案，顯示精簡文字空狀態，不再佔用大塊提示框。
+- **移動端審核面板**：Activity Publish Review 在窄屏下把右側審核面板改為底部 bottom sheet，支援半高、全高與收起三種狀態；桌面端仍為右側 sticky panel。
+- **審批歷史中的 OC 名單**：審批歷史最新一輪 Submit 節點下會顯示該活動的 OC 成員名單。資料來自 reviewer 可讀的 `/activity/get` 活動詳情；因提交前已要求全體 OC endorsement 完成，該名單用於提示「本輪提交前涉及哪些 OC」，不展示 per-member endorsement 時間。
+- **贊助資訊更突出**：Create / Edit Activity 的 Budget Plan 內，贊助類 budget item 會以帶圖標與綠色左邊框的 Sponsorship details 面板展示，取代原本較容易被忽略的 divider；贊助附件與 Section XI 文件上傳使用 compact upload 樣式。
+- **贊助附件預覽即時可見**：編輯表單中剛上傳但尚未保存的 `sponsorAttachments`，會在 Preview / Activity Detail adapter 中即時轉成 `sponsorAttachmentFileIds` 顯示，避免 UAT 時誤以為附件遺失。
+- **流程歷史輪次視覺修正**：Process History 的多輪提交圓點不再被左側裁切，輪次之間的連線改為貫穿整組的主線；此為視覺修正，不改變審批歷史資料與流程狀態。
 
 ## 2. 角色與職責
 

@@ -270,11 +270,13 @@
 
 2. 在 `Activity Basics / Resources & Documents`：
    - 活動資料完整
-   - 有贊助相關內容
+   - 有贊助相關內容；Budget Plan 內贊助類 budget item 會展開醒目的 `Sponsorship details` 面板，可填 sponsor amount / source / description / terms 並上傳贊助附件
+   - 贊助附件剛上傳後，即使尚未保存草稿，也應可在 `Preview` 中看到
 
 3. 在 `External Guests`：
    - `nonEduhkInvolvement = Yes`
    - 至少建立 1 名外部嘉賓
+   - Section XI `Documents Upload` 位於 External Guests 步驟下方，使用 compact upload 樣式
 
 4. 在 `Preview`：
    - 確認所有校驗都通過
@@ -404,7 +406,7 @@
 ### 5.6 Dean / Delegate：贊助審批
 
 1. `Dean` 或 `Delegate` 打開 `Sponsorship Approval`。
-2. 查看贊助資訊區塊（金額 / 來源）。
+2. 查看贊助資訊區塊（金額 / 來源 / 描述 / 條款 / 附件）。贊助資訊在詳情卡中以獨立面板呈現，便於與普通 budget item 區分。
 3. 三選一：
    - `Approve` → 進入 `Activity Content Approval`。
    - `Return` → 退回 ③ Supervisor 重審（UI 標籤：「退回監督員」）。

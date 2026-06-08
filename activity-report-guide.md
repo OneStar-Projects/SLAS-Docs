@@ -54,7 +54,7 @@
 
 ### 2.4 與其他模組的關係
 
-- 報告掛在某個活動（`activityId`）之下；R01/R14 是否可提交，取決於活動是否已結束與時限窗口。
+- 報告掛在某個活動（`activityId`）之下；R01/R14 是否出現在「活動報告管理」列表，先取當前使用者可見活動，再收窄為**已通過審批且進入正式活動生命週期**的活動：`activity.approval_status='APPROVED'` 且 `activity.status IN ('PUBLISHED','ONGOING','COMPLETED')`。是否可點擊提交仍再看活動結束日期與 R01/R14 時限。
 - 中高級別事件會觸發 Dean / 單位主管的監看與審閱（並行待閱 + 主流程審閱）。
 
 ---
@@ -112,7 +112,7 @@ flowchart TD
   - 活動報告（`ActivityReportController.java`）：`GET /incident/activity-report/page`（R01+R14 彙總分頁）、`/can-submit-next-day`、`/can-submit-fourteen-day`、`/next-day-status`、`/fourteen-day-status`。
 - **服務實現**
   - `IncidentReportServiceImpl.createIncidentReport`：生成唯一 `irCode`、設提交者、初始 `status=DRAFT`，JSON 化 `activityTime` / `incidentNature` 等陣列欄位。
-  - `ActivityReportServiceImpl.getActivityReportPage`：以使用者可見活動為範圍，批次取出每個活動的 R01 與 R14，彙總成一行（含可否提交、時限）。
+  - `ActivityReportServiceImpl.getActivityReportPage`：先透過 `ActivityApi.getReportableActivityIds(userId)` 取得可報告活動（使用者可見 + `APPROVED` + `PUBLISHED/ONGOING/COMPLETED`），再批次取出每個活動的 R01 與 R14，彙總成一行（含可否提交、時限）。
 - **BPMN 分支條件**（`incident_report_audit.bpmn20.xml`）
   - `reportTypeGate`：`skipSupervisor==true` → 分級員；`reportType==R01||R14` → 督導確認；`reportType==R00` → 分級員。
   - `supervisorGate`：`confirmed && !hasIncident` → 結束；`confirmed && hasIncident` → 分級員；`!confirmed` → 退回/拒絕。
@@ -136,7 +136,14 @@ flowchart TD
 - 提交事件處理報告：`views/organiser/SubmitEventReport/index.vue`（5 步：資訊報告 → 級別分類 → 危機評估 → 後續行動 → 批註）。
 - R01/R14 列表與提交入口：`views/incident/ActivityReportList.vue`（每活動兩欄：翌日/兩週報告狀態）。
 - 審核：`views/review/ActivityReportReview/`（含篩選與待審清單）。
-- 活動調查問卷：`views/organiser/SubmitActivityReport/index.vue`（評分/回饋，無審批）。
+- 活動調查問卷：`views/organiser/SubmitActivityReport/index.vue`（評分/回饋，無審批；最新 UI 改為深色綠系問卷面板、步驟條與表單卡片，屬樣式優化，不改流程）。
+
+### 6.4 活動報告列表顯示規則
+
+- 列表只展示 `getReportableActivityIds` 命中的活動；草稿、待審批、退回、拒絕、取消等活動不再出現在 R01/R14 管理列表。
+- 狀態顯示採 i18n key 正規化：前端會把 `PENDING_SV_CONF`、`pending-sv-conf`、`pendingSvConf` 等寫法統一轉成 `pending_sv_conf` 再查 `incident.activityReport.*` 翻譯，找不到翻譯時才回退顯示原始狀態碼。
+- 活動狀態目前補齊了 `DRAFT`、`SUBMITTED`、`PENDING`、`NOT_SUBMITTED`、`ENROLLING`、`PUBLISHED`、`ONGOING`、`COMPLETED`、`CANCELLED`、`APPROVED`、`REJECTED`、`RETURNED` 等常見值的中英繁翻譯。
+- R14 提交入口有前端前置檢查：必須先有 R01；若 R01 仍是 `PENDING` / 空，或 R01 已 `REJECTED`，會提示先完成翌日報告。
 
 ---
 
@@ -144,12 +151,12 @@ flowchart TD
 
 ### 7.1 準備條件
 
-- 一個已結束的活動（用於 R01/R14）。
+- 一個已結束、審批已通過，且狀態為 `PUBLISHED` / `ONGOING` / `COMPLETED` 之一的活動（用於 R01/R14）。
 - 帳號：活動組織者（`Group Leader`）、`Supervisor`、`Incident Level Classifier`、`Dean of Custodian Unit`。
 
 ### 7.2 主線 A — 活動報告 R01（無事件，最短路徑）
 
-1. **組織者**進 `ActivityReportList`，對已結束活動點「翌日報告」提交（`reportType=R01`，`hasIncident=false`）。
+1. **組織者**進 `ActivityReportList`，對已結束且已通過審批的活動點「翌日報告」提交（`reportType=R01`，`hasIncident=false`）。
 2. 流程進入督導確認（學生路徑）。
 3. **Supervisor**確認「通過且無事件」→ 流程在「督導通過」結束。
    - 驗證點：報告狀態合理流轉至完成/督導通過；`activity-report/next-day-status` 反映結果。
@@ -182,3 +189,4 @@ flowchart TD
 - `RETURNED` 與 `REJECTED` 不同：前者可重新提交，後者為流程終止。
 - 「活動調查問卷」常被誤認為活動報告；它是滿意度回饋，與 R01/R14 審批無關，請在 Demo 中明確區分。
 - 中高級別事件的 Dean 待閱任務（`deanMonitorTask`）為並行不阻塞分支，與主流程的 Dean 審閱（`deanReviewTask`）是兩個不同任務。
+- 最新後端收窄的是「活動報告管理列表」資料源；若測試直接手工呼叫建立 / 狀態查詢接口，仍應另外核對活動是否屬於可報告範圍。

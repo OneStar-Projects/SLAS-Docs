@@ -13,7 +13,7 @@
 | --- | --- |
 | [activity-publish-workflow-design.md](activity-publish-workflow-design.md) | 活動發布審批的完整業務流程（NSOA / 非 NSOA、Supervisor / IRG / VP / Dean 多層審批） |
 | [student-org-workflow-flowcharts.md](student-org-workflow-flowcharts.md) | 學生組織註冊與申訴審批的兩條流程 |
-| [notification-and-email-guide.md](notification-and-email-guide.md) | 各業務流程在「什麼環節、向誰、用什麼方式」發出通知 / 郵件 |
+| [activity-application-notification-design.md](activity-application-notification-design.md) | 活動申請主流程在「什麼環節、向誰、用什麼方式」發出站內消息 / 郵件 |
 | [roles-menus-permissions-matrix.md](roles-menus-permissions-matrix.md) | 角色 × 菜單 × 權限對照表，便於客戶確認每個角色能看到 / 操作什麼 |
 
 ---
@@ -38,7 +38,7 @@
 
 - **第一次接觸 SLAS**：先讀 [activity-publish-workflow-design.md](activity-publish-workflow-design.md) 了解最核心的活動審批設計，再翻 [activity-end-to-end-demo-guide.md](activity-end-to-end-demo-guide.md) 跑一遍流程。
 - **準備 UAT / 培訓**：以「操作文檔」一節的 7 份為主，按業務模組分頭演練。
-- **驗收流程合規性**：以「設計文檔」一節為主，重點看 [activity-publish-workflow-design.md](activity-publish-workflow-design.md) 與 [notification-and-email-guide.md](notification-and-email-guide.md)。
+- **驗收流程合規性**：以「設計文檔」一節為主，重點看 [activity-publish-workflow-design.md](activity-publish-workflow-design.md) 與 [activity-application-notification-design.md](activity-application-notification-design.md)。
 
 ## 反饋
 

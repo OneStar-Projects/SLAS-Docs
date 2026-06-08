@@ -156,6 +156,9 @@ flowchart TD
 - **服務實現**（`ActivityPromotionServiceImpl`）
   - `PROCESS_DEFINITION_KEY = "activity_promotion_approval"`。
   - `createActivityPromotion` 先校驗活動狀態（PUBLISHED/ONGOING）、supervisor 綁定、無重複 PENDING，再寫入多語欄位、設 `status=PENDING` 並啟動 Flowable 流程。
+- **通知口徑**
+  - 推廣審批完成通知發給該筆 `activity_promotion` 記錄的建立人（`creator`），而不是僅按活動 organizer 反查；若流程變量缺失，仍會用 promotion business key 反查申請人。
+  - 其他 Supervisor / Group Leader 的同步通知會排除當前審批人與申請人，避免同一人重複收到同一結果通知。
 - **業務規則**
   - 同一活動同時只允許一個 `PENDING` 推廣。
   - 只有 `APPROVED` 的推廣才能被控制可見性。
