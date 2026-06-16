@@ -1,383 +1,463 @@
-# 活动生命周期通知模板设计说明（客户审核版）
+# 活动生命周期通知模板设计说明（客户确认版）
 
 > 版本日期：2026-06-09
-> 用途：本文用于向业务方说明「活动推广 / 活动报名 / 活动出席 / 活动报告 / 培训」五个阶段全部站内消息与邮件通知的**触发时机、接收人、发送方式和三语文案**，供业务审核与确认。
+> 用途：本文用于向业务方说明「活动推广 / 活动报名 / 活动出席 / 活动报告（事件报告）」四个生命周期阶段全部站内消息与邮件通知的**触发时机、接收人、发送方式和三语文案**，供业务**最终确认**。
 > 本文只描述业务需求，不包含任何技术实现方案。
+> 来源：GitHub Issue #268《活动生命周期通知需求规格（P1 / 2026-06-09）》，为 #210《活动申请通知需求规格》的子规格。
 > 配套文档：活动申请主流程通知见《活动申请通知模板设计说明（客户审核版）》。
 
 ---
 
 ## 1. 阅读指引
 
-- 本文是**当前拟定文案**，请逐节核对标题、正文、接收人是否符合业务预期。
-- 第 3 节《需业务确认事项》是审核重点，列出尚未拍板、会影响是否启用或如何发送的问题，请优先确认。
-- 所有通知均提供 **English / 繁体中文 / 简体中文** 三语，三语表达同一业务动作。
-- 占位符（如 `{活动名称}`）在发送时替换为实际内容；某字段没有值时，该字段整行不显示，不留空标签或空行。
+- 本文是**最终拟定文案**，请逐节核对标题、正文、接收人是否符合业务预期。
+- 第 3 节《需业务确认事项》是本次确认的重点，列出已拟定结论与尚待拍板的问题，请优先逐项确认或修改。
+- 第 9 节《不启用通知确认清单》列出本阶段**确定不发送**的通知，请确认客户同意停用。
+- 所有启用通知均提供 **English / 繁体中文 / 简体中文** 三语，三语必须表达同一业务动作。
+- 占位符（如 `{ACTIVITY_NAME}`）在发送时替换为实际内容；某字段没有值时，该字段整行不显示，不留空标签或空行。
 - **发送方式**统一说明：「站内消息 + 邮件」表示两者都发；当接收人没有邮箱或邮件服务不可用时自动跳过邮件，站内消息照常发送。邮件与站内消息使用同一业务内容。
 
 ---
 
-## 2. 通知总览
+## 2. 通知总览（启用通知）
 
 | 阶段 | 通知 | 接收人 | 发送方式 |
 | --- | --- | --- | --- |
-| 活动推广 | 推广申请已提交 / 待审核 / 审批通过 / 审批拒绝 / 审批完成同步告知 / 推广生效 | 申请人、审批人、相关人员 | 站内消息 + 邮件 |
-| 活动报名 | 单个报名审批结果、报名名单待审核、名单审批完成（组织者/学生）、报名退回、撤回报名 | 学生、组织者、审批人 | 站内消息 + 邮件 |
-| 活动出席 | 活动开始前 24 小时 / 2 小时提醒、签到提醒、签退提醒、缺席统计、活动完成 | 已报名/已签到学生、活动负责人 | 站内消息 + 邮件 |
-| 活动报告（事件报告） | 提交确认、各审批环节待办、最终结果、退回、进展、管理层通知、级别警报 | 报告人、督导、分级人、Dean、管理层 | 站内消息 + 邮件 |
-| 培训 | 培训进度 / 截止 / 完成 / 自定义提醒、培训状态提醒、培训合规结果 | 学生、督导、SAO Admin | 站内消息 + 邮件 |
+| 活动推广 | 推广申请已提交、推广待审核、推广审批通过、推广审批拒绝 / 退回、审批完成同步告知 | 申请人、当前审批人、其他活动指导 / OC 成员 / 组织负责人 | 站内消息 + 邮件 |
+| 活动报名 | 报名已提交、报名名单待审核、报名审批结果、撤回报名 | 报名学生、相关活动指导 | 站内消息 + 邮件 |
+| 活动出席 | 活动前 24 小时提醒、签到提醒、签退提醒 | 已获批报名 / 已签到学生 | 站内消息 + 邮件 |
+| 活动报告（事件报告） | 提交确认、待活动指导确认、待事件分级、待活动指导跟进、处理报告待审阅、最终结果、退回、提交限期提醒、管理层通知 / 事件警报 | 报告人、活动指导、事件分级员、Dean / 管理单位 | 站内消息 + 邮件 |
 
-> **本文不覆盖**：活动申请主流程、学生组织注册流程的通知。
-
----
-
-## 3. ⚠️ 需业务确认事项（审核重点）
-
-以下问题在确认前会影响是否启用或如何发送，**「拟定处理」为建议默认值，请逐项确认或修改。**
-
-| 编号 | 待确认问题 | 拟定处理（待确认） |
-| --- | --- | --- |
-| Q01 | 活动推广「审批完成同步告知」需要发给哪些人（其他督导、OC 成员、组织负责人）？是否排除申请人与本次审批人？ | 发给上述相关人员，排除申请人与本次审批督导 |
-| Q02 | 报名相关的「报名提交确认给学生」「新报名申请给组织者」「名额已满提醒」是否启用？ | 暂不启用，仅保留报名审批结果类通知 |
-| Q03 | 活动出席各提醒的时间窗口（开始前 24 小时 / 2 小时、签到截止前 30 分钟、签退前 30 分钟、完成后 2–4 小时）是否符合业务预期？ | 采用本文第 3.3 节时间设定 |
-| Q04 | 缺席统计通知发给「活动负责人 / 创建者」是否正确？是否还需发给督导？ | 仅发活动负责人 / 创建者 |
-| Q05 | 活动报告（事件报告）通知数量较多，是否全部启用？或按事件级别（低 / 中 / 高）裁剪通知范围？ | 全部启用，中 / 高级别额外发管理层通知 |
-| Q06 | 事件报告「最终结果」英文目前用 "Rejected"（拒绝），中文用「退回修改」。统一为哪个语义？ | 统一为「退回修改 / Returned for Revision」 |
-| Q07 | 培训提醒（进度 / 截止 / 完成 / 自定义）是仅支持管理员手动发送，还是需要系统定时自动发送？ | 第一阶段仅管理员手动发送；定时自动发送待确认 |
-| Q08 | 培训提醒区分「友好 / 紧急」两种语气，是否都保留？ | 都保留 |
-| Q09 | 培训合规结果通知的接收人与发送渠道（目前仅站内消息）是否需要加邮件？ | 加邮件，发给实际培训参与者 |
+> **本文不覆盖**：活动申请主流程通知（见 #210）、学生组织注册 / 申诉流程通知、非活动生命周期 P1 范围的其他系统通知。
+>
+> **确定不启用**的通知（推广生效、活动开始前 2 小时提醒、缺席统计、活动完成、培训提醒等）汇总于第 9 节，请一并确认。
 
 ---
 
-## 4. 活动推广
+## 3. ⚠️ 需业务确认事项（确认重点）
 
-### 4.1 推广申请已提交
-- 触发：推广申请提交、进入审批后。
-- 接收人：推广申请人 / 建立人。
-- 发送方式：站内消息 + 邮件。
+以下结论已根据客户审核文档与现有系统逻辑拟定。**「拟定结论」为建议默认值，请逐项确认或修改。** 其中仅 R01 为尚待业务提供信息的开放问题，其余为已拟定、待客户最终签字的结论。
 
-| 语言 | 标题 | 正文 |
+| 编号 | 待确认事项 | 拟定结论（请确认） |
 | --- | --- | --- |
-| English | Activity Promotion Application Submitted | Your activity promotion application has been submitted and is now under review. |
-| 繁中 | 活動推廣申請已提交 | 您的活動推廣申請已提交，目前正在審核中。 |
-| 简中 | 活动推广申请已提交 | 您的活动推广申请已提交，目前正在审核中。 |
+| C01 | 活动推广「审批完成同步告知」发送给哪些人？是否排除申请人与本次审批人？ | 发送给其他活动指导（Supervisors）、OC 成员和组织负责人（Group Leader），并**排除**申请人与本次审批人。 |
+| C02 | 报名相关的「新报名申请给组织者」「名额已满提醒」是否启用？ | **不启用**；仅保留「报名已提交」确认与「报名审批结果」。 |
+| C03 | 报名名单审批完成给组织者 / 给学生、单独报名退回等重复通知如何处理？ | **删除或并入**「报名审批结果」，不单独发送重复通知。 |
+| C04 | 活动出席提醒保留哪些？ | 仅保留**活动前 24 小时提醒、签到提醒、签退提醒**；停用活动开始前 2 小时提醒、缺席统计通知、活动完成通知。 |
+| C05 | 事件报告「最终结果」中「退回」的语义如何统一？ | 统一为 **`Returned for Revision / 退回修改`**，不与 `Rejected / 拒绝` 混用。 |
+| C06 | 培训提醒与培训合规结果通知是否启用？ | **不启用**；业务说明为：组织者未完成培训时，不能获批报名活动。 |
+| R01（**开放**） | 事件报告管理层通知的接收范围（Dean / 管理单位 / 学生事务长等）是否已完整覆盖？ | 当前发送给系统现有的管理 / 最终审阅人员范围。**若业务要求加入学生事务长或其他授权人员，请提供明确的角色、用户组或数据来源。** |
 
-### 4.2 推广待审核
+---
+
+## 4. 活动推广通知
+
+### 4.1 推广申请已提交（站内消息 + 邮件）
+
+- 触发：推广申请提交成功并进入审批后。
+- 接收人：推广申请人。
+- 包含字段：活动名称、主办单位、申请人、推广 / 报名开始与结束时间。
+
+| 语言 | 标题 / 邮件主题 | 正文 |
+| --- | --- | --- |
+| English | Promotion Application Submitted | Your activity promotion application has been successfully submitted and is now under review. |
+| 繁中 | 宣傳申請已提交 | 您的活動宣傳申請已提交，目前正在審核中。 |
+| 简中 | 推广申请已提交 | 您的活动推广申请已提交，目前正在审核中。 |
+
+### 4.2 推广待审核（站内消息 + 邮件）
+
 - 触发：推广审批任务产生时。
 - 接收人：当前推广审批人 / 候选审批人。
-- 发送方式：站内消息 + 邮件。
+- 包含字段：活动名称、主办单位、申请人、推广 / 报名开始与结束时间、审核链接。
 
-| 语言 | 标题 | 正文 |
+| 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
-| English | Activity Promotion Pending Review | A new activity promotion request is awaiting your review. |
-| 繁中 | 活動推廣待審核 | 有一個新的活動推廣申請等待您審核，請盡快處理。 |
-| 简中 | 活动推广待审核 | 有一个新的活动推广申请等待您审核，请尽快处理。 |
+| English | Promotion Pending Review | An activity promotion application has been submitted and is awaiting your review. Kindly review the details and proceed via the link below. |
+| 繁中 | 宣傳待審核 | 有一項活動宣傳申請已提交，正等待您進行審核。請點擊下方連結審閱詳情。 |
+| 简中 | 推广待审核 | 有一项活动推广申请已提交，正等待您进行审核。请点击下方链接审阅详情。 |
 
-### 4.3 推广审批通过
+### 4.3 推广审批通过（站内消息 + 邮件）
+
 - 触发：推广审批通过、流程完成后。
 - 接收人：推广申请人 / 建立人。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：审批人、审批时间、审批意见、报名开始 / 结束时间。
+- 包含字段：活动名称、主办单位、申请人、审核结果、审核人、审核时间、审核意见。
 
-| 语言 | 标题 | 正文 |
+| 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
-| English | Activity Promotion Approved | Your activity promotion request has been approved. |
-| 繁中 | 活動推廣審批通過 | 您的活動推廣申請已通過審批。 |
-| 简中 | 活动推广审批通过 | 您的活动推广申请已通过审批。 |
+| English | Promotion Approved | Your activity promotion application has been approved. |
+| 繁中 | 宣傳審批通過 | 您的活動宣傳申請已通過審批。 |
+| 简中 | 推广审批通过 | 您的活动推广申请已通过审批。 |
 
-### 4.4 推广审批拒绝
-- 触发：推广审批拒绝、流程完成后。
+### 4.4 推广审批拒绝 / 退回修改（站内消息 + 邮件）
+
+- 触发：推广审批拒绝或退回、流程完成后。
 - 接收人：推广申请人 / 建立人。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：审批人、审批时间、拒绝原因。
+- 包含字段：活动名称、主办单位、申请人、审核结果、审核人、审核时间、原因。
 
-| 语言 | 标题 | 正文 |
+| 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
-| English | Activity Promotion Rejected | Your activity promotion request has been rejected. Please review the comments below. |
-| 繁中 | 活動推廣審批被拒絕 | 您的活動推廣申請已被拒絕，請查看審批意見。 |
-| 简中 | 活动推广审批被拒绝 | 您的活动推广申请已被拒绝，请查看审批意见。 |
+| English | Promotion Rejected | Your activity promotion application has been rejected. Please review the comments below, make the necessary amendments, and resubmit via the system. |
+| 繁中 | 宣傳審批被拒絕 | 您的活動推廣申請已被拒絕。請查看下方的審批意見，修正相關內容後重新提交申請。 |
+| 简中 | 推广审批被拒绝 | 您的活动推广申请已被拒绝。请查看下方的审批意见，修正相关内容后重新提交申请。 |
 
-### 4.5 审批完成同步告知（见 Q01）
-- 触发：申请人收到审批结果后，向相关人员同步告知。
-- 接收人：其他督导、OC 成员、组织负责人；排除申请人与本次审批督导。
-- 发送方式：站内消息 + 邮件。
+### 4.5 审批完成同步告知（站内消息 + 邮件）
 
-| 语言 | 状态 | 标题 | 正文 |
+- 触发：推广审批结果产生后，同步告知相关人员。
+- 接收人：其他活动指导（Supervisors）、OC 成员和组织负责人（Group Leader）；**排除**申请人与本次审批人（详见 C01）。
+- 包含字段：活动名称、审核结果、审核人、审核时间、原因。
+
+| 结果 | 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- | --- |
-| English | 通过 | Activity Promotion Approved | An activity promotion request has been approved by a Supervisor. No further action is required from you. |
-| English | 拒绝 | Activity Promotion Rejected | An activity promotion request has been rejected by a Supervisor. |
-| 繁中 | 通过 | 活動推廣已通過 | 一項活動推廣申請已被督導審批通過，無需您進一步操作。 |
-| 繁中 | 拒绝 | 活動推廣已被拒絕 | 一項活動推廣申請已被督導拒絕。 |
-| 简中 | 通过 | 活动推广已通过 | 一项活动推广申请已被督导审批通过，无需您进一步操作。 |
-| 简中 | 拒绝 | 活动推广已被拒绝 | 一项活动推广申请已被督导拒绝。 |
-
-### 4.6 推广生效
-- 触发：推广经设置为可见、正式生效后。
-- 接收人：推广建立人。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：组织名称、报名开始 / 结束时间、生效时间。
-
-| 语言 | 标题 | 正文 |
-| --- | --- | --- |
-| English | Promotion Activated - {活动名称} | Your activity promotion is now active. |
-| 繁中 | 活動推廣生效 - {活动名称} | 您的活動推廣已生效。 |
-| 简中 | 活动推广生效 - {活动名称} | 您的活动推广已生效。 |
+| 通过 | English | Promotion Approved | The activity promotion application has been approved by another Supervisor. No further review action is required. |
+| 拒绝 / 退回 | English | Promotion Rejected | The activity promotion application has been rejected by another Supervisor. The applicant will be asked to revise and resubmit. No further review action is required from you at this stage. |
+| 通过 | 繁中 | 宣傳已通過 | 此宣傳申請已獲其他活動指導審批通過，無需您進一步操作。 |
+| 拒绝 / 退回 | 繁中 | 宣傳已被拒絶 | 此宣傳申請已被其他活動指導退回給申請人修改。申請人將在修訂後重新提交，目前無需您進行任何處理。 |
+| 通过 | 简中 | 推广已通过 | 此推广申请已被其他活动指导审批通过，无需您进一步操作。 |
+| 拒绝 / 退回 | 简中 | 活动推广已被拒绝 | 此推广申请已被其他活动指导退回给申请人修改。申请人将在修订后重新提交，目前无需您进行任何处理。 |
 
 ---
 
-## 5. 活动报名
+## 5. 活动报名通知
 
-### 5.1 单个报名审批结果
-- 触发：单个报名被通过 / 拒绝，或批量审批后。
+### 5.1 报名已提交（站内消息 + 邮件）
+
+- 触发：学生提交活动报名。
 - 接收人：报名学生。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：活动、审批结果、审批时间、意见或原因。
+- 包含字段：活动名称、主办单位、活动日期、报名时间、撤回报名链接。
 
-| 语言 | 标题（通过 / 拒绝） | 正文 |
+| 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
-| English | Enrolment Approved / Enrolment Rejected | Your activity enrolment has been approved / rejected. (拒绝时提示查看详情) |
-| 繁中 | 活動報名審批通過 / 活動報名審批被拒絕 | 您的活動報名申請已通過審批 / 已被拒絕，拒絕時提示查看詳情。 |
-| 简中 | 活动报名审批通过 / 活动报名审批被拒绝 | 您的活动报名申请已通过审批 / 已被拒绝，拒绝时提示查看详情。 |
+| English | Enrolment Submitted | Your activity enrolment has been submitted and is under review. |
+| 繁中 | 活動報名已提交 | 您的活動報名已提交，目前正在審核中。 |
+| 简中 | 活动报名已提交 | 您的活动报名申请已提交，目前正在审核中。 |
 
-### 5.2 报名名单待审核
-- 触发：报名名单提交、进入督导审核时。
-- 接收人：督导审核人。
-- 发送方式：站内消息 + 邮件。
+### 5.2 报名名单待审核（站内消息 + 邮件）
 
-| 语言 | 标题 | 正文 |
+- 触发：报名名单获 OC 推荐并进入活动指导审核时。
+- 接收人：相关活动指导。
+- 包含字段：活动名称、主办单位、活动日期、报名时间、审核报名链接。
+
+| 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
-| English | Enrolment List Review Required | An activity enrolment list is ready for supervisor review. |
-| 繁中 | 需要審核活動報名名單 | 活動報名名單已準備好，請督導進行審核。 |
-| 简中 | 需要审核活动报名名单 | 活动报名名单已准备好，请督导进行审核。 |
+| English | Enrolment Pending Review | The activity enrolment list has been submitted and is awaiting your review. Kindly review the details and proceed via the link below. |
+| 繁中 | 活動報名待審核 | 活動報名名單已提交，正等待您進行審核。請點擊下方連結審閱詳情。 |
+| 简中 | 活动报名待审核 | 活动报名名单已提交，正等待您进行审核。请点击下方链接审阅详情。 |
 
-### 5.3 报名名单审批完成 — 给组织者
-- 触发：报名名单审批流程完成（通过 / 拒绝）。
-- 接收人：报名名单提交者 / 组织者。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：审批人、审批时间、意见或拒绝原因。
+### 5.3 报名审批结果（站内消息 + 邮件）
 
-| 语言 | 标题（通过 / 拒绝） | 正文 |
-| --- | --- | --- |
-| English | Enrolment List Approved / Enrolment List Rejected | The submitted activity enrolment list has been approved / rejected. (拒绝时提示查看详情) |
-| 繁中 | 活動報名名單審批通過 / 活動報名名單審批被拒絕 | 您提交的活動報名名單已通過審批 / 已被拒絕，拒絕時提示查看詳情。 |
-| 简中 | 活动报名名单审批通过 / 活动报名名单审批被拒绝 | 您提交的活动报名名单已通过审批 / 已被拒绝，拒绝时提示查看详情。 |
-
-### 5.4 报名名单审批完成 — 给学生
-- 触发：报名名单审批流程完成（通过 / 拒绝）。
-- 接收人：名单内学生。
-- 发送方式：站内消息 + 邮件。
-
-| 语言 | 标题（通过 / 拒绝） | 正文 |
-| --- | --- | --- |
-| English | Enrolment Approved / Enrolment Rejected | Your activity enrolment has been approved / rejected. (拒绝时提示查看详情) |
-| 繁中 | 活動報名審批通過 / 活動報名審批被拒絕 | 您的活動報名已通過審批 / 已被拒絕，拒絕時提示查看詳情。 |
-| 简中 | 活动报名审批通过 / 活动报名审批被拒绝 | 您的活动报名已通过审批 / 已被拒绝，拒绝时提示查看详情。 |
-
-### 5.5 报名退回
-- 触发：报名被退回时。
+- 触发：单个报名被通过 / 拒绝，或批量审批完成后。
 - 接收人：报名学生。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：活动、退回原因。
+- 包含字段：活动名称、主办单位、活动日期、审核结果、审核时间、审核意见、原因、撤回 / 重新报名链接。
 
-### 5.6 撤回报名
-- 触发：学生撤回报名成功后。
+| 结果 | 语言 | 标题 / 邮件主题 | 正文 |
+| --- | --- | --- | --- |
+| 通过 | English | Enrolment Successful | Your activity enrolment is successful. Please attend the activity as scheduled, or cancel your enrolment via the link below if you can no longer attend. |
+| 拒绝 | English | Enrolment Unsuccessful | Your enrolment application has been rejected. Please check the details and comments, and resubmit your application if necessary. |
+| 通过 | 繁中 | 活動報名成功 | 您的活動報名申請已通過審批。請準時出席活動；如未能出席，請點擊下方連結取消報名。 |
+| 拒绝 | 繁中 | 活動報名未獲接納 | 您的活動報名申請已被拒絕。請點擊下方連結查看詳情及意見，並在必要時重新提交申請。 |
+| 通过 | 简中 | 活动报名成功 | 您的活动报名申请已通过审批。请准时出席活动；如未能出席，请点击下方链接取消报名。 |
+| 拒绝 | 简中 | 活动报名未获接纳 | 您的活动报名申请已被拒绝。请点击下方链接查看详情及审批意见，并在必要时重新提交申请。 |
+
+### 5.4 撤回报名（站内消息 + 邮件）
+
+- 触发：学生自行点击「取消报名」并成功执行后。
 - 接收人：报名学生。
-- 发送方式：站内消息 + 邮件。
+- 包含字段：活动名称、主办单位、活动日期、撤回时间、重新报名链接。
 
-> 5.5 / 5.6 的最终三语文案待与业务一并确认（见 Q02）。报名提交确认、新报名申请给组织者、名额已满提醒等通知是否启用，亦见 Q02。
+| 语言 | 标题 / 邮件主题 | 正文 |
+| --- | --- | --- |
+| English | Enrolment Withdrawn Successfully | Your enrolment for the activity has been successfully withdrawn. If you wish to re-enrol, please visit the activity page via the link below. |
+| 繁中 | 成功撤回活動報名 | 您的活動報名申請已成功撤回。若您希望重新報名參加，請點擊下方連結返回活動頁面。 |
+| 简中 | 成功撤回活动报名 | 您的活动报名申请已成功撤回。若您希望重新报名参加，请点击下方链接返回活动页面。 |
 
 ---
 
-## 6. 活动出席
+## 6. 活动出席通知
 
-### 6.1 活动开始前 24 小时提醒
-- 触发：活动开始前约 24 小时。
+> 本阶段仅启用以下三类提醒；活动开始前 2 小时提醒、缺席统计通知、活动完成通知**不启用**（详见 C04 与第 9 节）。
+
+### 6.1 活动前 24 小时出席提醒（站内消息 + 邮件）
+
+- 触发：活动开始前约 24 小时自动触发。
 - 接收人：已获批报名学生。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：活动、时间、地点、集合地点、注意事项、天气、紧急联系。
+- 包含字段：活动名称、主办单位、活动日期、撤回报名链接。
 
-| 语言 | 标题 | 正文 |
+| 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
-| English | Starts Tomorrow - {活动名称} | Your activity starts in about 24 hours. Please review the details and attend on time. |
-| 繁中 | 活動明天開始 - {活动名称} | 您的活動約 24 小時後開始，請查看以下資料並準時出席。 |
-| 简中 | 活动明天开始 - {活动名称} | 您的活动约 24 小时后开始，请查看以下资料并准时出席。 |
+| English | Event Reminder: `{ACTIVITY_NAME}` Starts Tomorrow | Your upcoming activity will start soon. Please attend on time, or cancel your enrolment via the link below if you can no longer attend. |
+| 繁中 | 活動出席提醒：`{ACTIVITY_NAME}` 將於明天開始 | 您報名的活動即將開始。請準時出席活動；如未能出席，請點擊下方連結取消報名。 |
+| 简中 | 活动出席提醒：`{ACTIVITY_NAME}` 将于明天开始 | 您报名的活动即将开始。请准时出席活动；如未能出席，请点击下方链接取消报名。 |
 
-### 6.2 活动开始前 2 小时提醒
-- 触发：活动开始前约 2 小时。
-- 接收人：已获批报名学生。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：活动、时间、集合地点、所需物品、联系方式。
+### 6.2 签到提醒（站内消息 + 邮件）
 
-| 语言 | 标题 | 正文 |
-| --- | --- | --- |
-| English | Starts Soon - {活动名称} | Your activity starts in about 2 hours. Please get ready and arrive on time. |
-| 繁中 | 活動即將開始 - {活动名称} | 您的活動約 2 小時後開始，請準備好並準時到達。 |
-| 简中 | 活动即将开始 - {活动名称} | 您的活动约 2 小时后开始，请准备好并准时到达。 |
-
-### 6.3 签到提醒
-- 触发：场次已开始，且签到截止前 30 分钟内仍未签到。
+- 触发：活动开始时间后 30 分钟内仍未签到。
 - 接收人：已获批报名但未签到的学生。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：活动、签到截止时间、签到链接。
+- 包含字段：活动名称、主办单位、活动日期、撤回报名链接。
 
-| 语言 | 标题 | 正文 |
+| 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
-| English | Please Complete Check-in - {活动名称} | Please complete check-in as soon as possible. |
-| 繁中 | 請完成簽到 - {活动名称} | 請盡快完成簽到。 |
-| 简中 | 请完成签到 - {活动名称} | 请尽快完成签到。 |
+| English | Action Required: Please Complete Check-in for `{ACTIVITY_NAME}` | Please contact the organisers on-site to complete your check-in. If you are still waiting for it to begin, remember to check in and out to record your attendance.<br>Click the link below to de-register yourself if you cannot attend the event. |
+| 繁中 | 請完成簽到：`{ACTIVITY_NAME}` | 請聯繫現場籌辦者完成簽到。若您仍在等待活動開始，請記得在現場進行簽到及簽退，以完整記錄您的出席。<br>若您無法出席，請點擊下方連結取消報名。 |
+| 简中 | 请完成签到：`{ACTIVITY_NAME}` | 请联系现场组织者完成签到。若您仍在等待活动开始，请记得在现场进行签到及签退，以完整记录您的出席。<br>若您无法出席，请点击下方链接取消报名。 |
 
-### 6.4 签退提醒
-- 触发：场次结束前 30 分钟内仍未签退。
+### 6.3 签退提醒（站内消息 + 邮件）
+
+- 触发：活动原定结束前 30 分钟内仍未签退。
 - 接收人：已签到但未签退的学生。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：活动、签退截止时间、签退链接。
+- 包含字段：活动名称、主办单位、活动日期。
 
-| 语言 | 标题 | 正文 |
+| 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
-| English | Please Complete Check-out - {活动名称} | Please complete check-out before the deadline. |
-| 繁中 | 請完成簽退 - {活动名称} | 請於截止時間前完成簽退。 |
-| 简中 | 请完成签退 - {活动名称} | 请于截止时间前完成签退。 |
-
-### 6.5 缺席统计通知
-- 触发：活动结束后，系统自动标记缺席或发现仍有未签到学生。
-- 接收人：活动负责人 / 创建者。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：活动、活动编号、结束时间、缺席人数、缺席名单。
-
-| 语言 | 标题 | 正文 |
-| --- | --- | --- |
-| English | Activity Absent Notification - {活动名称} | The activity has ended and the system has marked absent participants automatically. |
-| 繁中 | 活動缺席通知 - {活动名称} | 以下活動已結束，系統已自動標記缺席參與者。 |
-| 简中 | 活动缺席通知 - {活动名称} | 以下活动已结束，系统已自动标记缺席参与者。 |
-
-> 附加提示：「请登录系统查看完整出席统计。」/「請登入系統查看完整出席統計。」/「Please log in to view the full attendance details.」
-
-### 6.6 活动完成通知
-- 触发：活动结束后约 2 至 4 小时。
-- 接收人：已签到学生。
-- 发送方式：站内消息 + 邮件。
-- 信息字段可含：活动、参与证书链接、推荐活动。
-
-| 语言 | 标题 | 正文 |
-| --- | --- | --- |
-| English | Activity Successfully Completed - {活动名称} | The activity has been successfully completed. Thank you for your participation. |
-| 繁中 | 活動已圓滿結束 - {活动名称} | 活動已圓滿結束，感謝您的參與。 |
-| 简中 | 活动已圆满结束 - {活动名称} | 活动已圆满结束，感谢您的参与。 |
-
-> 附加提示：「欢迎您分享活动体验及意见。」/「歡迎您分享活動體驗及意見。」/「You are welcome to share feedback about this activity.」
+| English | Action Required: Please Complete Check-out for `{ACTIVITY_NAME}` | The activity is drawing to a close. Please contact the organisers on-site to complete your check-out to record your attendance. |
+| 繁中 | 請完成簽退：`{ACTIVITY_NAME}` | 活動即將結束。請聯繫現場籌辦者完成簽退程序，以完整記錄您的出席。 |
+| 简中 | 请完成签退：`{ACTIVITY_NAME}` | 活动即将结束。请联系现场组织者完成签退程序，以完整记录您的出席。 |
 
 ---
 
-## 7. 活动报告（事件报告）
+## 7. 活动报告 / 事件报告通知
 
-> 本阶段为活动事件报告（Incident Report）的提交与审批流程通知。通知较多，请结合 Q05 / Q06 确认启用范围与文案语义。所有通知均为「站内消息 + 邮件」。
+> 事件报告流程按报告类型与事件级别（低 / 中 / 高）裁剪：低级别在活动指导跟进后结束；中 / 高级别会进入 Dean / 管理单位的待阅与最终审阅环节。以下通知按所处流程节点和角色范围发送。
 
-### 7.1 流程类通知一览
+### 7.1 事件报告提交确认（站内消息 + 邮件）
 
-| 通知 | 接收人 | 触发 | 标题（EN / 繁 / 简） |
-| --- | --- | --- | --- |
-| 提交确认 | 报告人 | 报告提交后 | Incident Report Submitted Successfully / 事件報告提交成功 / 事件报告提交成功 |
-| 待督导确认 | 活动督导 | 学生提交报告且需督导确认 | Student Incident Report Pending Your Confirmation / 學生事件報告待您確認 / 学生事件报告待您确认 |
-| 待分级 | 分级人 | 进入分级环节 | Incident Report Pending Classification / 事件報告待定級 / 事件报告待定级 |
-| 待跟进 | 活动督导 | 分级后进入跟进环节 | Incident Report Pending Follow-up / 事件報告待跟進 / 事件报告待跟进 |
-| 待 Dean 监控 | Dean / Custodian Unit | 中 / 高级别事件分级完成后 | Incident Report Monitoring - Classification Completed / 事件報告監控 - 定級完成 / 事件报告监控 - 定级完成 |
-| 待 Dean 最终审阅 | Dean / Custodian Unit | 中 / 高级别跟进提交后 | Incident Report Pending Your Final Review / 事件報告待您最終審閱 / 事件报告待您最终审阅 |
+- 触发：OC 或 Supervisor 成功提交事件报告后。
+- 接收人：报告提交人。
+- 包含字段：活动名称、主办单位、事件报告类别、提交人、角色、提交时间、查看链接。
 
-### 7.2 结果与进展类通知
-
-#### 7.2.1 最终结果通知报告人（见 Q06）
-- 接收人：报告人。触发：审批流程完成（通过 / 退回）。
-
-| 语言 | 通过 | 退回 |
+| 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
-| English | Incident Report Approved — the report has been approved. | Incident Report Returned for Revision — please revise and resubmit. |
-| 繁中 | 事件報告已通過 — 報告已通過審核。 | 事件報告被退回 — 需要修改後重新提交。 |
-| 简中 | 事件报告已通过 — 报告已通过审核。 | 事件报告被退回 — 需要修改后重新提交。 |
+| English | Incident Report Submitted: `{ACTIVITY_NAME}` | The incident report has been submitted. Please click the link below to review the report details. |
+| 繁中 | 事件報告提交確認：`{ACTIVITY_NAME}` | 系統已收到事件報告。請點擊下方連結查看報告詳情。 |
+| 简中 | 事件报告提交确认：`{ACTIVITY_NAME}` | 系统已收到事件报告。请点击下方链接查看报告详情。 |
 
-#### 7.2.2 Dean 审阅完成通知督导
-- 接收人：活动督导。触发：中 / 高级别流程完成，或 Dean 退回。
+### 7.2 事件报告待活动指导确认（站内消息 + 邮件）
 
-| 语言 | 通过 | 退回 |
+- 触发：需活动指导先行确认的事件报告进入待确认节点。
+- 接收人：本活动的活动指导（Supervisors）。
+- 包含字段：活动名称、主办单位、事件报告类别、提交人、角色、提交时间、审核链接。
+
+| 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
-| English | Incident Report Final Review Completed - Approved | Incident Report Final Review - Returned for Revision |
-| 繁中 | 事件報告最終審閱完成 - 已通過 | 事件報告最終審閱 - 已退回修改 |
-| 简中 | 事件报告最终审阅完成 - 已通过 | 事件报告最终审阅 - 已退回修改 |
+| English | Incident Report Pending Review: `{ACTIVITY_NAME}` | An incident report has been submitted and is awaiting your confirmation. Kindly review the details and proceed via the link below. |
+| 繁中 | 事件報告待審閱：`{ACTIVITY_NAME}` | 系統已收到事件報告，正等待您進行確認。請點擊下方連結審閱詳情。 |
+| 简中 | 事件报告待审阅：`{ACTIVITY_NAME}` | 系统已收到事件报告，正等待您进行确认。请点击下方链接审阅详情。 |
 
-#### 7.2.3 其它进展 / 知会通知
-- 跟进进展更新（给报告人）：Incident Report Progress Update / 事件報告進展更新 / 事件报告进展更新。
-- 分级退回督导：Incident Report Returned by Classifier / 事件報告已被分級員退回 / 事件报告已被分级员退回。
-- 给组织负责人的结果知会（通过 / 拒绝）：Incident Report Approved · Rejected / 事件報告已通過 · 已被拒絕 / 事件报告已通过 · 已被拒绝。
+### 7.3 事件待分级员分级（站内消息 + 邮件）
 
-### 7.3 提醒与管理层通知
+- 触发：活动指导提交紧急事件报告，或确认 OC 事件报告且勾选为「有事故」后。
+- 接收人：事件分级员（Incident Level Classifier）。
+- 包含字段：活动名称、主办单位、事件报告类别、提交人、角色、提交时间、审核链接。
 
-| 通知 | 接收人 | 触发 | 标题（EN / 繁 / 简） |
+| 语言 | 标题 / 邮件主题 | 正文 |
+| --- | --- | --- |
+| English | Incident Pending Classification: `{ACTIVITY_NAME}` | An incident report has been submitted and is awaiting your classification. Kindly review the details and proceed via the link below. |
+| 繁中 | 事件待分級：`{ACTIVITY_NAME}` | 系統已收到事件報告，正等待您進行事件分級與評估。請點擊下方連結審閱詳情。 |
+| 简中 | 事件待分级：`{ACTIVITY_NAME}` | 系统已收到事件报告，正等待您进行事件分级与评估。请点击下方链接审阅详情。 |
+
+### 7.4 事件待活动指导跟进（站内消息 + 邮件）
+
+- 触发：事件分级员完成分级后。
+- 接收人：本活动的活动指导（Supervisors）。
+- 包含字段：活动名称、主办单位、事件报告类别、事件级别、处理报告提交链接。
+
+| 语言 | 标题 / 邮件主题 | 正文 |
+| --- | --- | --- |
+| English | Incident Pending Follow-up: `{ACTIVITY_NAME}` | The incident reported has been classified. After handling, please complete a report detailing how the incident was managed via the link below. |
+| 繁中 | 事件待跟進：`{ACTIVITY_NAME}` | 此事件已完成分級。請於事件處理完畢後，點擊下方連結提交處理詳情。 |
+| 简中 | 事件待跟进：`{ACTIVITY_NAME}` | 该事件已完成分级。请在事件处理完成后，点击下方链接提交处理详情。 |
+
+### 7.5 事件处理报告待审阅（站内消息 + 邮件）
+
+- 触发：活动指导提交事件处理报告后（仅中 / 高级别事件）。
+- 接收人：Dean / 管理单位等最终审阅人（详见 R01）。
+- 包含字段：活动名称、主办单位、事件报告类别、处理报告查看链接。
+
+| 语言 | 标题 / 邮件主题 | 正文 |
+| --- | --- | --- |
+| English | Incident Handling Report Pending Review: `{ACTIVITY_NAME}` | The supervisor has submitted the incident handling report, which is now awaiting your final review and endorsement. Please click the link below to review the handling details. |
+| 繁中 | 事件處理報告待審閱：`{ACTIVITY_NAME}` | 活動指導已提交事件處理報告，目前正等待您進行最終審閱與核准。請點擊下方連結審閱處理詳情。 |
+| 简中 | 事件处理报告待审阅：`{ACTIVITY_NAME}` | 活动指导已提交相关事件之处理报告，目前正等待您进行最终审阅与核准。请点击下方链接审阅处理详情。 |
+
+### 7.6 事件报告最终结果通知报告人（站内消息 + 邮件）
+
+- 触发：OC 提交的事件报告审批流程完成。
+- 接收人：报告提交人。
+- 包含字段：活动名称、主办单位、事件报告类别、提交人、审核人、审核结果。
+
+| 结果 | 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- | --- |
-| 截止日提醒 | 报告创建人 / 督导 | 报告临近截止且仍未完成 | Incident Report Deadline Reminder / 事件報告截止日提醒 / 事件报告截止日提醒 |
-| 管理层通知 | 管理层角色（含 SAO Admin / Dean 等） | 通过且事件为中 / 高 / 严重级别 | Incident Management Notification / 事件管理通知 / 事件管理通知 |
-| 级别警报 | 报告人 | 识别为第 2 / 3 级事件 | Incident Level Alert / 事件級別警報 / 事件级别警报 |
-| 自定义通知 | 指定接收人 | 管理员手动发送 | 标题与正文由发送人填写 |
+| 通过 | English | Incident Report Approved: `{ACTIVITY_NAME}` | The incident report has been approved. |
+| 退回 | English | Incident Report Returned for Revision - `{ACTIVITY_NAME}` | The incident report has been returned for revision. Kindly review the feedback, make the necessary amendments, and resubmit for approval via the link below. |
+| 通过 | 繁中 | 事件報告已通過：`{ACTIVITY_NAME}` | 事件報告已正式通過審核。 |
+| 退回 | 繁中 | 事件報告已被退回修改 - `{ACTIVITY_NAME}` | 事件報告被退回。請點擊下方連結審閱修改意見，並於完成修正後重新提交審核。 |
+| 通过 | 简中 | 事件报告已通过：`{ACTIVITY_NAME}` | 事件报告已正式通过审核。 |
+| 退回 | 简中 | 事件报告已被退回修改 - `{ACTIVITY_NAME}` | 事件报告被退回。请点击下方链接审阅修改意见，并在完成修正后重新提交审核。 |
+
+### 7.7 事件处理报告结果通知（站内消息 + 邮件）
+
+- 触发：事件处理报告审阅通过或退回。
+- 接收人：活动指导 / 相关处理人。
+- 包含字段：活动名称、主办单位、事件报告类别、审核人、审核结果、原因。
+
+| 结果 | 语言 | 标题 / 邮件主题 | 正文 |
+| --- | --- | --- | --- |
+| 通过 | English | Incident Handling Report Endorsed: `{ACTIVITY_NAME}` | The incident handling report has been endorsed. |
+| 退回 | English | Incident Handling Report Returned for Revision - `{ACTIVITY_NAME}` | The incident handling report has been returned for revision. Kindly review the feedback, make the necessary amendments, and resubmit for approval via the link below. |
+| 通过 | 繁中 | 事件處理報告已通過：`{ACTIVITY_NAME}` | 事件處理報告已正式通過審閱。 |
+| 退回 | 繁中 | 事件處理報告已被退回修改 - `{ACTIVITY_NAME}` | 事件處理報告被退回。請點擊下方連結審閱修改意見，並於完成修正後重新提交審核。 |
+| 通过 | 简中 | 事件处理报告已通过：`{ACTIVITY_NAME}` | 事件处理报告已正式通过审阅。 |
+| 退回 | 简中 | 事件处理报告已被退回修改 - `{ACTIVITY_NAME}` | 事件处理报告被退回。请点击下方链接审阅修改意见，并在完成修正后重新提交审核。 |
+
+### 7.8 分级退回活动指导（站内消息 + 邮件）
+
+- 触发：事件分级员退回事件报告。
+- 接收人：活动指导（Supervisors）。
+- 包含字段：活动名称、主办单位、事件报告类别、提交的活动指导、重交链接。
+
+| 语言 | 标题 / 邮件主题 | 正文 |
+| --- | --- | --- |
+| English | Incident Report Returned for Revision - `{ACTIVITY_NAME}` | The incident report has been returned for revision. Kindly review the feedback, make the necessary amendments, and resubmit for approval via the link below. |
+| 繁中 | 事件報告已被退回修改 - `{ACTIVITY_NAME}` | 事件報告被退回。請點擊下方連結審閱修改意見，並於完成修正後重新提交審核。 |
+| 简中 | 事件报告已被退回修改 - `{ACTIVITY_NAME}` | 事件报告被退回。请点击下方链接审阅修改意见，并在完成修正后重新提交审核。 |
+
+### 7.9 事件报告提交限期提醒（站内消息 + 邮件）
+
+- 触发：事件报告临近提交截止日期（约截止前 3 天内）且报告仍未完成提交。
+- 接收人：活动负责人 / 活动指导。
+- 包含字段：活动名称、活动日期、组织者名称、报告状态、提交链接。
+
+| 语言 | 标题 / 邮件主题 | 正文 |
+| --- | --- | --- |
+| English | Incident Report Deadline Reminder - `{ACTIVITY_NAME}` | Please click the link below to complete and submit the incident report before the deadline. Please note that late submission or a NIL-submission may lead to a formal investigation by the Supervisor(s). |
+| 繁中 | 事件報告提交限期提醒 - `{ACTIVITY_NAME}` | 請點擊下方連結，並於截止日期前完成及提交相關的事件報告。請注意：逾期未交或漏報，活動指導將可能推定活動曾發生事故並進行正式調查。 |
+| 简中 | 事件报告提交限期提醒 - `{ACTIVITY_NAME}` | 请点击下方链接，并在截止日期前完成及提交相关的事件报告。请注意：逾期未交或漏报，活动指导将可能推定活动曾发生事故并进行正式调查。 |
+
+> 简中标题已由源文案 `事件报告截止日` 修正为 `事件报告提交限期提醒`，与英文 / 繁中保持一致。
+
+### 7.10 管理层通知 / 事件警报（站内消息 + 邮件）
+
+- 触发：中 / 高级别事件进入管理层监控 / 最终审阅环节。
+- 接收人：Dean / 管理单位等管理层人员（接收范围详见 R01）。
+- 包含字段：活动名称、主办单位、事件报告类别、事件级别、报告链接。
+
+| 语言 | 标题 / 邮件主题 | 正文 |
+| --- | --- | --- |
+| English | Incident Alert: `{ACTIVITY_NAME}` | An incident reported might require your immediate attention. Please click the link below to review the report details. |
+| 繁中 | 事件警報：`{ACTIVITY_NAME}` | 事件可能需要您即時關注。請點擊下方連結審閱報告詳情。 |
+| 简中 | 事件警报：`{ACTIVITY_NAME}` | 事件可能需要您即时关注。请点击下方链接审阅报告详情。 |
 
 ---
 
-## 8. 培训
+## 8. 培训提醒 / 合规通知
 
-> 培训提醒分「友好 / 紧急」两种语气（见 Q08），目前主要为管理员手动发送（见 Q07）。所有通知为「站内消息 + 邮件」。占位 `{课程名称}` 等在发送时替换。
+培训相关提醒在本阶段**全部不启用**（详见 C06 与第 9 节）。
 
-### 8.1 培训进度提醒
-- 接收人：学生。触发：管理员发送，提醒学生关注课程进度。
-
-| 语气 | English | 繁中 | 简中 |
-| --- | --- | --- | --- |
-| 友好 | Training Progress Update - {课程名称} | 培訓進度更新 - {课程名称} | 培训进度更新 - {课程名称} |
-| 紧急 | URGENT: Training Progress - {课程名称} | 緊急：培訓進度 - {课程名称} | 紧急：培训进度 - {课程名称} |
-
-正文：提醒学生检查并继续完成课程进度；紧急语气强调需立即处理以免错过培训要求。
-
-### 8.2 培训截止提醒
-- 接收人：学生。触发：课程临近截止日期（需课程设有截止日期）。
-- 信息字段含：截止日期（紧急语气下高亮）。
-
-| 语气 | English | 繁中 | 简中 |
-| --- | --- | --- | --- |
-| 友好 | Training Deadline Reminder - {课程名称} | 培訓截止日期提醒 - {课程名称} | 培训截止日期提醒 - {课程名称} |
-| 紧急 | URGENT: Training Deadline - {课程名称} | 緊急：培訓截止日期 - {课程名称} | 紧急：培训截止日期 - {课程名称} |
-
-正文：提醒在 `{截止日期}` 前完成课程；紧急语气强调时间紧迫需立即完成。
-
-### 8.3 培训完成提醒
-- 接收人：学生。触发：提醒学生完成尚未完成的培训。
-
-| 语气 | English | 繁中 | 简中 |
-| --- | --- | --- | --- |
-| 友好 | Training Completion Check - {课程名称} | 培訓完成情況檢查 - {课程名称} | 培训完成情况检查 - {课程名称} |
-| 紧急 | URGENT: Training Completion Overdue - {课程名称} | 緊急：培訓完成逾期 - {课程名称} | 紧急：培训完成逾期 - {课程名称} |
-
-正文：友好语气温和询问完成情况并提供协助；紧急语气提示完成已逾期，需立即完成所有未完成活动。
-
-### 8.4 自定义培训提醒
-- 接收人：学生。触发：管理员发送，正文追加管理员填写的 `{自定义消息}`（必填）。
-
-| 语气 | English | 繁中 | 简中 |
-| --- | --- | --- | --- |
-| 友好 | Custom Training Reminder - {课程名称} | 定制培訓提醒 - {课程名称} | 定制培训提醒 - {课程名称} |
-| 紧急 | URGENT: Custom Training Notice - {课程名称} | 緊急：定制培訓通知 - {课程名称} | 紧急：定制培训通知 - {课程名称} |
-
-### 8.5 培训状态提醒
-- 接收人：学生。触发：提醒学生当前培训状态。
-- 状态取值：未开始 / 进行中 / 已完成（Not Started / In Progress / Completed）。
-- 含「打开培训」按钮（Open Training / 開啟培訓 / 打开培训）。
-
-| 语言 | 标题 | 正文 |
-| --- | --- | --- |
-| English | Training Status Reminder - {培训名称} | Shows your current training status. Please complete before the due date to avoid affecting your eligibility. |
-| 繁中 | 培訓狀態提醒 - {培训名称} | 顯示您目前的培訓狀態，請於截止日期前完成，以免影響資格。 |
-| 简中 | 培训状态提醒 - {培训名称} | 显示您目前的培训状态，请于截止日期前完成，以免影响资格。 |
-
-### 8.6 培训合规结果（见 Q09）
-- 接收人：培训参与者（最终范围待确认）。触发：培训合规审批流程通过 / 拒绝。
-- 标题：Training Compliance Approved / Rejected（培训合规通过 / 拒绝）。
-- 当前仅站内消息，是否加邮件见 Q09。
+业务意见：不需要发送培训提醒；组织者若未完成培训，将无法获批报名活动。
 
 ---
 
-> 文末说明：本文聚焦业务需求与文案确认。请在第 3 节逐项回填确认结论后，我方据以确定开发与发送范围。
+## 9. 不启用通知确认清单
+
+以下通知在本阶段**确定不发送**，请确认客户同意停用。
+
+| 阶段 | 不启用通知 | 不启用原因 |
+| --- | --- | --- |
+| 活动推广 | 推广生效通知 | 经客户批注删除，不单独发送。 |
+| 活动报名 | 新报名申请给组织者 | 不需要；不接入主流程。 |
+| 活动报名 | 名额已满提醒 | 不需要；不接入主流程。 |
+| 活动报名 | 报名名单审批完成给组织者 | 与「报名审批结果」重复，删除或并入。 |
+| 活动报名 | 报名名单审批完成给学生 | 与「报名审批结果」重复，删除或并入。 |
+| 活动报名 | 单独报名退回通知 | 与「报名审批结果」重复，删除或并入。 |
+| 活动出席 | 活动开始前 2 小时提醒 | 客户确认不需要。 |
+| 活动出席 | 缺席统计通知 | 客户确认不需要；可保留必要的缺席标记能力，但不发送通知。 |
+| 活动出席 | 活动完成通知 | 建议由活动后评价问卷通知替代。 |
+| 事件报告 | 跟进进展更新给报告人 | 客户批注要求删除，不必要。 |
+| 事件报告 | 给组织负责人的结果知会 | 客户批注要求删除，不必要。 |
+| 事件报告 | 待 Dean 监控的重复通知 | 与管理层通知重复，不另建重复模板。 |
+| 事件报告 | 逾期催交提醒 | 当前只更新逾期天数，不单独发通知。 |
+| 培训 | 培训进度 / 截止 / 完成 / 自定义提醒 | 客户确认不启用。 |
+| 培训 | 培训合规结果通知 | 客户确认不启用。 |
+
+---
+
+## 10. 通用规则
+
+### 10.1 变量
+
+字段没有值时，不显示该字段行，不留空标签或空行。
+
+| 变量 | 含义 | 主要使用场景 | 示例 |
+| --- | --- | --- | --- |
+| `{ACTIVITY_NAME}` | 活动名称 | 全阶段 | Campus Music Night 2026 |
+| `{ORGANISATION_NAME}` | 主办单位名称 | 推广、报名、事件报告 | Singing Club |
+| `{APPLICANT_NAME}` | 申请人名称 | 推广 | Alex Chan |
+| `{ACTIVITY_DATE}` | 活动日期 | 报名、出席 | 2026-09-15 19:00 - 2026-09-15 21:30 |
+| `{REVIEW_LINK}` | 审核 / 查看链接 | 待审核、待处理、事件报告 | https://slas.example.edu.hk/... |
+| `{RESULT}` | 审核结果 | 审批结果 | Approved |
+| `{REVIEWER_NAME}` | 审核人 / 处理人名称 | 审批结果 | Dr. Lee |
+| `{REVIEW_TIME}` | 审核时间 | 审批结果 | 2026-06-09 19:45:00 |
+| `{COMMENT}` | 审批意见 | 审批通过、退回 | Approved. Please proceed. |
+| `{REASON}` | 拒绝或退回原因 | 拒绝、退回 | Please clarify the arrangement. |
+| `{INCIDENT_REPORT_TYPE}` | 事件报告类别 | 事件报告 | Safety incident |
+| `{INCIDENT_LEVEL}` | 事件级别 | 事件报告 | Level 2 |
+| `{DEADLINE}` | 截止日期 | 事件报告提醒 | 2026-09-20 |
+
+### 10.2 字段标签（三语）
+
+| 字段 | English | 繁中 | 简中 |
+| --- | --- | --- | --- |
+| 默认问候语 | Dear User, | 您好， | 您好， |
+| 活动名称 | Activity Name | 活動名稱 | 活动名称 |
+| 主办单位 | Organising Unit | 主辦單位名稱 | 主办单位名称 |
+| 申请人 | Applicant | 申請人 | 申请人 |
+| 活动日期 | Activity Date | 活動日期 | 活动日期 |
+| 审核链接 | Review Link | 審核連結 | 审核链接 |
+| 审核结果 | Result | 審核結果 | 审核结果 |
+| 审核人 | Reviewer | 審核人 | 审核人 |
+| 审核时间 | Review Time | 審核時間 | 审核时间 |
+| 审核意见 | Comments | 審核意見 | 审核意见 |
+| 原因 | Reason | 原因 | 原因 |
+| 事件报告类别 | Incident Report Type | 事件報告類別 | 事件报告类别 |
+| 事件级别 | Incident Level | 事件級別 | 事件级别 |
+| 截止日期 | Deadline | 截止日期 | 截止日期 |
+| 通过 | Approved | 已通過 | 已通过 |
+| 拒绝 | Rejected | 已拒絕 | 已拒绝 |
+| 退回修改 | Returned for Revision | 已退回修改 | 已退回修改 |
+
+### 10.3 站内消息展示顺序
+
+1. 通知标题
+2. 问候语
+3. 正文固定文案
+4. 活动 / 报名 / 事件报告信息字段
+5. 操作链接（如适用）
+
+### 10.4 邮件展示顺序
+
+1. 邮件主题
+2. 免回复声明
+3. 问候语
+4. 正文固定文案
+5. 活动 / 报名 / 事件报告信息字段
+6. 操作链接（如适用）
+7. 系统页脚
+
+### 10.5 免回复声明与系统页脚
+
+免回复声明与页脚规则与《活动申请通知模板设计说明（客户审核版）》保持一致。
+
+免回复声明：
+
+| 语言 | 文案 |
+| --- | --- |
+| English | This is a system-generated message from the Student-led Activities System (SLAS). Please do not reply. |
+| 繁中 | 本郵件由學生主導活動系統 (SLAS) 自動生成，請勿直接回覆。 |
+| 简中 | 本邮件由学生主导活动系统 (SLAS) 自动生成，请勿直接回复。 |
+
+系统页脚：
+
+| 语言 | 页脚 |
+| --- | --- |
+| English | For enquiries, please email student-led@eduhk.hk.<br>Student-led Activities System<br>This is a system-generated message from The Education University of Hong Kong. This message (including any attachments) may contain confidential, proprietary, privileged and/or private information, intended solely for the use of the individual(s) or entity named above. If you are not the intended recipient, please notify our support team immediately and delete this message and all its attachments. Please note that any disclosure, copying, distribution or other use of this message or any attachment by an unintended recipient is strictly prohibited. |
+| 繁中 | 如有查詢，請電郵至 student-led@eduhk.hk。<br>學生主導活動系統<br>本郵件為香港教育大學系統自動生成的訊息。本訊息（包括任何附件）可能包含機密、專利、受特權保護及/或私隱的資訊，僅供上述指定的個人或實體使用。若您並非本訊息的預期接收者，請立即通知我們的支援團隊，並刪除本訊息及其所有附件。特此聲明，非預期接收者對本訊息或任何附件的任何披露、複製、分發或其他使用行為均被嚴格禁止。 |
+| 简中 | 如有查询，请电邮至 student-led@eduhk.hk。<br>学生主导活动系统<br>本邮件为香港教育大学系统自动生成的讯息。本讯息（包括任何附件）可能包含机密、专利、受特权保护及/或隐私的信息，仅供上述指定的个人或实体使用。若您并非本讯息的预期接收者，请立即通知我们的支援团队，并删除本讯息及其所有附件。特此声明，非预期接收者对本讯息或任何附件的任何披露、复制、分发或其他使用行为均被严格禁止。 |
