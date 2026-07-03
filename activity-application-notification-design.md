@@ -1,16 +1,16 @@
 # 活动申请通知模板设计说明（客户审核版）
 
-> 版本日期：2026-06-02
+> 版本日期：2026-07-01
 > 用途：本文用于向业务方说明「活动申请主流程」全部站内消息与邮件通知的**触发时机、接收人、发送方式和三语文案**，供业务审核与确认。
 > 本文只描述业务需求，不包含任何技术实现方案。
-> 来源：GitHub Issue #210《活动申请通知需求规格（2026-06-02）》正文。
+> 原始基线：GitHub Issue #210《活动申请通知需求规格（2026-06-02）》正文；本次核对修订来源：`zhlibai-asal-SLAS_PRO/docs/design/Activity Application Module Noti Comments 20260701.md`。
 
 ---
 
 ## 1. 阅读指引
 
 - 本文是**最终拟定文案**，请逐节核对标题、正文、接收人是否符合业务预期。
-- 第 3 节《需业务确认事项》是本次审核的重点，列出尚未拍板、会影响是否开发或如何发送的问题，请优先确认。
+- 第 3 节《已确认事项》列出 2026-07-01 修订后已拍板、会影响是否发送或如何展示的规则。
 - 所有通知均提供 **English / 繁体中文 / 简体中文** 三语，三语必须表达同一业务动作。
 - 占位符（如 `{ACTIVITY_NAME}`）在发送时替换为实际内容；某字段没有值时，该字段整行不显示，不留空标签或空行。
 
@@ -21,11 +21,10 @@
 | 阶段 | 通知 | 接收人 | 发送方式 |
 | --- | --- | --- | --- |
 | 提交前 OC 认可 | 需要 OC 认可、修改后重新认可、部分成员已认可、所有成员已认可 | OC 成员 | 仅站内消息 |
-| 申请提交 | 活动申请已提交 | 活动申请人 | 站内消息 + 邮件 |
+| 申请提交 | 活动申请已提交 | **所有 OC 成员** | 站内消息 + 邮件 |
 | 审批待办 | 各审批环节待办提醒 | 当前审批人 | 站内消息 + 邮件 |
 | 审批结果 | 审批通过 / 拒绝 / 退回修改 | **所有 OC 成员** | 站内消息 + 邮件 |
-| 审批同步 | Dean/Delegate 拒绝、Supervisor 退回、Supervisor 拒绝 | 已参与审批人员（不含申请人和当前处理人） | 站内消息 + 邮件 |
-| 活动发布 | 活动发布成功 | 活动创建者 | 站内消息 + 邮件 |
+| 审批同步 | 审批通过 / 拒绝 / 退回修改结果同步 | 已参与审批人员 | 邮件 BCC |
 
 **本次不覆盖**：活动推广申请流程、活动报名/签到/出席记录、活动总结、事件报告，以及非活动申请主流程的其他通知。
 
@@ -36,32 +35,39 @@
 | 变化 | 旧版 | 本版 |
 | --- | --- | --- |
 | 业务术语 | activity publish request / 活动发布申请 | activity application / 活动申请 |
+| 申请提交接收人 | 活动申请人 | 所有 OC 成员，样本接收人显示为系统角色 |
 | 审批结果接收人 | 仅活动申请人 | 所有 OC 成员 |
+| 审批结果字段 | 显示 Reviewer，Comments / Reason 显示长文本 | 不显示 Reviewer；Comments / Reason 直接显示审核详情 URL |
 | 拒绝文案 | 可提示「修改后重新提交本申请」 | 拒绝后须重新发起**全新申请**，不得提示修改本申请 |
 | IRG / VPSLA 术语 | vote / cast vote / VP group selection | assessment / recommendation / review / confirmation |
 | 邮件结构 | 无统一免回复声明与页脚 | 统一加入免回复声明与系统页脚 |
+| 样本语言切换 | 可能联动全站界面语言 | 仅切换通知标题与内容，不切换 SLAS 全站界面语言 |
 
 ---
 
-## 3. ⚠️ 需业务确认事项（审核重点）
+## 3. 已确认事项
 
-以下问题在确认前不应进入开发，或会影响发送逻辑。**「拟定处理」为建议默认值，请逐项确认或修改。**
+以下事项已按 2026-07-01 客户修订意见确认。
 
-| 编号 | 待确认问题 | 拟定处理（待确认） | 影响 |
-| --- | --- | --- | --- |
-| Q01 | 「外部嘉宾认可」待办通知是否启用？ | **禁用** | 不启用则该环节不发待办提醒 |
-| Q02 | 「赞助审批」待办通知是否启用？ | **禁用** | 同上 |
-| Q03 | VPSLA 确认放行通知的发送粒度：按每个活动申请发送，还是按 IRG Secretary 的一次操作发送？ | 按每个活动申请到达时发送 | 决定发送次数与去重逻辑 |
-| Q04 | 审批结果通知改为发给所有 OC 成员后，是否仍需单独给活动申请人再发一条？ | 不另发；申请人若是 OC 成员会自然收到 | 决定申请人是否重复收到 |
-| Q05 | 「活动发布成功」通知是否保留？若保留，须仅在活动正式公开发布时触发，且文案不得暗示「活动宣传申请」已完成 | 保留，仅在正式发布后触发 | 决定第 4.6 节是否开发 |
-| Q06 | 邮件页脚是否采用免责声明与保密声明？最终法律措辞为何？ | 采用第 5.5 节拟定措辞 | 决定邮件页脚最终内容 |
-| Q07 | 「活动发布成功」的 English 与简中文案（原始资料只提供繁体），是否采用本文补齐版本？ | 采用第 4.6 节补齐版本 | 决定该通知三语是否完整 |
+| 编号 | 确认事项 | 处理 |
+| --- | --- | --- |
+| Q01 | 「外部嘉宾认可」待办通知 | 暂时停用，不在样本或真实发送中启用 |
+| Q02 | 「赞助审批」待办通知 | 暂时停用，不在样本或真实发送中启用 |
+| Q03 | EO 校园场地使用建议字段 | 不显示申请人；改显示 Supervisor(s) / 活動指導 / 活动指导 |
+| Q04 | 审批结果通知 | 发给所有 OC 成员，抬头统一使用默认问候语 Dear User；不显示 Reviewer |
+| Q05 | 审批结果 Comments / Reason | 直接显示审核详情 URL，避免 VPSLA 长意见撑长通知 |
+| Q06 | 审批同步通知 | 通过 BCC 同步发给所有已参与审批人员；迎新活动同样需要同步 |
+| Q07 | 4.6 活动发布成功通知 | 已移除 |
+| Q08 | 通知样本语言切换 | 只切换通知标题与内容，不联动页面上的 SLAS 全站界面语言 |
+| Q09 | 邮件免回复声明 | 在邮件预览和实际邮件中置中显示 |
 
 ---
 
 ## 4. 各阶段通知文案
 
 ### 4.1 提交前 OC 认可（仅站内消息）
+
+> 本节只在设计文档中保留规格说明。Workflow Notification Samples 页面无需新增 4.1.1 至 4.1.4 的通知样本。
 
 #### 4.1.1 需要 OC 成员认可
 - 触发：活动提交审批前，需 OC 成员确认参与并认可活动内容。
@@ -106,8 +112,10 @@
 ### 4.2 申请提交确认（站内消息 + 邮件）
 
 - 触发：活动申请提交成功并进入审批流程。
-- 接收人：活动申请人。
-- 包含字段：活动名称、主办单位、申请人。
+- 接收人：所有 OC 成员；样本页面接收人显示为系统角色。
+- 问候语：统一使用默认问候语 `Dear User,` / `您好，`。
+- 包含字段：活动名称、主办单位、申请人、活动日期。
+- 活动名称：三语样本与实际通知均使用活动表单中的英文名称。
 
 | 语言 | 标题 / 邮件主题 | 正文 |
 | --- | --- | --- |
@@ -121,8 +129,10 @@
 
 - 接收人：当前审批人。
 - 每条待办均包含：活动名称、主办单位、申请人、活动日期、审核链接。审核链接指向对应待办详情页。
-- **「外部嘉宾认可」「赞助审批」两个环节是否发送待办，取决于 Q01 / Q02 的确认结果，确认前不默认启用。**
+- EO 校园场地使用建议通知不显示「申请人」字段，改显示 `Supervisor(s)` / `活動指導` / `活动指导`。
+- 「外部嘉宾认可」「赞助审批」两个环节暂时停用，不在样本或真实发送中启用。
 - IRG / VPSLA 文案统一使用 assessment / recommendation / review / confirmation，不得出现 vote、cast vote、VP group selection。
+- VPSLA 成员评审通知的 Note 前须保留一个空行。
 
 | 审批环节 | English 标题 / 正文 | 繁中标题 / 正文 | 简中标题 / 正文 |
 | --- | --- | --- | --- |
@@ -130,13 +140,11 @@
 | EO 校园场地使用建议 | Advice Required on Campus Venue Usage / An activity application has been submitted, and the Supervisor has invited you to provide professional advice on campus venue usage. Kindly review and provide your input via the link below. | 校園場地使用待提供意見 / 有一項活動申請已提交，活動指導（Supervisor）邀請您就校園場地使用提供意見。請點擊下方連結進行審閱並提供建議。 | 校园场地使用待提供意见 / 有一项活动申请已提交，活动指导（Supervisor）邀请您就校园场地使用提供意见。请点击下方链接进行审阅并提供建议。 |
 | Checker 审核 | Activity Pending Review / An activity application has been submitted and is awaiting your review. Kindly review the details and proceed via the link below. | 活動申請待審核 / 有一項活動申請已提交，正等待您進行審核。請點擊下方連結審閱詳情。 | 活动申请待审核 / 有一项活动申请已提交，正等待您进行审核。请点击下方链接审阅详情。 |
 | Supervisor 审核 | Activity Pending Review / An activity application has been submitted and is awaiting your review. Kindly review the details and proceed via the link below. | 活動申請待審核 / 有一項活動申請已提交，正等待您進行審核。請點擊下方連結審閱詳情。 | 活动申请待审核 / 有一项活动申请已提交，正等待您进行审核。请点击下方链接审阅详情。 |
-| 外部嘉宾认可（**待确认 Q01**） | Guest Endorsement Required / An activity application with external guests is awaiting your endorsement. Kindly review the details and proceed via the link below. | 嘉賓認可待處理 / 有一項涉及外部嘉賓的活動申請正等待您認可。請點擊下方連結審閱詳情。 | 嘉宾认可待处理 / 有一项涉及外部嘉宾的活动申请正等待您的认可。请点击下方链接审阅详情。 |
-| 赞助审批（**待确认 Q02**） | Activity Sponsorship Pending Endorsement / An activity sponsorship proposal is awaiting your endorsement. Kindly review the details and proceed via the link below. | 活動贊助待審批 / 有一項活動贊助申請正等待您認可。請點擊下方連結審閱詳情。 | 活动赞助待审批 / 有一项活动赞助申请正等待您的认可。请点击下方链接审阅详情。 |
 | 活动审批 | Activity Pending Review and Approval / An activity application has been submitted and is awaiting your review and approval. Kindly review the details and proceed via the link below. | 活動申請待審批 / 有一項活動申請已提交，正等待您的審批。請點擊下方連結審閱詳情。 | 活动申请待审批 / 有一项活动申请已提交，正等待您的审批。请点击下方链接审阅详情。 |
 | IRG 小组选择 | IRG - Sub-group Assignment Required / An activity application is awaiting your assignment to an Independent Review Group (IRG) Sub-group. Kindly review the details and proceed via the link below. | IRG - 活動申請待分配分組 / 有一項活動申請已提交，請為此活動審核分配一個獨立評審小組（IRG）分組。請點擊下方連結進行分配。 | IRG - 活动申请待分配分组 / 有一项活动申请已提交，请为此活动审核分配一个独立评审小组（IRG）分组。请点击下方链接进行分配。 |
 | IRG 成员活动评审 | IRG - Activity Pending Assessment / An activity application is awaiting your assessment as an Independent Review Group (IRG) member. Kindly review the details and submit your recommendation via the link below. | IRG - 活動獨立評審待處理 / 有一項活動申請等待您作為獨立評審小組（IRG）成員進行評審。請點擊下方連結審閱詳情並提交您的評審建議。 | IRG - 活动独立评审待处理 / 有一项活动申请等待您作为独立评审小组（IRG）成员进行评审。请点击下方链接审阅详情并提交您的评审建议。 |
 | IRG 摘要审阅 | IRG - Review Summary Ready for Confirmation / The Independent Review Group (IRG) review period has concluded. Kindly review and confirm the summary for the Vetting Panel of Student-led Activities (VPSLA) via the link below. | IRG - 評審摘要待確認 / 獨立評審小組（IRG）評審階段已完成。請點擊下方連結審閱評審摘要，並確認提交予學生主導活動審核小組（VPSLA）。 | IRG - 评审摘要待确认 / 独立评审小组（IRG）评审阶段已完成。请点击下方链接审阅评审摘要，并确认提交予学生主导活动审核小组（VPSLA）。 |
-| VPSLA 小组选择（**待确认 Q03**） | VPSLA - Activity Review and Confirmation Required / There are activity application(s) awaiting your confirmation to be passed to the VPSLA for further review. Kindly review and proceed via the link below. | VPSLA - 活動申請待確認放行 / 活動申請正等待您確認放行予學生主導活動審核小組（VPSLA）進行後續審核。請點擊下方連結進行審閱與確認。 | VPSLA - 活动申请待确认放行 / 活动申请正等待您确认放行予学生主导活动审核小组（VPSLA）进行后续审核。请点击下方链接进行审阅与确认。 |
+| VPSLA 小组选择 | VPSLA - Activity Review and Confirmation Required / There are activity application(s) awaiting your confirmation to be passed to the VPSLA for further review. Kindly review and proceed via the link below. | VPSLA - 活動申請待確認放行 / 活動申請正等待您確認放行予學生主導活動審核小組（VPSLA）進行後續審核。請點擊下方連結進行審閱與確認。 | VPSLA - 活动申请待确认放行 / 活动申请正等待您确认放行予学生主导活动审核小组（VPSLA）进行后续审核。请点击下方链接进行审阅与确认。 |
 | VPSLA 成员评审 | VPSLA - Activity Pending Review / Activity application(s) are awaiting your review as a Vetting Panel of Student-led Activities (VPSLA) member. Kindly review the details and submit your recommendation via the link below. Note: You may only submit your recommendation after the Independent Review Group (IRG) has completed the assessment. | VPSLA 評審待處理 / 活動申請正等待您作為學生主導活動審核小組（VPSLA）成員進行評審。請點擊下方連結審閱詳情並提交您的評審建議。注意：您必須在獨立評審小組（IRG）完成評審後，方可提交您的評審建議。 | VPSLA - 评审待处理 / 活动申请等待您作为学生主导活动审核小组（VPSLA）成员进行评审。请点击下方链接审阅详情并提交您的评审建议。注意：您必须在独立评审小组（IRG）完成评审后，方可提交您的评审建议。 |
 | VPSLA 共识检查 | VPSLA - Consensus Check Required / The VPSLA review period has concluded. Please verify the consensus and determine the subsequent action via the link below. | VPSLA - 共識檢查待處理 / 學生主導活動審核小組（VPSLA）的評審已完成。請點擊下方連結檢查小組共識並進行後續處理。 | VPSLA - 共识检查待处理 / 学生主导活动审核小组（VPSLA）的评审已完成。请点击下方链接检查小组共识并进行后续处理。 |
 | Chairperson 决定 | VPSLA - Chairperson Decision Required / Activity application(s) are awaiting your decision as Chairperson of the Vetting Panel of Student-led Activities. Kindly review the details and proceed via the link below. | VPSLA - 主席決議待處理 / 活動申請正等待您作為學生主導活動審核小組（VPSLA）的主席做出最終決議。請點擊下方連結審閱詳情並提交您的決定。 | VPSLA - 主席决议待处理 / 活动申请正等待您作为学生主导活动审核小组（VPSLA）的主席做出最终决议。请点击下方链接审阅详情并提交您的决定。 |
@@ -144,8 +152,10 @@
 
 ### 4.4 审批结果（站内消息 + 邮件）
 
-- 接收人：**所有 OC 成员**（不再仅发给申请人，详见 Q04）。
-- 包含字段：活动名称、申请人、审核结果、审核人、审核时间，以及通过时的审核意见 / 拒绝退回时的原因。
+- 接收人：**所有 OC 成员**。
+- 问候语：统一使用默认问候语 `Dear User,` / `您好，`。
+- 包含字段：活动名称、申请人、审核结果、审核时间，以及通过时的审核意见 / 拒绝退回时的原因；不显示审核人。
+- 审核意见 / 原因字段直接显示审核详情 URL。
 
 #### 4.4.1 审批通过
 
@@ -175,59 +185,40 @@
 
 > 退回与拒绝不同：退回**允许**提示修改后重新提交本申请。
 
-### 4.5 已参与审批人员同步通知（站内消息 + 邮件）
+### 4.5 已参与审批人员同步通知（邮件 BCC）
 
-- 用途：告知已参与审批的人员，流程已被拒绝或退回，本阶段无需继续处理。
-- 接收人：已参与审批人员；**不含**申请人，**不含**当前处理人。
-- 包含字段：活动名称、申请人、审核结果、审核人、审核时间、原因。
+- 用途：将发给 OC 成员的审批结果同步给所有已参与审批人员。
+- 接收人：所有已参与审批人员；迎新活动同样需要发送同步通知。
+- 邮件发送：同步邮件以 BCC 方式发送给已参与审批人员，避免公开其他审批人的收件地址；不向已参与审批人员额外发送站内消息。
+- 内容规则：直接复用第 4.4 节审批结果通知格式，即默认问候语、无 Reviewer 字段，Comments / Reason 直接显示审核详情 URL。
 
-#### 4.5.1 Dean / Delegate 拒绝后
-
-| 语言 | 标题 / 邮件主题 | 正文 | 结果值 |
-| --- | --- | --- | --- |
-| English | Activity Application Rejected | This activity application has been rejected. No further review action is required. | Rejected |
-| 繁中 | 活動申請已被拒 | 此活動申請已被拒絕，無需再處理後續審批。 | 已拒絕 |
-| 简中 | 活动申请已被拒 | 此活动申请已被拒绝，无需再处理后续审批。 | 已拒绝 |
-
-#### 4.5.2 Supervisor 退回后
+#### 4.5.1 审批通过同步
 
 | 语言 | 标题 / 邮件主题 | 正文 | 结果值 |
 | --- | --- | --- | --- |
-| English | Activity Application Returned by Supervisor | This activity application has been returned by a Supervisor for revision. The applicant will be asked to revise and resubmit. No further review action is required from you at this stage. | Returned |
-| 繁中 | 活動申請已被活動指導退回 | 此活動申請已被活動指導退回給申請人修改。申請人將在修訂後重新提交，目前無需您進行任何處理。 | 已退回 |
-| 简中 | 活动申请已被活动指导退回 | 此活动申请已被活动指导退回给申请人修改。申请人将在修订后重新提交，目前无需您进行任何处理。 | 已退回 |
+| English | Activity Approved | Your activity application has been approved. Please proceed with submitting the activity promotion application. | Approved |
+| 繁中 | 活動審批通過 | 您的活動申請已通過審批。請繼續提交活動宣傳申請。 | 已通過 |
+| 简中 | 活动审批通过 | 您的活动申请已通过审批。请继续提交活动宣传申请。 | 已通过 |
 
-#### 4.5.3 Supervisor 拒绝后
+#### 4.5.2 审批拒绝同步
 
 | 语言 | 标题 / 邮件主题 | 正文 | 结果值 |
 | --- | --- | --- | --- |
-| English | Activity Application Rejected by Supervisor | This activity application has been rejected by a Supervisor. No further review action is required. | Rejected |
-| 繁中 | 活動申請已被活動指導拒絕 | 此活動申請已被活動指導拒絕，無需再處理後續審批。 | 已拒絕 |
-| 简中 | 活动申请已被活动指导拒绝 | 此活动申请已被活动指导拒绝，无需再处理后续审批。 | 已拒绝 |
+| English | Activity Application Rejected | Your activity application has been rejected. Please review the comments below for details. If you wish to proceed, please submit a new application. | Rejected |
+| 繁中 | 活動申請已被拒 | 您的活動申請已被拒絕，請查看下方的審批意見以瞭解詳情。若要繼續辦理，需另行發起全新申請。 | 已拒絕 |
+| 简中 | 活动申请已被拒 | 您的活动申请已被拒绝。请查看下方的审批意见以了解详情。若要继续办理，需另行发起全新申请。 | 已拒绝 |
 
-### 4.6 活动发布成功（站内消息 + 邮件）
+#### 4.5.3 退回修改同步
 
-> 是否保留及触发点见 **Q05**；English / 简中文案为补齐版本，见 **Q07**。
-> 仅在活动**正式公开发布**后触发，与「审批通过」通知相互独立，文案不得暗示「活动宣传申请」已完成。
+| 语言 | 标题 / 邮件主题 | 正文 | 结果值 |
+| --- | --- | --- | --- |
+| English | Activity Application Returned for Revision | Your activity application has been returned for revision. Please review the comments below, make the necessary amendments, and resubmit via the system. | Returned |
+| 繁中 | 活動申請被退回修改 | 您的活動申請已被退回修改。請查看下方的審批意見，修正相關內容後重新提交申請。 | 已退回 |
+| 简中 | 活动申请被退回修改 | 您的活动申请已被退回修改。请查看下方的审批意见，修正相关内容后重新提交申请。 | 已退回 |
 
-- 接收人：活动创建者。
-- 包含变量：活动名称、发布时间、活动编号。
+### 4.6 已移除通知
 
-#### 4.6.1 站内消息
-
-| 语言 | 标题 | 正文 |
-| --- | --- | --- |
-| English | Activity Published | Your activity "{ACTIVITY_NAME}" has been successfully published!<br>Publish Time: {PUBLISH_TIME}<br>Activity ID: {ACTIVITY_ID}<br>The activity is now publicly visible in the system, and students can start enrolling. |
-| 繁中 | 活動已發布 | 您的活動「{ACTIVITY_NAME}」已成功發佈！<br>發佈時間：{PUBLISH_TIME}<br>活動編號：{ACTIVITY_ID}<br>活動現已在系統中公開顯示，學生可以開始報名參加。 |
-| 简中 | 活动已发布 | 您的活动「{ACTIVITY_NAME}」已成功发布！<br>发布时间：{PUBLISH_TIME}<br>活动编号：{ACTIVITY_ID}<br>活动现已在系统中公开显示，学生可以开始报名参加。 |
-
-#### 4.6.2 邮件
-
-| 语言 | 主题 | 正文 |
-| --- | --- | --- |
-| English | Activity Published - {ACTIVITY_NAME} | Activity Published<br>Congratulations! Your activity has been successfully published.<br>Activity Name: {ACTIVITY_NAME}<br>Students can now view and enrol in your activity.<br>You can check the enrolment status through the management dashboard.<br>We wish your activity every success! |
-| 繁中 | 活動已發布 - {ACTIVITY_NAME} | 活動已發布<br>恭喜！您的活動已成功發布。<br>活動名稱：{ACTIVITY_NAME}<br>學生現在可以查看和報名您的活動<br>您可以通過管理面板查看報名情況<br>祝您的活動成功！ |
-| 简中 | 活动已发布 - {ACTIVITY_NAME} | 活动已发布<br>恭喜！您的活动已成功发布。<br>活动名称：{ACTIVITY_NAME}<br>学生现在可以查看和报名您的活动<br>您可以通过管理面板查看报名情况<br>祝您的活动成功！ |
+第 4.6 节原「活动发布成功」通知已按 2026-07-01 修订意见移除，不在样本或真实发送中启用。
 
 ---
 
@@ -243,13 +234,10 @@
 | `{ACTIVITY_DATE}` | 活动日期 | 2026-09-15 19:00 - 2026-09-15 21:30 |
 | `{REVIEW_LINK}` | 审核链接 | https://slas.example.edu.hk/activity-approval/review/100 |
 | `{RESULT}` | 审核结果 | Approved |
-| `{REVIEWER_NAME}` | 审核人 / 处理人名称 | Dr. Lee |
 | `{REVIEW_TIME}` | 审核时间 | 2026-06-01 19:45:00 |
-| `{COMMENT}` | 审批意见 | Approved. Please proceed with publication. |
-| `{REASON}` | 拒绝或退回原因 | Please clarify the crowd control arrangement. |
+| `{COMMENT_URL}` | 审批意见链接 | https://slas.example.edu.hk/#/bpm/my-todo |
+| `{REASON_URL}` | 拒绝或退回原因链接 | https://slas.example.edu.hk/#/bpm/my-todo |
 | `{OC_ENDORSER_NAME}` | 已认可的 OC 成员姓名 | Chris Wong |
-| `{PUBLISH_TIME}` | 活动发布时间 | 2026-06-01 19:50:00 |
-| `{ACTIVITY_ID}` | 活动编号 | 100 |
 
 ### 5.2 字段标签（三语）
 
@@ -260,10 +248,10 @@
 | 活动名称 | Activity Name | 活動名稱 | 活动名称 |
 | 主办单位 | Organising Unit | 主辦單位名稱 | 主办单位名称 |
 | 申请人 | Applicant | 申請人 | 申请人 |
+| 活动指导 | Supervisor(s) | 活動指導 | 活动指导 |
 | 活动日期 | Activity Date | 活動日期 | 活动日期 |
 | 审核链接 | Review Link | 審核連結 | 审核链接 |
 | 审核结果 | Result | 審核結果 | 审核结果 |
-| 审核人 | Reviewer | 審核人 | 审核人 |
 | 审核时间 | Review Time | 審核時間 | 审核时间 |
 | 审核意见 | Comments | 審核意見 | 审核意见 |
 | 原因 | Reason | 原因 | 原因 |
@@ -281,13 +269,17 @@
 ### 5.4 邮件展示顺序
 
 1. 邮件主题
-2. 免回复声明
+2. 免回复声明，置中显示
 3. 问候语
 4. 正文固定文案
 5. 活动信息与审批信息
 6. 系统页脚
 
-### 5.5 免回复声明与系统页脚（待 Q06 确认）
+### 5.5 通知样本语言切换
+
+Workflow Notification Samples 页面中的通知语言切换按钮只作用于通知标题与通知内容。切换 English / 繁体中文 / 简体中文样本时，不得联动或改变 SLAS 全站界面语言。
+
+### 5.6 免回复声明与系统页脚
 
 免回复声明：
 
@@ -297,7 +289,7 @@
 | 繁中 | 本郵件由學生主導活動系統 (SLAS) 自動生成，請勿直接回覆。 |
 | 简中 | 本邮件由学生主导活动系统 (SLAS) 自动生成，请勿直接回复。 |
 
-系统页脚（繁中 / 简中照录 docx 原文；English 为对应翻译，待业务确认，详见 Q06）：
+系统页脚（繁中 / 简中照录 docx 原文；English 为对应翻译）：
 
 | 语言 | 页脚 |
 | --- | --- |
