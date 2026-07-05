@@ -158,7 +158,7 @@
 - 触发：单个报名被通过 / declined / returned，或批量审批完成后。
 - 接收人：报名学生。
 - 问候语：统一使用默认问候语 `Dear User,` / `您好，`。
-- 包含字段：活动名称、主办单位、活动日期、审核结果，以及撤回 / 重新报名 / 重新提交链接；Declined 通知不显示 Review Time 和 Reason。
+- 包含字段：活动名称、主办单位、活动日期、审核结果，以及撤回 / 重新报名 / 重新提交链接；报名审批结果不显示 Review Time。Approved 通知不显示 Comments，Declined 通知不显示 Reason。
 - 学生链接不得指向待办列表。Declined 后的链接指向 SLAS 活动列表或活动页；Returned 后须提供重新提交报名链接。
 
 | 结果 | 语言 | 标题 / 邮件主题 | 正文 |

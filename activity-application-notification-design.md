@@ -51,7 +51,7 @@
 
 | 编号 | 确认事项 | 处理 |
 | --- | --- | --- |
-| Q01 | 「外部嘉宾认可」待办通知 | 暂时停用，不在样本或真实发送中启用 |
+| Q01 | 「Dean / Delegate 外部嘉宾认可（Guest Endorsement）」待办通知 | 暂时停用，不在样本或真实发送中启用；VPRD / VPRD Delegate「嘉宾最终审批」仍按第 4.3 节发送 |
 | Q02 | 「赞助审批」待办通知 | 暂时停用，不在样本或真实发送中启用 |
 | Q03 | EO 校园场地使用建议字段 | 不显示申请人；改显示 Supervisor(s) / 活動指導 / 活动指导 |
 | Q04 | 审批结果通知 | 发给所有 OC 成员，抬头统一使用默认问候语 Dear User；不显示 Reviewer |
@@ -130,7 +130,7 @@
 - 接收人：当前审批人。
 - 每条待办均包含：活动名称、主办单位、申请人、活动日期、审核链接。审核链接指向对应待办详情页。
 - EO 校园场地使用建议通知不显示「申请人」字段，改显示 `Supervisor(s)` / `活動指導` / `活动指导`。
-- 「外部嘉宾认可」「赞助审批」两个环节暂时停用，不在样本或真实发送中启用。
+- 「Dean / Delegate 外部嘉宾认可（Guest Endorsement）」「赞助审批」两个环节暂时停用，不在样本或真实发送中启用；VPRD / VPRD Delegate「嘉宾最终审批」仍按下表发送。
 - IRG / VPSLA 文案统一使用 assessment / recommendation / review / confirmation，不得出现 vote、cast vote、VP group selection。
 - VPSLA 成员评审通知的 Note 前须保留一个空行。
 
