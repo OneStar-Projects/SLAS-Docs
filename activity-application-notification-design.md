@@ -24,7 +24,7 @@
 | 申请提交 | 活动申请已提交 | **所有 OC 成员** | 站内消息 + 邮件 |
 | 审批待办 | 各审批环节待办提醒 | 当前审批人 | 站内消息 + 邮件 |
 | 审批结果 | 审批通过 / 拒绝 / 退回修改 | **所有 OC 成员** | 站内消息 + 邮件 |
-| 审批同步 | 审批通过 / 拒绝 / 退回修改结果同步 | 已参与审批人员 | 邮件 BCC |
+| 审批同步 | 审批通过 / 拒绝 / 退回修改结果同步 | 已参与审批人员（不含申请人、当前处理人） | 站内消息 + 邮件（独立发送） |
 
 **本次不覆盖**：活动推广申请流程、活动报名/签到/出席记录、活动总结、事件报告，以及非活动申请主流程的其他通知。
 
@@ -185,36 +185,65 @@
 
 > 退回与拒绝不同：退回**允许**提示修改后重新提交本申请。
 
-### 4.5 已参与审批人员同步通知（邮件 BCC）
+### 4.5 已参与审批人员同步通知（站内消息 + 邮件）
 
-- 用途：将发给 OC 成员的审批结果同步给所有已参与审批人员。
-- 接收人：所有已参与审批人员；迎新活动同样需要发送同步通知。
-- 邮件发送：同步邮件以 BCC 方式发送给已参与审批人员，避免公开其他审批人的收件地址；不向已参与审批人员额外发送站内消息。
-- 内容规则：直接复用第 4.4 节审批结果通知格式，即默认问候语、无 Reviewer 字段，Comments / Reason 直接显示审核详情 URL。
+> **修订说明（2026-07-18 草案，待客户确认）**：2026-07-01 批注建议以「邮件 BCC」实现同步，其目的是避免公开其他审批人的收件地址。现改为**对每位已参与审批人员独立发送**（站内消息 + 单收件人邮件）：保密效果与 BCC 等同（收件人互不可见），同时通知在系统通知中心可见、支持按收件人语言偏好渲染，并消除 BCC 方案「无 OC 成员时整封邮件不存在、参与人零通知」的缺陷。
+
+- 用途：告知已参与审批的人员流程的最终结果（通过 / 拒绝 / 退回），无需继续处理。
+- 接收人：所有已参与审批人员，含 Supervisor 池中待办被系统撤销的成员；**不含**申请人，**不含**当前处理人（做出最终动作的审批人）；迎新活动同样需要发送同步通知。
+- 发送方式：站内消息 + 邮件，对每位接收人独立发送（邮件收件人仅本人，不使用 BCC，互不可见其他审批人地址）。
+- 包含字段：活动名称（固定英文）、申请人、审核结果、审核人、审核时间，以及通过时的审核意见 / 拒绝退回时的原因（离散文本）。
+- 语言：按每位接收人的语言偏好渲染。
 
 #### 4.5.1 审批通过同步
 
-| 语言 | 标题 / 邮件主题 | 正文 | 结果值 |
-| --- | --- | --- | --- |
-| English | Activity Approved | Your activity application has been approved. Please proceed with submitting the activity promotion application. | Approved |
-| 繁中 | 活動審批通過 | 您的活動申請已通過審批。請繼續提交活動宣傳申請。 | 已通過 |
-| 简中 | 活动审批通过 | 您的活动申请已通过审批。请继续提交活动宣传申请。 | 已通过 |
-
-#### 4.5.2 审批拒绝同步
+模板码：`BPM_ACTIVITY_PUBLISH_SYNC_APPROVED`
 
 | 语言 | 标题 / 邮件主题 | 正文 | 结果值 |
 | --- | --- | --- | --- |
-| English | Activity Application Rejected | Your activity application has been rejected. Please review the comments below for details. If you wish to proceed, please submit a new application. | Rejected |
-| 繁中 | 活動申請已被拒 | 您的活動申請已被拒絕，請查看下方的審批意見以瞭解詳情。若要繼續辦理，需另行發起全新申請。 | 已拒絕 |
-| 简中 | 活动申请已被拒 | 您的活动申请已被拒绝。请查看下方的审批意见以了解详情。若要继续办理，需另行发起全新申请。 | 已拒绝 |
+| English | Activity Application Approved | This activity application has been approved. No further review action is required. | Approved |
+| 繁中 | 活動申請已通過審批 | 此活動申請已通過審批，無需再處理後續審批。 | 已通過 |
+| 简中 | 活动申请已通过审批 | 此活动申请已通过审批，无需再处理后续审批。 | 已通过 |
 
-#### 4.5.3 退回修改同步
+#### 4.5.2 Dean/Delegate 拒绝后同步
+
+模板码：`BPM_ACTIVITY_PUBLISH_SYNC_REJECTED`（Supervisor 以外环节的拒绝，含 VPSLA Chairperson，均使用本文案）
 
 | 语言 | 标题 / 邮件主题 | 正文 | 结果值 |
 | --- | --- | --- | --- |
-| English | Activity Application Returned for Revision | Your activity application has been returned for revision. Please review the comments below, make the necessary amendments, and resubmit via the system. | Returned |
-| 繁中 | 活動申請被退回修改 | 您的活動申請已被退回修改。請查看下方的審批意見，修正相關內容後重新提交申請。 | 已退回 |
-| 简中 | 活动申请被退回修改 | 您的活动申请已被退回修改。请查看下方的审批意见，修正相关内容后重新提交申请。 | 已退回 |
+| English | Activity Application Rejected | This activity application has been rejected. No further review action is required. | Rejected |
+| 繁中 | 活動申請已被拒 | 此活動申請已被拒絕，無需再處理後續審批。 | 已拒絕 |
+| 简中 | 活动申请已被拒 | 此活动申请已被拒绝，无需再处理后续审批。 | 已拒绝 |
+
+#### 4.5.3 Supervisor 退回后同步
+
+模板码：`BPM_ACTIVITY_PUBLISH_SYNC_RETURNED_SUPERVISOR`
+
+| 语言 | 标题 / 邮件主题 | 正文 | 结果值 |
+| --- | --- | --- | --- |
+| English | Activity Application Returned by Supervisor | This activity application has been returned by a Supervisor for revision. The applicant will be asked to revise and resubmit. No further review action is required from you at this stage. | Returned |
+| 繁中 | 活動申請已被活動指導退回 | 此活動申請已被活動指導退回給申請人修改。申請人將在修訂後重新提交，目前無需您進行任何處理。 | 已退回 |
+| 简中 | 活动申请已被活动指导退回 | 此活动申请已被活动指导退回给申请人修改。申请人将在修订后重新提交，目前无需您进行任何处理。 | 已退回 |
+
+#### 4.5.4 Supervisor 拒绝后同步
+
+模板码：`BPM_ACTIVITY_PUBLISH_SYNC_REJECTED_SUPERVISOR`
+
+| 语言 | 标题 / 邮件主题 | 正文 | 结果值 |
+| --- | --- | --- | --- |
+| English | Activity Application Rejected by Supervisor | This activity application has been rejected by a Supervisor. No further review action is required. | Rejected |
+| 繁中 | 活動申請已被活動指導拒絕 | 此活動申請已被活動指導拒絕，無需再處理後續審批。 | 已拒絕 |
+| 简中 | 活动发布申请已被活动指导拒绝 | 此活动发布申请已被活动指导拒绝，无需再处理后续审批。 | 已拒绝 |
+
+#### 4.5.5 非 Supervisor 环节退回后同步（兜底）
+
+模板码：`BPM_ACTIVITY_PUBLISH_SYNC_RETURNED`。退回动作来自 Supervisor 以外环节（如 VPSLA Chairperson）时使用，避免「by Supervisor」的错误归因。
+
+| 语言 | 标题 / 邮件主题 | 正文 | 结果值 |
+| --- | --- | --- | --- |
+| English | Activity Application Returned | This activity application has been returned to the applicant for revision. The applicant will be asked to revise and resubmit. No further review action is required from you at this stage. | Returned |
+| 繁中 | 活動申請已被退回 | 此活動申請已被退回給申請人修改。申請人將在修訂後重新提交，目前無需您進行任何處理。 | 已退回 |
+| 简中 | 活动申请已被退回 | 此活动申请已被退回给申请人修改。申请人将在修订后重新提交，目前无需您进行任何处理。 | 已退回 |
 
 ### 4.6 已移除通知
 
