@@ -40,7 +40,32 @@
 ### 1.4 與其他模組的關係
 
 - 推廣建立在「活動發布審批」之後（活動須先 `PUBLISHED`）。
-- 推廣可帶自己的報名起訖時間，串接「活動報名」的開放窗口。
+- 推廣可帶自己的報名起訖時間，**這組時間是活動報名的實際開關**——見 §1.5。
+
+### 1.5 推廣的報名窗口＝報名的實際閘門（2026-08，#355）
+
+`registrationStartDate` / `registrationEndDate` 不只是展示用的文案，而是**學生能否報名的即時判定依據**。每次報名請求都會現場比對推廣窗口（`validatePromotionRegistrationWindow`），不再依賴任何排程任務、也不會改寫活動的報名狀態。
+
+判定規則（依序）：
+
+| 情況 | 結果 |
+|:--|:--|
+| 該活動**完全沒有**推廣記錄 | **放行**（不設閘門） |
+| 有推廣記錄，但**沒有一筆是「生效中」** | **放行**（不設閘門） |
+| 有「生效中」推廣，且**其中任一筆**的窗口涵蓋當下 | **放行** |
+| 有「生效中」推廣但無一筆涵蓋當下，且**有窗口尚未開始** | 擋下：`ENROLLMENT_NOT_STARTED` |
+| 有「生效中」推廣但無一筆涵蓋當下，且窗口皆已過 | 擋下：`ENROLLMENT_CLOSED` |
+
+> **「生效中」的定義很嚴格**，三個條件須同時成立（`isPromotionActive`）：
+> `promotionStatus = APPROVED` **且** `workflowStatus = ACTIVE` **且** `visibilitySettings = VISIBLE`。
+> 換言之，一筆**尚未上架**（`HIDDEN`）的推廣，它的報名窗口**不會**擋住任何人。
+>
+> - 起始時間留空 = 從一開始就開放；結束時間留空 = 永不關閉。
+> - **起訖同一天是合法設定**（2026-08 修正）：報名起訖是純日期，落庫時起日取 `00:00:00`、訖日取 `23:59:59`，因此「當天開始、當天結束」代表整整一天的窗口。舊版校驗把「起 = 訖」誤判為非法，並回報一個容易誤導的「活動時間衝突」錯誤；現在只有**起日嚴格晚於訖日**才會被擋。
+> - **改報名日期會同步更新推廣窗口**（2026-08 修正）：推廣窗口先前只在建立當下寫入一次，被退回後修改報名日期再重新提交，推廣窗口仍停留在第一次提交的日期；通過後首頁便以那組過期日期篩選，該推廣可能提早消失。現在更新報名日期時會以與建立時相同的規則同步推廣窗口，同時修正了結束日被截成 `00:00` 的問題（該問題會讓報名少掉最後一天）。
+> - 多筆生效中推廣採**任一涵蓋即放行**（取聯集，不取交集）。
+> - 判定時會忽略資料權限過濾（`DataPermissionUtils.executeIgnore`），所以審核人可見範圍不影響閘門結果。
+> - 舊的 `enrollmentDeadlineFreezeJob` 排程已停用（回傳 `Disabled (#355)`），報名截止改為即時生效，不再把活動卡在錯誤狀態、也不再封鎖主管審批。
 
 ---
 
@@ -88,7 +113,7 @@
 |:--|:--|:--|
 | **報名 enrollment** | ✅ 能 | 報名全程只讀 `activity` 主表欄位（狀態、`enrollmentEndDate`、`maxParticipants`）＋ `activity_supervisor`，**不讀 schedule/session/member**。導入 `OPEN` 即滿足。名單審批是現場新起的獨立流程。 |
 | **出席 attendance** | ⚠️ 部分 | 缺 `activity_schedule` 時遲到判定**回退到 `activity.activityEndDate`**，有兜底不報錯。**唯一實際卡點**：導入的 OC 成員報名狀態是 `PENDING`，而簽到要求 `APPROVED`——必須先讓 supervisor 在那條自動發起的名單審批流把人批成 `APPROVED` 才能簽到。普通學生「報名 → 審批 → 簽到」不受影響。 |
-| **活動報告 report** | ✅ 能 | 報告走獨立 BPMN `activity_report_audit`，提交資格只看 `activity.activityEndDate` 推算 +1/+14 天，不依賴發布流程實例或 endorsement。 |
+| **活動報告 report** | ✅ 能 | R01/R14 報告走獨立 BPMN `incident_report_audit`，提交資格只看 `activity.activityEndDate` 推算 +1/+14 天，不依賴發布流程實例或 endorsement。新版「活動報告」另走 `activity_report_approval`（見 `activity-report-submission-design.md`）。 |
 
 ### 2.5 關鍵提醒（UAT / Demo 必讀）
 
@@ -136,8 +161,8 @@ flowchart TD
     H -- 重新提交 --> E
     I -- 編輯後重提 --> E
     G --> J{SAO Admin 可見性控制}
-    J -- 上架 visible=true --> K[對外曝光<br/>首頁/精選等版位]
-    J -- 下架 visible=false --> L[隱藏]
+    J -- 上架 visibilitySettings=VISIBLE --> K[對外曝光<br/>首頁/精選等版位<br/>報名窗口同時生效]
+    J -- 下架 visibilitySettings=HIDDEN --> L[隱藏<br/>報名窗口不生效]
 ```
 
 ---
@@ -152,7 +177,11 @@ flowchart TD
   - `PUT /activity/promotion/approve`：審核人通過/拒絕。
   - `POST /activity/promotion/visibility-control`、`/batch-visibility-control`：SAO Admin 控制可見性。
   - `GET /activity/promotion/page`、`/get`、`/get-by-activity`、`/getPromotionReviewDetail`、`/view`：查詢。
-  - 首頁曝光：`GET /activity/promotion/homepage/list`（HOT/LATEST/UPCOMING/ALL）、`/homepage/summary`。
+  - **預覽（2026-07 新增）**：
+    - `GET /activity/promotion/preview-view?activityId=`：**推廣記錄尚未建立前**即可預覽——後端只以活動資料組出參與者看到的推廣詳情頁，前端把表單上正在填的值疊上去，因此組織者在提交前就能看到成品樣貌。無推廣 ID 時不記瀏覽次數。
+    - `GET /activity/promotion/review-view`：與 `/view` 相同的合併視圖，但**不套用可見性與生效工作流的閘門**，讓審核人能用學生視角預覽一筆尚在 `PENDING`、還沒上架的推廣。
+  - 首頁曝光：`GET /activity/promotion/homepage/list`（`type` = HOT/LATEST/UPCOMING/ALL，並支援 `pageNum` / `pageSize` **分頁**）。
+    - ⚠️ `GET /activity/promotion/homepage/summary`（一次取回熱門/最新/即將開始三組）**已標記為廢棄**（2026-08），請改用 `/homepage/list` 加 `type` 與分頁參數。首頁版位改為分頁取數後，一次回應不再包含全部推廣，演示「上架後首頁看得到」時請確認所在頁碼與排序，不要只看第一頁就判定沒上架。
 - **服務實現**（`ActivityPromotionServiceImpl`）
   - `PROCESS_DEFINITION_KEY = "activity_promotion_approval"`。
   - `createActivityPromotion` 先校驗活動狀態（PUBLISHED/ONGOING）、supervisor 綁定、無重複 PENDING，再寫入多語欄位、設 `status=PENDING` 並啟動 Flowable 流程。
@@ -163,6 +192,9 @@ flowchart TD
   - 同一活動同時只允許一個 `PENDING` 推廣。
   - 只有 `APPROVED` 的推廣才能被控制可見性。
   - 多語內容（En/Sc/Tc）皆可填寫，前台依語言展示。
+  - **審核意見會落庫（2026-08 修正，#345）**：審核人填寫的通過／拒絕理由現在會寫入該推廣記錄的審核意見欄位（`auditComment`），因此「審核結果」頁、活動列表的提示浮窗、以及退回後重新提交時的預填，都能看到理由。變更前理由只存在流程歷史裡、推廣記錄上是空的，這三處都顯示不出內容。
+    - 通過時若未填備註則**不覆寫**既有意見（避免一次無備註的通過把先前的退回理由洗掉）。
+    - **此修正之前被拒的舊記錄，其審核意見仍為空**，屬預期，不必視為缺陷。
 
 ---
 
@@ -183,7 +215,13 @@ flowchart TD
 
 ### 6.3 關鍵欄位（`ActivityPromotionDO`）
 
-`activityId`、`promotionType`、`promotionTitle{En/Sc/Tc}`、`promotionContent{En/Sc/Tc}`、`status`、`workflowStatus`、`registrationStartDate/EndDate`、`promotionStartTime/EndTime`、`visible`、`viewCount`、`clickCount`。
+`activityId`、`promotionType`、`promotionTitle{En/Sc/Tc}`、`promotionContent{En/Sc/Tc}`、`status`、`promotionStatus`、`workflowStatus`、`visibilitySettings`、`registrationStartDate/EndDate`、`promotionStartTime/EndTime`、`priorityLevel`、`viewCount`、`clickCount`、`approvedBy` / `approvalTime` / `approvalComment`、`visibilityAuditorId` / `visibilityAuditTime` / `visibilityRemark`。
+
+> **欄位辨析（易踩坑）：**
+>
+> - **沒有 `visible` 這個布林欄位**。可見性存在 `visibilitySettings`，是**字串**，取值 `VISIBLE` / `HIDDEN`（`VisibilitySettingsEnum`）。舊文檔寫的 `visible=true/false` 是錯的。
+> - `status` 與 `promotionStatus` 是**兩個不同的欄位**。§1.3 表格描述的內容審核狀態、以及 §1.5 判定「生效中」時讀的，都是 **`promotionStatus`**。
+> - 判定一筆推廣是否「生效中」需要 `promotionStatus` / `workflowStatus` / `visibilitySettings` **三者同時**成立，缺一不可。
 
 ---
 
@@ -194,16 +232,19 @@ flowchart TD
 - 一個狀態為 `PUBLISHED` 且已綁定 supervisor 的活動。
 - 一個組織者帳號、一個審核人帳號、一個 `SAO Administrator` 帳號。
 
+> **活動編號格式已改為 5 位流水號**（2026-07 變更，#278）：新產生的活動編號為 `SLA-<學年>-NNNNN`（例：`SLA-2526-00391`），舊有的 4 位編號（`SLA-2526-0390`）仍然有效並繼續沿用同一條流水序列，不會撞號。Demo 截圖與教材若引用舊格式編號，請對齊為 5 位。
+
 ### 7.2 主線：建立 → 審核 → 上架
 
 1. **組織者**進入 `/organiser/promote-activities`（`views/organiser/PromoteActivities/`），對目標活動「建立推廣」。
 2. 填寫多語標題與內容、上傳封面，選擇 `HOMEPAGE` 類型，可選填推廣與報名起訖時間。
-3. 先「保存草稿」→ 確認狀態為 `DRAFT`（可再編輯）。
+3. 先「保存草稿」→ 確認狀態為 `DRAFT`（可再編輯）。提交前可用**預覽**看到學生視角的推廣詳情頁（`preview-view`，推廣記錄還沒建立也能預覽）。
 4. 「提交審核」→ 狀態轉 `PENDING`，後台啟動 `activity_promotion_approval`。
-5. **審核人**在推廣審核入口（`views/review/ActivityPromotion.vue`）打開該申請，查看內容後選擇「通過」。
+5. **審核人**在推廣審核入口（`views/review/ActivityPromotion.vue`）打開該申請，查看內容後選擇「通過」。審核人可用 `review-view` 以學生視角預覽這筆尚未上架的推廣。
    - 驗證點：狀態轉 `APPROVED`；若選「退回修改」應轉 `PENDING_MODIFICATION`，「拒絕」轉 `REJECTED`。
+   - 驗證點：填寫的理由應出現在「審核結果」頁與活動列表提示中；退回後重新提交時，該理由會預填給組織者（見 §5「審核意見會落庫」）。
 6. **SAO Administrator**對 `APPROVED` 推廣執行可見性控制（上架）。
-   - 驗證點：`visible=true`；前台首頁 `homepage/list` 能查到該推廣，`viewCount` 隨瀏覽增加。
+   - 驗證點：`visibilitySettings=VISIBLE`（**不是** `visible=true`，見 §6.3 欄位辨析）；前台首頁 `homepage/list` 能查到該推廣，`viewCount` 隨瀏覽增加。首頁已分頁，查不到時請先翻頁確認。
 
 ### 7.3 邊支：退回與重提
 
@@ -218,3 +259,5 @@ flowchart TD
 - 活動未 `PUBLISHED`/`ONGOING` 或未綁定 supervisor 時，建立推廣會被擋下。
 - 已有 `PENDING` 推廣時無法再提交新申請，需先讓上一筆審完。
 - 可見性與內容審核是兩件事：`APPROVED` 不等於對外可見，仍需 SAO Admin 手動上架。
+- **上架同時會啟用該推廣的報名窗口**（見 §1.5）。若填了報名起訖時間卻在窗口外上架，學生會立刻收到 `ENROLLMENT_NOT_STARTED` 或 `ENROLLMENT_CLOSED`——Demo 前請確認窗口涵蓋當下，或乾脆把起訖時間留空。
+- 反過來，**推廣停在 `HIDDEN` 時報名窗口完全不生效**，此時報名是否開放由活動本身的條件決定。排查「學生報不了名」時，請先看該活動有沒有一筆已上架的推廣、其報名窗口是什麼。

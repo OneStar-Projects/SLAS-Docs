@@ -1,6 +1,41 @@
 # SLAS Roles × Menus × Permissions Matrix
 ---
 
+> ## ⚠️ 本文 §1 的矩阵数据已过期，请勿直接用于验收
+>
+> §1 的 `✓` 是按 `sql/patch/0004_021`（2026-05-14/15）执行后的数据库状态抓的快照。此后**至少有 15 个补丁改动过角色 / 菜单 / 角色-菜单绑定**，其中 `0004_027` 是一次**全量重建**（`system_role` 47 行、`system_menu` 340 行、`system_role_menu` 2840 行全部重写，并清理了历史脏数据）。因此下表逐格的 `✓` 不再可信。
+>
+> 快照之后落地的相关补丁：
+>
+> | 补丁 | 影响 |
+> |---|---|
+> | `0004_022_add_supervisor_approval_permission` | 新增 Supervisor 审批权限 |
+> | **`0004_027_sync_role_menu_permissions`** | **全量重建 role / menu / role_menu 三张表** |
+> | `0004_029_grant_mgmt_center_to_irg_vp_secretary` | 管理中心授予 IRG / VP Secretary |
+> | `0004_034_hide_notification_template_and_my_group_menu` | 隐藏两个菜单 |
+> | `0004_035_restrict_activity_list_data_scope` | 115 / 149 / 150 改自定义部门范围 |
+> | `0004_036_reorder_rename_center_menus` | 各「中心」菜单重排与改名 |
+> | `0004_039` / `0004_040`（notification sample menu） | 新增菜单并授予 SAO Admin |
+> | `0004_043_checker_data_scope_all` | 142 改回 ALL |
+> | `0004_044_align_role_menu_uat_to_prod` | 对齐 UAT 与 PROD 的绑定 |
+> | `0004_045_backfill_dept_custom_scope` | 回填 115 / 149 / 150 的用户级 scope |
+> | `0004_046_unbind_supervisor_group_review_menu` | 解绑 Supervisor 的社团审核菜单 |
+> | `0004_047_head_data_scope_custom` | 148 由 ALL 收窄为本院系 |
+> | `0004_048_fix_coordinator_training_record_query_permission` | 修 Coordinator 培训记录查询权限 |
+> | `0004_052_add_activity_report_submission` | 新版活动报告相关菜单 |
+> | `0004_054_add_manage_activity_reports_menu` | 组织者中心（父菜单 81）下新增「管理活动报告」菜单 6580，路径 `/organiser/ActivityReportManagement`，沿用既有权限 `activity:report:query`（不新增权限节点）；授予 `Group Leader`（114）与 `SuperAdmin - Dev`（1） |
+>
+> **正确用法**：把 §2（按钮权限现状）与 §3（数据范围）当作**机制说明**读，这部分仍然成立；§1 的逐格授权则以目标环境的实时查询为准：
+>
+> ```sql
+> SELECT r.id, r.name, m.id AS menu_id, m.name AS menu_name
+> FROM   SLAS.SYSTEM_ROLE_MENU rm
+> JOIN   SLAS.SYSTEM_ROLE r ON r.id = rm.role_id
+> JOIN   SLAS.SYSTEM_MENU m ON m.id = rm.menu_id
+> WHERE  m.type IN (1,2) AND r.deleted = 0 AND m.deleted = 0
+> ORDER  BY r.id, m.id;
+> ```
+
 ## 1. 菜单 × 角色 详细矩阵（三语）/ Menu × Role Detailed Matrix
 
 > 视图说明：纵向 = 每一个菜单节点（仅 `TYPE∈{1,2}`，即目录与菜单页，不含按钮），横向 = 12 个代表性角色。
@@ -19,16 +54,24 @@
 | Coordinator | `coordinator` | 115 |
 | Incident Level Classifier | `lv_classifier` | 128 |
 | Dean of Students | `do_student_admin` | 129 |
-| Dean | `dean` | 149 |
+| Activity Application Reviewer | `act_app_reviewer` | 149 |
 | Supervisor | `supervisor` | 116 |
 | SAO Administrator | `sao_admin` | 120 |
 | System Admin (OCIO) | `ocio_admin` | 121 |
 | SuperAdmin - Dev | `super_admin` | 1 |
 
 > 注 / Note：
-> - 「Dean」(id=149) 是活动发布工作流中的院长角色，与「Dean of Students」(id=129) **是两个不同角色**，不要混淆。
+> - **三个 Dean 类角色务必区分**（以下为对库实测值）：
+>
+>   | ID | `SYSTEM_ROLE.NAME` | `CODE` |
+>   |---:|---|---|
+>   | 129 | Dean of Students | `do_student_admin` |
+>   | 130 | **Dean** | `doc_unit` |
+>   | 149 | **Activity Application Reviewer** | `act_app_reviewer` |
+>
+>   旧版本文档把 **149 标为「Dean」**（`code=dean`）——**这是错的**。149 的正式名称是 `Activity Application Reviewer`，是活动发布 Non-NSOA 分支的审批候选角色；真正叫 `Dean` 的是 **130**。
 > - 「Supervisor」(id=116, `code=supervisor`) 是活动审批 ③ 步骤的多人并行审核角色,Java 代码与 BPMN 均以此命名。
-> - 自 `sql/patch/0004_021_add_ori_app_period_menu.sql`（2026-05-14/15）起，`Coordinator`（115）会继承 `Dean`（149）当前生效的菜单绑定，用于补齐 To-do / Review / incident query 等流程入口；下表已按**补丁执行后状态**同步。
+> - 自 `sql/patch/0004_021_add_ori_app_period_menu.sql`（2026-05-14/15）起，`Coordinator`（115）会继承 149 当时生效的菜单绑定，用于补齐 To-do / Review / incident query 等流程入口。**此后 `0004_027` 全量重建过绑定，该继承关系是否仍然成立需实测。**
 
 ---
 
@@ -271,5 +314,73 @@
 | `POST /activity/approval/ai-summary` | `activity:approval:ai-summary` | |
 
 > ⚠️ 这些接口若部署到 UAT/PROD 且未补对应 menu seed，会以同样方式 403。部署前请用 `tools/perm-diagnostic/perm-diff.sh diff 146 uat 'activity:approval'` 比对。
+
+---
+
+## 3. 数据范围 / Data Scope（第三个维度）
+
+> §1 和 §2 只回答「**能不能进这个页面 / 调这个接口**」。它们回答不了「**进去之后看得见哪些数据**」——这是**独立的第三个维度**，由 `SYSTEM_ROLE.DATA_SCOPE` 与应用层过滤共同决定。同一个菜单，两个角色都有 `✓`，看到的行数可以完全不同。
+
+### 3.1 两条并行的过滤链路
+
+| 链路 | 机制 | 典型角色 |
+|---|---|---|
+| **部门维度**（框架层） | `@DataPermission` + `DeptDataPermissionRule` 按部门 ID 集合过滤 | Coordinator、Dean、Head、Activity Application Reviewer、Delegate |
+| **关系维度**（应用层） | 在 Service 里显式拼 activity-id `IN` 过滤，**fail-closed**（解析不出就返回空页） | Activity Application Checker、EO Venue Reviewer、Group Leader |
+
+两条链路会**叠加**。这就是为什么走关系维度的角色必须把 `DATA_SCOPE` 设成 `1`（ALL）：否则部门规则会再 AND 一层部门条件，把分派给本人、但不在本人部门下的活动直接过滤掉。`0004_043` 就是为此把 Activity Application Checker（142）从 `2` 改回 `1` 的。
+
+### 3.2 `DATA_SCOPE` 取值与 scope 来源
+
+| `DATA_SCOPE` | 含义 | 部门集合怎么算 |
+|---:|---|---|
+| `1` | ALL | 部门规则不生效（no-op） |
+| `2` | 自定义部门（DEPT_CUSTOM） | 见下 |
+
+`DATA_SCOPE = 2` 时，部门集合有**两个可能的来源**，这是最容易搞混的地方：
+
+1. **`SYSTEM_USER_ROLE.SCOPE`（用户级，每人一份）**——JSON 数组，存**根部门 ID**，例如 `[10402,10403]`。`PermissionServiceImpl` 会自动把每个根部门**连同其全部子部门**展开。用于「每人负责不同院系」的角色（115 / 149 / 150）。
+2. **`SYSTEM_ROLE.DATA_SCOPE_DEPT_IDS = '[]'`（角色级留空）**——此时框架回落到 `includeOwnDept` 默认行为，返回**本人所属部门 + 其子部门**。用于「一律只看本院系」的角色（Dean 130、Head 148）。
+
+> **坑：`SCOPE` 留空 ≠ 本院系全部。** 若某用户的 `SYSTEM_USER_ROLE.SCOPE` 为空，框架只会加入该用户**自己的部门、不含子部门**，下级单位的数据全部丢失。`0004_045` 就是为存量用户回填 `SCOPE = [本人 dept_id]` 来补回子部门的；`PermissionServiceImpl.assignUserRole` 则为**今后**新分配的 DEPT_CUSTOM 角色自动填入同样的默认值。两者都**只在为空时填**，不覆盖管理员的显式选择。
+>
+> **前置条件**：回填只对**有 `dept_id`** 的用户生效。`SYSTEM_USERS.DEPT_ID` 为 NULL 的用户会被跳过，必须先把部门补对。
+
+### 3.3 已知角色的数据范围（对库实测）
+
+| ID | 角色 | `DATA_SCOPE` | 实际可见范围 | 依据 |
+|---:|---|:---:|---|---|
+| 115 | Coordinator | 2 | 用户级 `SCOPE` 指定的院系 + 子单位 | `0004_035` / `0004_045` |
+| 129 | Dean of Students | 1 | 全部 | — |
+| 130 | Dean | 2（`dept_ids='[]'`） | 本人院系 + 子单位 | `0004_047` 参照对象 |
+| 141 | EO Venue Reviewer | 1 | 全部（再由应用层关系过滤收窄） | `0004_043` |
+| 142 | Activity Application Checker | 1 | 全部（再由应用层收窄为**分派给本人**的活动） | `0004_043` |
+| 148 | Head | 2（`dept_ids='[]'`） | 本人院系 + 子单位 | `0004_047`（此前为 `1`＝全部） |
+| 149 | Activity Application Reviewer | 2 | 用户级 `SCOPE` 指定的院系 + 子单位 | `0004_035` / `0004_045` |
+| 150 | Delegate | 2 | 同上 | `0004_035` / `0004_045` |
+
+验证语句：
+
+```sql
+-- 角色级
+SELECT id, name, code, data_scope, data_scope_dept_ids
+FROM   SLAS.SYSTEM_ROLE WHERE deleted = 0 ORDER BY id;
+
+-- 用户级（DEPT_CUSTOM 角色才需要）
+SELECT ur.user_id, ur.role_id, ur.scope, u.dept_id
+FROM   SLAS.SYSTEM_USER_ROLE ur
+JOIN   SLAS.SYSTEM_USERS u ON u.id = ur.user_id
+WHERE  ur.role_id IN (115,149,150);
+```
+
+### 3.4 排查「某角色看不到 / 看得太多」的顺序
+
+1. 菜单进得去吗？→ §1（以实时查询为准）
+2. 接口有没有 `@PreAuthorize`？→ §2
+3. `SYSTEM_ROLE.DATA_SCOPE` 是 1 还是 2？
+4. 若是 2：`SYSTEM_USER_ROLE.SCOPE` 填了吗？该用户的 `SYSTEM_USERS.DEPT_ID` 有值吗？
+5. 该列表是不是走应用层关系过滤（fail-closed）？——这类页面「看到空白」往往不是权限被拒，而是关系解析不出来。
+
+> 活动列表、事件列表、培训三个模块的数据范围口径仍在演进（例如 Coordinator 按自定义 scope、Supervisor 按督导的活动、SAO 看全部，均**与本人所属部门无关**）。涉及具体业务口径时，请以对应模块的专项文档与最新实现为准，不要只按本节的框架层规则推断。
 
 — end —
