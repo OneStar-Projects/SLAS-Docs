@@ -326,6 +326,7 @@ Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）
 - **悲觀行鎖 + 原子升態**：以 `selectByIdForUpdate` 鎖列，避免「讀後其他人改料」窗口；再以 `promoteDraftToSubmitted`（`UPDATE ... WHERE status='DRAFT'`）原子升態為 `SUBMITTED`；同事務內啟動 BPM 工作流。
 - **BPM 啟動失敗回滾**：`startActivityApprovalWorkflow` 改為 rethrow（錯誤碼 `ACTIVITY_APPROVAL_WORKFLOW_START_FAILED` 1_003_001_024），整個提交事務回滾——之前是「catch 後僅記日誌」，會留下無流程實例的 `SUBMITTED` 殭屍活動。
 - **`createActivity` 不再支援提交分支**：即使請求帶 `status='SUBMITTED'` 也只記日誌並落 `DRAFT`，提交動作完全由 `submitForApproval` 統一驅動。
+- **日期一致性也是提交前置**（2026-07 新增）：提交與 OC 認可時會校驗**已存進資料庫**的活動日期、日程日期與申請表場次日期是否彼此一致，不通過即擋下。認可面板會直接標示不通過的原因，OC 不必按下提交才發現問題。完整規則見 §1.11。
 
 ### 1.8 待辦可見性與 claim 規則（框架級，跨所有 BPM 流程）
 
@@ -377,6 +378,23 @@ Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）
 
 因此「看得到」與「能辦」用同一套規則，不會出現看得到卻點不開、或反之。
 
+#### 1.8.5 Supervisor 的活動列表資料範圍（2026-06 收窄）
+
+> 引入時間：commit `8df5ba969`（2026-06-30），伴隨補丁 `0004_046`。
+
+以上 §1.8.1–1.8.4 講的是**待辦任務**的可見性；**活動列表**是另一套資料範圍，Supervisor 在 2026-06 起改為：
+
+- 只看得到**自己被指派為督導的活動**（依 `activity_supervisor` 綁定），且狀態限於 `APPROVED` 與 `PENDING`。
+- **綁定為空時「fail closed」**：一個尚未被指派任何活動的 Supervisor 看到的是空列表，而不是全部活動。這是刻意設計，UAT 時看到空列表請先確認該帳號是否已被綁定為某活動的督導。
+- 判定會**先核對登入者實際持有的角色**再套用範圍，避免以偽造的「當前角色」標頭繞過收窄。
+- 同批一併收緊的存取檢查（原本可憑 ID 直接讀取他人資料）：
+  - 報名管理列表：套用同一套角色核對後才適用 supervisor 範圍；
+  - 推廣詳情：新增擁有權檢查（管理員 / 該活動可見 / 為該活動督導）；
+  - 出席詳情兩個端點（`/detail/{userId}`、`/detail-by-attendance/{id}`）：補上出席管理權限檢查。
+- 補丁 `0004_046` 另把誤掛在 Supervisor 上的「主辦組織審核」選單解除綁定。
+
+> 對 UAT 的影響：升級後 Supervisor 看到的活動筆數會**變少**，這是預期結果，不是資料遺失。
+
 ---
 
 ### 1.9 最新審核頁與詳情卡 UI 行為（SLAS_UI）
@@ -393,6 +411,42 @@ Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）
 - **贊助資訊更突出**：Create / Edit Activity 的 Budget Plan 內，贊助類 budget item 會以帶圖標與綠色左邊框的 Sponsorship details 面板展示，取代原本較容易被忽略的 divider；贊助附件與 Section XI 文件上傳使用 compact upload 樣式。
 - **贊助附件預覽即時可見**：編輯表單中剛上傳但尚未保存的 `sponsorAttachments`，會在 Preview / Activity Detail adapter 中即時轉成 `sponsorAttachmentFileIds` 顯示，避免 UAT 時誤以為附件遺失。
 - **流程歷史輪次視覺修正**：Process History 的多輪提交圓點不再被左側裁切，輪次之間的連線改為貫穿整組的主線；此為視覺修正，不改變審批歷史資料與流程狀態。
+
+### 1.10 審批意見「存為草稿」（通用於所有審批環節）
+
+> 引入時間：commit `583a2f44f`（2026-06-20），資料表補丁 `0004_032`。
+
+審批人填寫意見時可先**存為草稿**，稍後再回來提交，不必一次寫完：
+
+- **適用範圍**：**所有**審批環節通用（① Coordinator 到 ⑭ ChairPerson，以及走同一套審批面板的其他節點），不是某一節點的專屬功能。
+- **儲存粒度**：按 **(任務, 使用者)** 一組一份草稿。同一個任務若有多位候選人，各人的草稿彼此獨立、互不可見。
+- **端點**：`POST /activity/approval/draft/save`（存）、`GET /activity/approval/draft?taskId=`（取）。
+- **自動清除**：任務一旦真正提交（`completeTask`），該草稿自動刪除——涵蓋所有提交路徑，不需要人工清理。
+- **UAT 對照**：離開審批頁再回來，先前輸入的意見應自動帶回；提交後再開同一畫面，草稿應已清空。
+
+> 草稿**只是意見文字的暫存**，不佔用任務、不影響 claim、也不改變任何流程狀態；存了草稿不等於已審批。
+
+### 1.11 活動日期一致性校驗（後端為權威）
+
+> 引入時間：commit `5aa1070c1`（2026-07-28），實作於 `ActivityDateConsistencyValidator`。
+
+活動的三組日期必須彼此一致，後端在**保存草稿 / 提交審批 / OC 認可**三個時點統一把關：
+
+| 規則 | 不符時的錯誤 |
+|:--|:--|
+| 活動**開始日 ≤ 結束日** | `ACTIVITY_DATE_RANGE_INVALID`（1003001029） |
+| 申請表 `basic.programmes[]` 中每個場次的日期須落在活動起訖日之內 | 越界：`ACTIVITY_PROGRAMME_DATE_OUT_OF_RANGE`；格式無法解析：`ACTIVITY_PROGRAMME_DATE_INVALID`（1003001031） |
+| 活動日程（schedule）的每個日期須落在活動起訖日之內 | `ACTIVITY_SCHEDULE_DATE_OUT_OF_RANGE`（1003001030） |
+
+**幾個容易誤解的地方：**
+
+- **日期留空一律放行**。活動起訖日未填、或 programme 的日期欄位為空，都視為草稿佔位而略過校驗；只有「填了但填錯」才會被擋。這是為了不讓填寫中的草稿無法保存。
+- **只比對日期，不比對時分**。
+- **校驗時機的差別是刻意設計**：
+  - **保存草稿**時校驗的是**這次請求送上來的**日程；
+  - **提交審批 / OC 認可**時校驗的是**已經存進資料庫的**日程。
+  - 後者確保歷史遺留資料、以及繞過前端直接呼叫 API 的請求，都要通過同一條業務規則，無法迴避。
+- **OC 認可頁會直接顯示被日期問題擋住的原因**：認可狀態介面新增 `dateValid` / `dateValidationCode` / `dateValidationMessage` 三個欄位，OC 在認可面板上就能看到「哪一條日期規則不通過」，不必等到按下提交才收到錯誤（另見 §1.7）。
 
 ## 2. 角色與職責
 
@@ -817,6 +871,10 @@ flowchart TD
   - `RETURN` → 流程結束（`RETURNED`）
   - `REJECT` → 流程結束（`REJECTED`）
 
+> **ELAT 類別要填兩個，且兩個都會被保存**（2026-06 修正，補丁 `0004_026`）。Supervisor 審批表單同時收「**主辦者**（organiser）ELAT 類別」與「**參與者**（participant）ELAT 類別」，兩者皆為必填。此前只有主辦者那一項會落庫，參與者的選擇被靜默丟棄，審核面板上因此看不到 supervisor 完整的 ELAT 意見。現已一併保存並顯示。
+>
+> 若在既有環境看到舊活動只有主辦者類別而沒有參與者類別，屬此修正之前的歷史資料，非缺陷。
+
 ### ④ EO 審批
 
 - **執行人**：EO Venue Reviewer
@@ -939,6 +997,7 @@ flowchart TD
   - 已達成共識 → 進入 ⑭ ChairPerson 決定
   - 未達成共識且輪次 < 3 → 回到 ⑪ 重新選組投票
   - 未達成共識且已是第 3 輪 → 強制進入 ⑭ ChairPerson 決定
+- **另填「建議與跟進」**：VPSLA Secretary 在做決定的同時，可另外填寫**建議（recommendation）與跟進事項（follow-up）**，以 stage `SECRETARY` 獨立存檔（見下方說明）。
 
 ### ⑭ 最終決定
 
@@ -951,6 +1010,19 @@ flowchart TD
     - 如 `hasExternalGuest == false` → 系統自動發布活動,流程結束（`APPROVED`）
   - `REJECT` → 流程結束（`REJECTED`）
   - `RETURN` → 流程結束（`RETURNED`）：BPMN `flow_chair_return → endEventReturned`；Java 同步將 `activity.approvalStatus` 置為 `RETURNED` 並發退回通知給申請人；**不再生成新的主管待辦**（見 §1.5.4）
+- **另填「建議與跟進」**：ChairPerson 在做決定的同時，可另外填寫建議與跟進事項，以 stage `CHAIR` 獨立存檔（見下方說明）。
+
+#### VPSLA 建議與跟進表（⑬ / ⑭ 共用）
+
+> 引入時間：commit `583a2f44f`（2026-06-20），資料表補丁 `0004_031`。
+
+⑬ VPSLA Secretary 與 ⑭ ChairPerson 的**決定**與他們填寫的**建議 / 跟進事項**是兩份資料，分開存放：
+
+- 決定本身仍寫入流程；建議與跟進另存於獨立的建議表，按 **(流程實例, 階段)** 區分，階段取值 `SECRETARY`（⑬ 填寫）或 `CHAIR`（⑭ 填寫），並記錄該筆建議的來源。
+- **重填即覆蓋**：同一流程實例的同一階段再次提交時，該階段的既有建議會被整批替換，不會累積出多份歷史版本。
+- 內容為長文本，建議與跟進事項各自一欄；**來源為空的列會被略過**，不會存出空白列。
+- **讀取端點**：`GET /activity/approval/recommendations`（審核頁據此顯示 ⑬⑭ 兩階段的建議與跟進）。
+- 為相容既有畫面，舊有的扁平流程變量仍同時保留寫入，因此升級前後的頁面都能取到內容。
 
 ---
 
