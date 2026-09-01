@@ -54,6 +54,8 @@
 ### 2.1 DEV Demo 帳號清單
 
 > DEV 請使用**本地帳號**方式登入，預設密碼：`admin123`
+>
+> **2026-08 起的前置條件**：帳密登入對 `USER_SOURCE = SSO` 的帳號受系統參數 `sso.user.allow_default_password` 管控——該值為 `false`（或讀取失敗）時一律擋下，只能走 SSO。DEV / UAT 請先確認此值為 `true`，否則下表帳號可能登不進去。
 
 #### 2.1.1 註冊審批帳號
 
