@@ -9,19 +9,25 @@
 
 ## 1. 概念釐清（先讀）
 
-本系統「報告」一詞涵蓋**三種不同事物**，請勿混淆：
+本系統「報告」一詞涵蓋**四種不同事物**，請勿混淆：
 
 | 名稱 | 本質 | reportType | 提交者 | 走 BPMN? |
 |:--|:--|:--|:--|:--|
 | 督導事件報告 | 事件/事故報告（R00） | `R00` | `Supervisor` | ✓ `incident_report_audit` |
 | 翌日活動報告 | 活動結束後 1 日內提交 | `R01` | 活動組織者 | ✓ 同上（學生路徑） |
 | 兩週活動報告 | 活動結束後 14 日內提交 | `R14` | 活動組織者 | ✓ 同上（學生路徑） |
+| **活動報告**（新版總結報告） | 活動結束後的總結報告，含出席、財務、OC 名單 | — | 活動組織者（需 OC 認可後提交） | ✓ `activity_report_approval` |
 | 活動調查問卷 | **參與者滿意度問卷**（評分/回饋），非審批報告 | — | 參與者 | ✗ |
 
 > **重點**：
-> - R00 / R01 / R14 共用同一張表 `incident_report`，以 `reportType` 區分，並共用同一條 BPMN `incident_report_audit`。
-> - 前端 `views/organiser/SubmitEventReport/` 是**事件處理報告**（5 步精靈）；`views/organiser/SubmitActivityReport/` 實際是**活動調查問卷**（標題即「活動調查問卷」），與 R01/R14 無關，本文不展開其審批（它沒有審批流）。
-> - 真正的 R01/R14 活動報告，入口在 `views/incident/ActivityReportList.vue`，審核在 `views/review/ActivityReportReview/`。
+> - R00 / R01 / R14 共用同一張表 `incident_report`，以 `reportType` 區分，並共用同一條 BPMN `incident_report_audit`。**本文其餘章節只講這三種。**
+> - 「活動報告（新版）」是**獨立的一套**：獨立資料表（`activity_report` 及 `activity_report_oc_member` / `_finance` / `_media` / `_endorsement` / `_process`）、獨立狀態枚舉（`DRAFT` / `PENDING_ENDORSEMENT` / `SUBMITTED` / `RETURNED` / `APPROVED`）、獨立審批鏈（OC 共簽 → Coordinator → Checker → Supervisor → VPSLA／Reviewer）。流程設計見 **[activity-report-submission-design.md](activity-report-submission-design.md)**，操作步驟見 **[activity-report-submission-guide.md](activity-report-submission-guide.md)**，本文不重複。
+> - 前端三個入口切勿混淆：
+>   - `views/organiser/SubmitEventReport/` — **事件處理報告**（5 步精靈）。
+>   - `views/organiser/ActivityReport/` — **新版活動報告**（走 `activity_report_approval`，待辦頁 `views/bpm/task/ActivityReportTask.vue`）。
+>   - `views/organiser/SubmitActivityReport/` — **活動調查問卷**（標題即「活動調查問卷」），與 R01/R14 及新版活動報告皆無關，**沒有審批流**。
+> - R01/R14 活動報告的入口在 `views/incident/ActivityReportList.vue`，審核在 `views/review/ActivityReportReview/`。
+> - 早期文檔提到的 BPMN `activity_report_audit` 與 `activity_summary_approval` **已從代碼庫移除**（BPMN 源檔已刪、Java 與前端零引用），統一由 `activity_report_approval` 承接。注意 `sql/init/init_uat.sql` 仍保留 `activity_summary_approval` 的歷史部署記錄，用該腳本初始化的環境在流程定義列表中仍會看到它——那是舊數據，不會再被啟動。
 
 ---
 
@@ -34,7 +40,7 @@
 
 ### 2.2 觸發條件
 
-- R00：督導在發現事件後主動提交。
+- R00：督導在發現事件後主動提交。**僅 `Supervisor`（116）可提交 R00**——這條在 2026-06-30 起由後端**硬性攔截**（`INCIDENT_REPORT_EMERGENCY_SUPERVISOR_ONLY`，1003001016，「Only Supervisors may submit an emergency report」）。此前系統只用提交者是否為督導來決定報告的初始狀態，並未阻止一般 OC 成員提交 R00。
 - R01：活動結束後**次日**內提交；R14：活動結束後 **14 天**內提交。
 
 ### 2.3 結束狀態總覽（`IncidentReportStatusEnum`）
@@ -51,6 +57,9 @@
 | `REJECTED` | 已拒絕（流程終止） | ✓ | ✓ |
 | `RETURNED` | 已退回（可重新提交） | ✓ | ✓ |
 | `ARCHIVED` | 已歸檔 | | ✓ |
+| `SUPERSEDED` | 已被兩週報告取代 | | ✓ |
+
+> `SUPERSEDED`：同一活動的 R14 報告通過後，系統會把仍未結案的 R01 報告置為此狀態，清掉懸空的待辦。此狀態由系統寫入，使用者不會主動選擇。
 
 ### 2.4 與其他模組的關係
 
@@ -137,6 +146,7 @@ flowchart TD
 - R01/R14 列表與提交入口：`views/incident/ActivityReportList.vue`（每活動兩欄：翌日/兩週報告狀態）。
 - 審核：`views/review/ActivityReportReview/`（含篩選與待審清單）。
 - 活動調查問卷：`views/organiser/SubmitActivityReport/index.vue`（評分/回饋，無審批；最新 UI 改為深色綠系問卷面板、步驟條與表單卡片，屬樣式優化，不改流程）。
+- 新版活動報告（不屬本文範圍）：`views/organiser/ActivityReport/index.vue` + `ActivityReportForm.vue` + `EndorsementDialog.vue`，列表 `views/organiser/ActivityReportManagement/index.vue`，審批待辦 `views/bpm/task/ActivityReportTask.vue`；後端 `/activity/report/*` 與 `/activity/report/approval/*`。詳見 [activity-report-submission-design.md](activity-report-submission-design.md) 與 [activity-report-submission-guide.md](activity-report-submission-guide.md)。
 
 ### 6.4 活動報告列表顯示規則
 
@@ -187,6 +197,7 @@ flowchart TD
 
 - R01/R14 受時限約束：超過提交窗口（次日 / 14 天）未交，狀態可被置為 `REJECTED`。
 - `RETURNED` 與 `REJECTED` 不同：前者可重新提交，後者為流程終止。
+- 「活動報告」在系統中有**兩套並存**：本文描述的 R01/R14（存 `incident_report`，走 `incident_report_audit`），以及新版活動總結報告（存 `activity_report`，走 `activity_report_approval`，見 [activity-report-submission-guide.md](activity-report-submission-guide.md)）。Demo / UAT 前務必先確認測試對象是哪一套，兩者的入口、狀態與審批鏈完全不同。
 - 「活動調查問卷」常被誤認為活動報告；它是滿意度回饋，與 R01/R14 審批無關，請在 Demo 中明確區分。
 - 中高級別事件的 Dean 待閱任務（`deanMonitorTask`）為並行不阻塞分支，與主流程的 Dean 審閱（`deanReviewTask`）是兩個不同任務。
 - 最新後端收窄的是「活動報告管理列表」資料源；若測試直接手工呼叫建立 / 狀態查詢接口，仍應另外核對活動是否屬於可報告範圍。

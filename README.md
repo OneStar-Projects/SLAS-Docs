@@ -14,6 +14,8 @@
 | [activity-publish-workflow-design.md](activity-publish-workflow-design.md) | 活動發布審批的完整業務流程（NSOA / 非 NSOA、Supervisor / IRG / VP / Dean 多層審批） |
 | [student-org-workflow-flowcharts.md](student-org-workflow-flowcharts.md) | 學生組織註冊與申訴審批的兩條流程 |
 | [activity-application-notification-design.md](activity-application-notification-design.md) | 活動申請主流程在「什麼環節、向誰、用什麼方式」發出站內消息 / 郵件 |
+| [activity-lifecycle-notification-design.md](activity-lifecycle-notification-design.md) | 活動生命週期（報名、出席、結案等環節）的通知設計 |
+| [activity-report-submission-design.md](activity-report-submission-design.md) | 活動總結報告的提交與審批流程（OC 共簽 → Coordinator → Checker → Supervisor → VPSLA／Reviewer），含退回矩陣與並行門控 |
 | [roles-menus-permissions-matrix.md](roles-menus-permissions-matrix.md) | 角色 × 菜單 × 權限對照表，便於客戶確認每個角色能看到 / 操作什麼 |
 
 ---
@@ -25,10 +27,11 @@
 | 文檔 | 涵蓋場景 |
 | --- | --- |
 | [activity-end-to-end-demo-guide.md](activity-end-to-end-demo-guide.md) | 活動從草稿、OC 認可、Supervisor / IRG / VP / Dean 審批到發布的全鏈路演練 |
-| [activity-enrollment-guide.md](activity-enrollment-guide.md) | 學生報名 → 推薦 → 審核 → 凍結名冊 → 名冊審批 |
+| [activity-enrollment-guide.md](activity-enrollment-guide.md) | 學生報名 → 組織者推薦 → 主管審核 → 關閉報名 → 名冊審批 |
 | [activity-promotion-guide.md](activity-promotion-guide.md) | 活動推廣的提交、審核與上架；含「導入活動 vs 系統內發布活動」的差異提醒 |
 | [activity-attendance-guide.md](activity-attendance-guide.md) | 活動出席（QR 簽到 + 手動補簽 + 出席終結） |
-| [activity-report-guide.md](activity-report-guide.md) | 事件報告 / 活動報告的提交與審核 |
+| [activity-report-submission-guide.md](activity-report-submission-guide.md) | 活動總結報告：填寫 → OC 共簽 → Coordinator 分派 → Checker／Supervisor → 最終審批 |
+| [activity-report-guide.md](activity-report-guide.md) | 事件報告，以及事件性質的翌日 / 兩週活動報告（R00 / R01 / R14）的提交與審核 |
 | [import-modules-guide.md](import-modules-guide.md) | 活動成員、社團組織的 Excel 批次導入 |
 | [student-org-end-to-end-demo-guide.md](student-org-end-to-end-demo-guide.md) | 學生組織註冊 + 申訴流程全鏈路演練 |
 
@@ -37,7 +40,7 @@
 ## 閱讀順序建議
 
 - **第一次接觸 SLAS**：先讀 [activity-publish-workflow-design.md](activity-publish-workflow-design.md) 了解最核心的活動審批設計，再翻 [activity-end-to-end-demo-guide.md](activity-end-to-end-demo-guide.md) 跑一遍流程。
-- **準備 UAT / 培訓**：以「操作文檔」一節的 7 份為主，按業務模組分頭演練。
+- **準備 UAT / 培訓**：以「操作文檔」一節的 8 份為主，按業務模組分頭演練。
 - **驗收流程合規性**：以「設計文檔」一節為主，重點看 [activity-publish-workflow-design.md](activity-publish-workflow-design.md) 與 [activity-application-notification-design.md](activity-application-notification-design.md)。
 
 ## 反饋

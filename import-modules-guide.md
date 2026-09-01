@@ -141,8 +141,16 @@ flowchart TD
   - `GroupCoreMember` 以分號分隔多個 `studentId`，第一個被設為 `leaderStudentId`。
   - `processCoreMembersForTemplate` 對每個 `studentId`：先查使用者（studentId → username）→ 查不到則在 `V_STUDENT_DETAIL` 核對學生身份 → **自動建立使用者**：
     - `username = studentId`、`email = {studentId}@s.eduhk.hk`；
-    - 初始密碼取系統設定 `USER_INIT_PASSWORD_KEY`，未配置時退回為 `studentId`；
+    - `USER_SOURCE = SSO`——這類帳號代表已核實的 EdUHK 身份，與 SSO 回調建立的帳號同一套密碼政策（**2026-08 變更**，詳見下方說明）；
     - 指派角色（OC / 社團場景為 `Group Leader`，id=114）。
+
+> **⚠️ 自動建號的密碼政策已於 2026-08 變更，舊描述作廢：**
+>
+> - 舊版：初始密碼取系統設定 `system.user.init-password`，未配置時**退回為學號本身**。
+> - 現版：密碼由 `sso.user.allow_default_password` 與 `sso.user.default_password` 兩個系統參數決定——**只有**前者為 `true` 且後者已配置時才設密碼，否則帳號**完全不設本地密碼，只能走 SSO 登入**。「未配置就用學號當密碼」的退路已移除。
+> - 同一變更也套用於活動 OC 自動建號與社團註冊自動建號（原本分別掛 `ACTIVITY_OC` / `ACTIVITY_APPLICATION` / `STUGROUP_REG` 三種來源值，現已統一為 `SSO`）。
+> - 活動**訪客**帳號不受影響，仍為 `USER_SOURCE = LOCAL`，本地密碼登入是其唯一途徑。
+> - 變更前建立、仍掛著三個舊來源值的既有帳號需另行做資料遷移；若在環境中看到 `USER_SOURCE` 仍是 `ACTIVITY_OC` 等值，代表該遷移尚未執行。
 - **`NA` 與空值**：模板中 `NA`（不分大小寫）與空字串一律視為 null。
 
 ---
@@ -224,7 +232,7 @@ flowchart TD
 3. **驗證點**：
    - `student_group` 新增一筆 `Demo Club`；第一個學號成為 Leader。
    - 對於原本沒有帳號的核心成員學號：系統自動建立使用者（`username=學號`、`email=學號@s.eduhk.hk`），並掛 `Group Leader` 角色。
-   - 用該學號 + 初始密碼登入，確認可進入系統並看到「建立活動」入口。
+   - 用該學號登入，確認可進入系統並看到「建立活動」入口。**前置條件**：環境須先開 `sso.user.allow_default_password=true` 並配置 `sso.user.default_password`，否則新帳號沒有本地密碼，只能走 SSO（見 §4.2 的密碼政策說明）。
 4. 補充：把 `updateSupport` 開為 `true`，改 `GroupName_EN` 後重傳同一 `SOCode`，確認為「更新」而非報重複。
 
 ### 6.4 Demo C — 社團成員批次掛載
@@ -239,6 +247,6 @@ flowchart TD
 ## 7. 邊界與已知限制
 
 - 活動成員導入**不建立登入帳號**；需要登入能力的學生請改用社團導入或另行建號。
-- 自動建號的初始密碼取決於系統設定 `USER_INIT_PASSWORD_KEY`，Demo 前請先確認該值。
+- 自動建號**預設不設本地密碼**（只能走 SSO）。要在 Demo / UAT 用帳密登入，須先開 `sso.user.allow_default_password=true` 並配置 `sso.user.default_password`；Demo 前請先確認這兩個值。舊文檔提到的 `system.user.init-password` 與「未配置就用學號當密碼」的退路，在**導入 / 活動 OC / 社團註冊這三條自動建號路徑上已不再使用**；該系統設定本身仍存在，只服務於管理員手工建號的路徑。
 - 日期格式雖容錯多種寫法，仍建議統一用 `yyyy-MM-dd` 以避免歧義。
 - 社團導入為逐行容錯，**部分成功**是正常結果；務必檢視回傳報告的失敗清單，而非只看整體是否 2xx。
