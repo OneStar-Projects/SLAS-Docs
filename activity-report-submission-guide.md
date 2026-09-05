@@ -201,6 +201,8 @@ flowchart TD
 
 ### 6.1 準備條件
 
+通用條件：
+
 1. 一個**已結束**（結束日期已過）的活動，且掛在測試帳號擔任組長的學生組織下，或由測試帳號本人建立——兩者都能進報告列表。
 2. 該活動有 2 位以上 OC 成員（用來演示共簽），且都能登入。
 3. 該活動已存檔至少 1 位 Supervisor。
@@ -208,7 +210,52 @@ flowchart TD
 5. `Coordinator`（115）帳號一個。
 6. 非 NSOA 主線另需 `Activity Application Reviewer`（149）帳號；NSOA 主線另需 `VPSLA Secretary`（146）、VPSLA 成員與主席帳號。
 
+### 6.1.1 DEV 環境現成資料（2026-09-04 實查）
+
+下表是 DEV（dappl05）當下**真的可以直接拿來 Demo** 的資料，不必自己造。
+
+**演示活動——全庫唯一同時具備 OC 成員與已存檔 Supervisor 的已結束活動：**
+
+| 項目 | 值 |
+|:--|:--|
+| 活動編號 | `SLA-2526-00121` |
+| 活動名稱 | Enrolment form testing |
+| 活動 ID | `2085552777101631490` |
+| 活動日期 | 2026-08-08 ~ 2026-08-09（已結束），狀態 `COMPLETED` |
+| 是否 NSOA | 否 → 走**非 NSOA / Reviewer** 主線（6.2、6.3） |
+| 建立人 = 報告填報人 | `S1138111`（CHAN Chin Ching，user id `2051932437251416065`） |
+| OC 成員 | 1 位：CHAN Chin Ching（學號 11381112）——**與建立人是同一人** |
+| 已存檔 Supervisor | 1 位：`hro-test-074`（Test Supervisor 1，user id 13，持角色 116） |
+| 報告現況 | 已有草稿 `2095444726084345858`，`DRAFT` / 共簽 `PENDING` / 輪次 0，未啟動流程；財務、照片、共簽、流程四張子表都還是空的 |
+
+**審批角色帳號**（各角色在 DEV 都只有一位持有人，不必挑）：
+
+| 角色 | 帳號 | 姓名 | user id |
+|:--|:--|:--|:--|
+| `Coordinator`（115） | `hro-test-071` | Test Coordinator | 10 |
+| `Activity Application Checker`（142） | `hro-test-073` | Test Checker | 12 |
+| `Supervisor`（116，本活動已存檔的那位） | `hro-test-074` | Test Supervisor 1 | 13 |
+| `Activity Application Reviewer`（149） | `hro-test-091` | Test Dean | 30 |
+| `Delegate`（150） | `hro-test-092` | Test Delegate | 31 |
+| `VPSLA Secretary`（146） | `hro-test-083` | Test VP Secretary | 22 |
+
+**VPSLA 傳閱小組**（`activity_vp_group_member`，兩組可選）：
+
+| 小組 ID | 成員 |
+|:--|:--|
+| `2051611753177513986` | Secretary `hro-test-083`、Chairperson `hro-test-089`、Members `hro-test-084` ~ `hro-test-088`（5 人） |
+| `2052775263958790145` | Secretary `hro-test-083`、Chairperson `hro-test-089`、Members `hro-test-084`、`hro-test-085`（2 人） |
+
+**DEV 上的三個實測限制，排 Demo 前先知道：**
+
+- **Group Leader 入口在 DEV 走不通，只能用「活動建立人」這條路。** 判定組長的條件是 `student_group_member.ROLE_CODE ∈ (president, chairperson, leader)` 且 `STATUS='active'`。DEV 有 21 筆這樣的列，但這些組織名下**一個已結束的已核准活動都沒有**；反過來，所有可報告活動所屬的組織**都沒有組長**。所以 §4.1 列表的兩個來源裡，DEV 目前只有「我建立的活動」這一條會出資料。要演示組長入口，得先給某個有已結束活動的學生組織補一位組長。
+  ⚠️ **UAT / PROD 的情況更嚴重——那兩個環境是一個組長都判不出來，見 §7。**
+- **共簽只能演示單人。** `SLA-2526-00121` 只有 1 位 OC，而且就是填報人本人——按下「提交共簽」後，同一個帳號簽完那一筆即刻轉 `SUBMITTED`，看不到「等其他人簽」的中間態。要演示多人共簽，需先在活動成員裡補至少 1 位有系統帳號的 OC。
+- **主線 C（NSOA）在 DEV 沒有可用活動。** DEV 上 `IS_NSOA=1` 的已結束活動（例如 `SLA-2526-0041` / `2052583866546831362`，OC 2 人）**一位已存檔 Supervisor 都沒有**，而 Coordinator 分派時 Supervisors 為空會被後端擋下，流程走不過第一關。要跑 6.4，必須先為某個 NSOA 活動存檔 Supervisor。
+
 ### 6.2 主線 A — 非 NSOA 最短路徑
+
+> DEV 對照：填報人 `S1138111` → 活動 `SLA-2526-00121` → Coordinator `hro-test-071` → Supervisor `hro-test-074` → Reviewer `hro-test-091`。因該活動的報告草稿已存在，第 1 步進去看到的狀態是 `DRAFT` 而非 `NOT_STARTED`。
 
 1. Group Leader 登入 → 管理活動報告 → 找到該活動（狀態 `NOT_STARTED`）→ 點入，確認 OC 名單、財務、出席三塊已自動帶出。
 2. 補齊 04–08 文字欄與 §7 實際金額，上傳 §10 照片，**勾選 §11 聲明**，存草稿。
@@ -220,7 +267,7 @@ flowchart TD
 
 ### 6.3 主線 B — 含 Checker 的並行分支
 
-在 6.2 第 5 步改為**指定 Checker**，然後驗證：
+在 6.2 第 5 步改為**指定 Checker**（DEV 選 `hro-test-073`），然後驗證：
 
 - Checker 與 Supervisor **同時**出現在各自的待辦（並行）。
 - 此時 Supervisor 進入審批頁，提交按鈕**被鎖住**並顯示提示。
@@ -229,6 +276,9 @@ flowchart TD
 ### 6.4 主線 C — NSOA 全鏈
 
 活動為 NSOA 時，第 7 步改走：VPSLA Secretary 選組傳閱（設定催辦時點）→ VPSLA Members 逐一「已審閱」→ VPSLA Secretary 共識確認 → VPSLA Chairperson 批准 → `APPROVED`。
+
+> DEV 對照：Secretary `hro-test-083` → 傳閱小組選 `2052775263958790145`（只有 2 位 Members，簽起來最快）→ Members `hro-test-084`、`hro-test-085` → 回到 `hro-test-083` 做共識 → Chairperson `hro-test-089` 批准。
+> ⚠️ 前提是**先找一個 NSOA 活動存檔 Supervisor**——見 6.1.1 第三條限制，DEV 現有的 NSOA 活動都缺 Supervisor，這條鏈目前起跑不了。
 
 ### 6.5 旁支 — 退回與重新提交
 
@@ -242,7 +292,20 @@ flowchart TD
 ## 7. 邊界與已知限制
 
 - **PDF 匯出未實作**，屬長期需求，目前只能在系統內查看報告。
-- **VPSLA（NSOA）分支尚未有完整實跑記錄。** 截至 2026-08，測試環境的歷史任務裡 `coordinatorTask` / `supervisorsTask` / `reviewerTask` / `checkerTask` 都有實例，但 VPSLA 選組、Members 審閱、共識、主席四個節點的實例數為 0——UAT 應優先覆蓋 6.4 與 6.5 兩節。
+- **VPSLA（NSOA）分支尚未有完整實跑記錄。** 截至 2026-08，測試環境的歷史任務裡 `coordinatorTask` / `supervisorsTask` / `reviewerTask` / `checkerTask` 都有實例，但 VPSLA 選組、Members 審閱、共識、主席四個節點的實例數為 0——UAT 應優先覆蓋 6.4 與 6.5 兩節。2026-09-04 複查 DEV 的原因很直接：**沒有一個 NSOA 已結束活動存檔了 Supervisor**，流程卡在 Coordinator 分派，根本進不到 VPSLA 段（見 6.1.1）。
+- **UAT / PROD 上「Group Leader 入口」形同不存在**（issue #380）。判定組長的查詢只認 `student_group_member.ROLE_CODE ∈ (president, chairperson, leader)`，而客戶的兩個環境這個欄位全是空的，**沒有任何一個人會被判為組長**。2026-09-04 四環境實查：
+
+  | 環境 | `ROLE_CODE` 有值 | 全部列 |
+  |:--|--:|--:|
+  | DEV | 37（其中 21 筆命中組長判定） | 102 |
+  | 146 | 234 | 723 |
+  | **UAT** | **0** | 56（全 `ROLE='others'`） |
+  | **PROD** | **0** | 520（全 `ROLE='others'`） |
+
+  後果：PROD 有 511 個帳號持角色 114 `Group Leader`、58 個學生組織、111 個已結束活動**全部**掛在組織下，但這 511 人開啟「管理活動報告」只會看到**自己親手建立的**活動。
+  成因：`ROLE_CODE` 只有「學生組織**註冊流程**存 ExCo 名單」這一條寫入路徑會寫，後台錄入 / 匯入成員只寫 `ROLE`。DEV 的資料是測試帳號走註冊流程造的；PROD 的 58 個組織全部由 SAO 職員後台錄入（`REGISTRATION_PROCESS_ID` 全為 NULL），從未走過註冊流程。因此修復不能只做一次性回填，得同時補寫入路徑。
+- **Coordinator 在「活動沒有任何已存檔 Supervisor」時會走進死路**（低優先，PROD 當前不可達）：分派時 Supervisors 為空後端直接拒絕，而前端該欄位唯讀、只帶出已存檔督導，Coordinator 除了「退回 Group Leader」沒有別的出路，Group Leader 也無法事後補督導。2026-09-04 實查 PROD 的 111 個已結束活動**全部**都有已存檔督導，所以現階段觸發不到；DEV 則有不少活動缺督導（例如 6.1.1 提到的 NSOA 活動）。
+- **DEV 的報告資料量極小。** 2026-09-04 實查：81 個已結束的已核准活動，但 `activity_report` 全庫只有 1 筆（`DRAFT`），共簽、流程實例子表皆為空。Demo 前請先照 6.1.1 核對資料是否還在。
 - **VPSLA Members 沒有退回動作**，也不會因逾時被自動視為無異議；催辦時點只發提醒，流程會一直等到全員提交。這條逾時語義需求方尚未定義，待確認後才會調整。
 - **Coordinator 的退回只有一個去向**（Group Leader），介面上不提供其他選項。
 - **§11 聲明的簡體中文措辭待需求方確認**（涉及學生紀律處分與法律責任），目前為對照英文 / 繁體原文的譯本。
