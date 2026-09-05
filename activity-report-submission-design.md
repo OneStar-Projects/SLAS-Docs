@@ -26,12 +26,22 @@
 |:--|:--|:--|
 | 1 | 活動結束日期已過 | 不能建立報告 |
 | 2 | 該活動尚無報告（一活動一報告） | 不能重複建立 |
-| 3 | 操作者是該活動所屬**學生組織的組長**（Group Leader）**或該活動的建立人** | 不能建立 / 編輯 / 發起共簽 |
+| 3 | 操作者屬於該活動的**籌委會**（見門檻 3 說明） | 不能建立 / 編輯 / 發起共簽 |
 | 4 | §11 聲明已勾選 | 不能發起共簽 |
 | 5 | OC 名單非空，且每位 OC 都有系統帳號（無帳號者系統嘗試自動建立） | 不能發起共簽 |
 | 6 | 本輪快照名單內的 OC **全部**完成簽署 | 流程不啟動 |
 
-> 門檻 3 有兩條並列通道（2026-08 調整）：**活動所屬學生組織的組長**，或**該活動的建立人**。原先只認組長，導致自己籌辦活動的建立人在報告列表裡看不到該活動；現在兩者都能建立、編輯與發起共簽。文中其餘章節為行文簡潔仍以「Group Leader」代稱這一組人。
+> **門檻 3 的認定範圍（2026-09 定案）。** 下列任一身分皆可建立、編輯與發起共簽，能看見報告的人就能修改與提交，不再區分讀寫權限：
+>
+> 1. **該活動的建立人**（申請人）；
+> 2. **該活動的 OC 成員**——同時涵蓋系統在申請存檔時登記的名冊與申請人自行填寫的名單，兩者取聯集；
+> 3. **該活動所屬學生組織的組長**。
+>
+> 檢視報告詳情另外再放寬給**該報告 OC 名單上的成員**，供共簽時查閱。
+>
+> 演進過程：最初只認組長；2026-08 加入建立人，解決「自己籌辦活動的建立人在列表裡看不到該活動」；2026-09 再加入活動 OC 成員——組長的認定依賴學生組織成員名單上登記的職位，而客戶環境該欄位普遍空白（見 §8.3），改以活動自身的籌委會名單判斷後，不需要任何資料回填即可生效。
+>
+> 文中其餘章節為行文簡潔，仍以「Group Leader」代稱這一組人。
 
 ### 1.3 報告狀態總覽
 
@@ -68,24 +78,26 @@
 |:--|:--|:--|:--|
 | Coordinator | **只有 Group Leader** | 流程結束 | 已退回 |
 | Checker | Coordinator / Group Leader | 回 Coordinator 分派環節 / 流程結束 | 已提交 / 已退回 |
-| Supervisor | Checker / Group Leader | 重建「檢查 + 推薦」並行結構 / 流程結束 | 已提交 / 已退回 |
+| Supervisor | **只有 Group Leader** | 流程結束 | 已退回 |
 | Activity Application Reviewer | 無選項 | 重跑 Supervisor 推薦輪次 | 已提交 |
 | VPSLA Secretary（選組） | 無選項 | 重跑 Supervisor 推薦輪次 | 已提交 |
 | VPSLA Secretary（共識） | 無選項 | 重跑 Supervisor 推薦輪次 | 已提交 |
 | VPSLA Chairperson | 無選項 | 回 VPSLA Secretary 共識環節 | 已提交 |
 | VPSLA Members | **無退回動作** | — | — |
 
-兩個要點：
+三個要點：
 
 1. **只有「退回 Group Leader」會結束整個審批流程**並把報告轉為「已退回」；其餘退回都在同一輪審批之內流轉，報告維持「已提交」，Group Leader 不需要也不能介入。
 2. **審批後段（Reviewer / VPSLA 選組 / VPSLA 共識）的退回一律回到 Supervisor 推薦環節**，而不是退回 Group Leader。重跑時如果 Checker 已完成檢查，不會再次拉起 Checker 任務，只重建 Supervisor 會簽。
+3. **Supervisor 的退回只有一個去向**（2026-09 調整）：一律退回 Group Leader、結束本輪。原先可選「退回 Checker」，但該路徑會令審批重新展開一輪檢查與推薦、流程始終不結束，報告因此永遠到不了「已退回」、申請人也收不到通知，故予以取消。另一層原因是 Supervisors 為並行會簽，多人同時選擇不同的退回目標本身就沒有一致語義。
 
 ### 1.6 Checker 與 Supervisor 的並行門控
 
-- **Coordinator 指定了 Checker**：Checker 任務與 Supervisors 會簽任務**同時**建立，兩者同時出現在各自待辦。
-- **Coordinator 未指定 Checker**：不建立 Checker 任務，直接進入 Supervisors 會簽。
-- **Supervisor 必須等 Checker 完成才能提交**：這是**系統層強制校驗**，不只是畫面上的按鈕禁用——繞過介面直接送出同樣會被拒絕。畫面在門控狀態查詢失敗時，一律按「未完成」處理（保持禁用），不預設放行。
-- Supervisor 退回 Checker 時，門控狀態會被重置，並行結構重新建立。
+- **Coordinator 指定了 Checker**：Checker 任務與 Supervisors 會簽任務**同時**建立，但在 Checker 完成之前，**Supervisor 的待辦是隱藏的**（2026-09 調整，見下）。
+- **Coordinator 未指定 Checker**：不建立 Checker 任務，門控直接視為已完成，Supervisors 會簽立即可辦。
+- **Supervisor 必須等 Checker 完成才能提交**：這是**系統層強制校驗**，不只是畫面上的按鈕禁用——繞過介面直接送出同樣會被拒絕。
+
+> **待辦可見性（2026-09 調整）。** 原先兩個任務同時出現在各自待辦，Supervisor 點進去只會看到一個被鎖住的提交按鈕——一條**看得到卻辦不了**的待辦。現在系統會把「本輪尚待 Checker」的 Supervisor 待辦整條隱藏，Checker 送出檢查結果後自動重現，中間不需要任何補償動作。待辦列表、任務計數、統計與「能否操作」四處採同一判斷，不會出現數字對不上的情況。
 
 ### 1.7 會簽規則與輪次
 
@@ -105,11 +117,11 @@
 
 | 角色 | 流程環節 | 指派方式 | 可做的動作 |
 |:--|:--|:--|:--|
-| Group Leader | 流程外 | 活動所屬學生組織的組長，**或該活動的建立人** | 建立 / 編輯報告、發起與撤回共簽 |
+| Group Leader | 流程外 | 活動建立人、活動 OC 成員，或活動所屬學生組織的組長（見 §1.2 門檻 3） | 建立 / 編輯報告、發起與撤回共簽 |
 | OC 成員 | 流程外 | 活動成員中角色屬於 OC 者 | 簽署；末簽觸發流程啟動 |
 | Coordinator | 分派 | 全體 Coordinator 為候選人 | 分派 / 退回 |
 | Activity Application Checker | 檢查 | Coordinator 指定單人 | 檢查通過 / 退回 |
-| Supervisor | 推薦 | 該活動已存檔的督導**全量**，介面唯讀、Coordinator 只確認不增刪 | 推薦 / 確認退回 |
+| Supervisor | 推薦 | 該活動已存檔的督導**全量**，介面唯讀、Coordinator 只確認不增刪 | 推薦 / 確認退回（**只退 Group Leader**） |
 | VPSLA Secretary | 選組傳閱、共識確認 | 全體 VPSLA Secretary 為候選人 | 選組傳閱、共識確認 / 退回 |
 | VPSLA Members | 審閱 | 由所選 VPSLA 審批小組載入，**主席自動排除在審閱名單外** | 只有「已審閱」 |
 | VPSLA Chairperson | 審批 | 所選小組的主席 | 批准 / 退回 |
@@ -143,8 +155,7 @@ flowchart TD
       JOIN --> AGG
     end
     SUB -. 環節內退回 .-> RG{退回目標}
-    RG -- Coordinator --> C
-    RG -- Checker --> RSTC[重置檢查門控] --> SUB
+    RG -- Coordinator（僅 Checker 可選） --> C
     RG -- Group Leader --> RET
     SUB --> NS{NSOA?}
     NS -- 否 --> REV[Activity Application Reviewer<br/>／Delegate 審批]
@@ -175,14 +186,14 @@ flowchart TD
 ### ② Checker 檢查（可選）
 
 - **誰**：Coordinator 指定的那一位 Activity Application Checker。
-- **動作**：檢查通過（解除 Supervisor 的提交門控）／ 退回至 Coordinator 或 Group Leader。
+- **動作**：檢查通過（Supervisor 的待辦隨即出現）／ 退回至 Coordinator 或 Group Leader。
 - 未指定 Checker 時本環節不存在，門控直接視為已完成。
 
 ### ③ Supervisors 推薦（會簽）
 
 - **誰**：Coordinator 確認的全體 Supervisor，並行處理。
-- **動作**：推薦 ／ 確認退回（退回 Checker 或 Group Leader）。
-- **門控**：有 Checker 而尚未檢查完成時，提交會被系統拒絕。
+- **動作**：推薦 ／ 確認退回（**唯一去向是 Group Leader**，流程結束、報告轉「已退回」）。
+- **門控**：有 Checker 而尚未檢查完成時，Supervisor 的待辦不會出現；即使繞過介面直接送出，系統層仍會拒絕。
 - **聚合**：全員推薦 → 進入下一階段；任一人退回 → 立即中止本輪並依退回目標路由。
 
 ### ④ 非 NSOA：Reviewer 審批
@@ -278,6 +289,6 @@ flowchart TD
 
 ### 8.3 已知限制
 
-- **VPSLA（NSOA）分支尚無完整實跑記錄**：截至 2026-08，測試環境已有多份報告走完非 NSOA 路徑並結案，但 VPSLA 選組、Members 審閱、共識、主席四個環節的歷史記錄為 0。§1.5 的退回矩陣中，「退回 Group Leader」與「Supervisor 退回 Checker」已有實跑記錄，**「Checker 退回 Coordinator」以及審批後段（Reviewer／VPSLA 選組／VPSLA 共識／Chairperson）的各條退回尚未被走過**。UAT 應優先覆蓋 NSOA 全鏈與這批未走過的退回路徑。
+- **VPSLA（NSOA）分支尚無完整實跑記錄**：截至 2026-08，測試環境已有多份報告走完非 NSOA 路徑並結案，但 VPSLA 選組、Members 審閱、共識、主席四個環節的歷史記錄為 0。§1.5 的退回矩陣中，「退回 Group Leader」已有實跑記錄，**「Checker 退回 Coordinator」以及審批後段（Reviewer／VPSLA 選組／VPSLA 共識／Chairperson）的各條退回尚未被走過**（「Supervisor 退回 Checker」曾有實跑記錄，該路徑已於 2026-09 取消，見 §1.5 要點 3）。UAT 應優先覆蓋 NSOA 全鏈與這批未走過的退回路徑。
 - **VPSLA Members 沒有退回動作**，只能標記「已審閱」。
 - **Coordinator 的退回只有一個去向**（Group Leader），介面不提供其他選項。
