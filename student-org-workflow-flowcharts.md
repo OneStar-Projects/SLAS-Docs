@@ -60,10 +60,12 @@ REJECTED_FINAL → 申訴流程 → 通過? → ACTIVE
 |----:|:------------------------------|:----------------------------------------------|:-------------|:-----|
 | 125 | `sg_app_reviewer`             | Registration Appeal Reviewer                  | Appeal Reviewer | 提供申訴意見（並行多人） |
 | 126 | `sg_app_approver`             | Registration Appeal Approver                  | Appeal Approver | 最終批准／拒絕／退回（有條件批准）決定 |
-| 135 | `sg_app_approver_secretary`   | Student Group Appeal Approver Secretary       | Appeal Approver Secretary | 替代終審人,與 Appeal Approver 享有相同決定權 |
+| 135 | `sg_app_approver_secretary`*  | Student Group Appeal Approver Secretary       | Appeal Approver Secretary | 替代終審人,與 Appeal Approver 享有相同決定權 |
 | 139 | `sg_app_summary_reviewer`     | Registration Appeal Endorser                  | Appeal Summary Reviewer | 審核已收集的申訴意見；可提交至最終,或退回（結束流程） |
 
 > **流程外參與者**：Appeal Initiator（學生）—— 發起申訴；在 `APPEAL_RESUBMIT` 狀態時重新提交申訴。
+>
+> **角色 135 的資料口徑待核對**：此表沿用申訴審批秘書的設計 `CODE=sg_app_approver_secretary`；`SLAS_PRO/sql/patch/0004_027_sync_role_menu_permissions.sql` 對同一角色 ID 寫入 `sg_app_admin`，而 `sql/patch/update_role_student_group_registration.sql` 使用前者。請以部署環境的 `SYSTEM_ROLE` 實際資料核對 `CODE`。當前 BPMN 按角色 **ID 135** 指派最終審批任務，不能單憑本表推定環境中的角色代碼。
 >
 > **本文簡稱規則**：為保持流程圖與步驟詳述的可讀性,後續章節在不致歧義時使用功能別名（例如 `Registration Administrator` 簡作 `Secretary`；`Registration Checker` 簡作 `Admin Checker`；`Registration Referrer` 簡作 `Academic Checker`；`Registration Endorser` 簡作 `Registration Summary Reviewer`；`Registration Appeal Endorser` 簡作 `Appeal Summary Reviewer`）。
 
@@ -311,6 +313,8 @@ flowchart TD
 ```
 
 > 申訴流程的「退回」業務上等同於「有條件批准」——學生需根據意見修改後重新提交申訴,而非直接通過。
+>
+> **當前操作路徑與 BPMN 定義的差異**：`SLAS_PRO/p2` 的 `ReviewerOpinionController.completeFinal()` 將申訴終審的 `return` 轉為結束當前流程的 `reject` 路徑，再由狀態監聽器根據 `rejectionType=return` 設為 `APPEAL_RESUBMIT`。BPMN 仍保留 `finalAction=return` → `studentResubmitTask` → `summaryReviewTask` 的原流程內回跳路徑；此路徑與當前審批接口的操作行為不同。本圖按當前審批接口及重新提交服務的行為繪製。
 
 ### 4.5 申訴重新提交
 
@@ -461,7 +465,7 @@ flowchart LR
   - **拒絕** → 流程結束（`APPEAL_REJECTED`,終局）
   - **退回** → 流程結束（`APPEAL_RESUBMIT`,業務上等同「有條件批准」）
 
-> 申訴流程沒有拒絕子流程;退回／拒絕直接結束流程。重新提交永遠啟動新的流程實例,不在原實例內回跳。
+> 申訴流程沒有拒絕子流程；從當前審批接口選擇退回／拒絕會結束流程。學生透過重新提交接口操作時啟動新的流程實例。BPMN 尚有未與此操作路徑一致的原流程內回跳定義，見 §4.4。
 
 ---
 
