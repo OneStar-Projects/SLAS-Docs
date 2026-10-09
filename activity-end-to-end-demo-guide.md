@@ -239,6 +239,8 @@
 
 > 如果想節省填表時間，可在第 1 步使用 **Copy from Previous**，但仍需手動調整 `NSOA`、嘉賓、贊助等觸發條件。
 >
+> **Copy from Previous 不會沿用舊申請的申請人**（2026-09 起）：複製後，申請人與第一位 OC 成員一律改為**目前登入的學生**；其餘 OC 成員的姓名會按學號重新查核帶出，而不是照抄舊申請上的姓名。
+>
 > **`Activity Date` 與議程日期要對得上**：活動起訖日必須涵蓋申請表裡每個 programme 的場次日期與活動日程日期，否則保存或提交時會被日期一致性校驗擋下（見 §9.7）。
 >
 > **活動編號格式**：2026-07 起新產生的編號為 5 位流水號 `SLA-<學年>-NNNNN`（例：`SLA-2526-00391`）；環境中既有的 4 位舊編號仍然有效並沿用同一條序列。教材截圖若仍是舊格式，請對齊。
@@ -262,6 +264,8 @@
    - `External Guests`
    - `Preview`
 
+> **申請人不會因他人編輯而改變**（2026-09 起）：其他 OC 成員或 Supervisor 打開既有草稿修改並保存後，申請表上的申請人仍是原申請人，申請人姓名按其學號帶出；不會被換成正在編輯的人。
+>
 > **編輯鎖提示**：如果你是打開一筆既有活動或草稿進行修改，系統可能先取得該活動的編輯鎖。Demo 中若多人輪流修改同一筆活動，請先由上一位使用者儲存或退出，避免被鎖定。
 > 需注意：按當前實作，「退出頁面」本身不一定立即釋放鎖；最可靠的是先完成一次儲存 / 更新，否則可能需要等待 30 分鐘超時。
 
@@ -273,6 +277,7 @@
    - `NSOA = Yes`
    - Student Group 正確
    - OC Members 至少 3 人
+   - OC 成員輸入學號後，姓名與所屬單位由系統按學號查出；改動學號時，原先帶出的姓名會即時清空並重新查核。即使輸入的是申請人本人的學號，姓名也同樣按學號查出
 
 2. 在 `Activity Basics / Resources & Documents`：
    - 活動資料完整
@@ -325,6 +330,8 @@
 
 > 所有審批人都建議從 `My To-do / 待辦` 進入任務，並打開 `Activity Publish Review Detail` 頁面處理。
 >
+> **先選決定，再寫意見；退回 / 拒絕必須寫明原因**（2026-09 起）：Coordinator、Checker、Supervisor、EO、Dean / Delegate、VP(RD) / VP(RD) Delegate 與 ChairPerson 的審批表單，都是先選擇決定（通過 / 退回 / 拒絕等），再填寫意見。選擇「通過」時意見可留空；選擇「退回」或「拒絕」時，意見欄變為必填，未填（或只填空白）時「提交」按鈕不可按，或提交時提示「請填寫退回原因」／「請填寫具體拒絕意見」。Demo 演示任何退回 / 拒絕分支時，請先準備好一句具體原因。IRG / VP 成員投票不在此列，投 `REJECT` 時意見仍可選填。
+>
 > **審批意見可以「存為草稿」**（2026-06 起，所有審批環節通用）：意見寫到一半可先存草稿，離開頁面再回來會自動帶回；任務一旦提交，草稿自動清除。草稿只是文字暫存，**存了草稿不等於已審批**，Demo 時別把它當成已完成的環節。見 `activity-publish-workflow-design.md §1.10`。
 
 ### 5.1 Coordinator：初審並指派 Checker / Supervisors
@@ -367,7 +374,7 @@
    - 至少 **1 名 Supervisor** 勾選場地相關確認，以便觸發 EO
 4. ELAT 區塊：
    - 可根據 Demo 需要選 `Yes` 並填 category(僅留痕,不影響流程)
-5. 填 comment
+5. 填 comment（選 `RECOMMEND` 時可留空；選 `RETURN` / `REJECT` 時必填）
 6. 提交
 
 預期結果：
@@ -410,7 +417,7 @@
 3. 三選一：
    - `Approve` → 進入 Sponsorship Approval（如活動有贊助）；無贊助則直接進入 `Activity Content Approval`。
    - `Return` → 退回 ③ Supervisor 重審（填寫退回原因）。
-   - `Reject` → **流程直接結束**，狀態 `REJECTED`；申請人 + 歷史已參與審批的人員會收到通知。
+   - `Reject` → **流程直接結束**，狀態 `REJECTED`；申請人 + 歷史已參與審批的人員會收到通知（需填寫不同意原因）。
 4. 提交。
 
 ### 5.6 Dean / Delegate：贊助審批
@@ -482,7 +489,7 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 #### 5.7.2 場景 B：退回 Dean（非 NSOA）
 
 1. `VP(RD)` 打開 `Guest Approval`。
-2. 選擇 `Return to Dean / Delegate` 並填寫意見。
+2. 選擇 `Return to Dean / Delegate` 並填寫退回原因（必填）。
 3. 提交。
 
 **預期結果**：
@@ -494,7 +501,7 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 #### 5.7.3 場景 C：退回 Chair（NSOA）
 
 1. `VP(RD)` 打開 `Guest Approval`。
-2. 選擇 `Return to VP ChairPerson` 並填寫意見。
+2. 選擇 `Return to VP ChairPerson` 並填寫退回原因（必填）。
 3. 提交。
 
 **預期結果**：
@@ -523,7 +530,7 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 
 1. IRG Member 收到投票任務。
 
-> **超時行為**(commit `7faa9acc2`, 2026-05-12):若 deadline 前未全部投票完成,系統 `activityIrgTimeoutDelegate` 把未投票者標記為預設 `RECOMMEND`,**跳過剩餘多實例任務**,直接進入「auto: AI 生成 IRG 摘要」 → ⑩ 摘要審核。Demo 中如要演示此分支,把 deadline 設成幾分鐘後,故意只讓部分 IRG Member 投票,等超時觸發。
+> **超時行為**(commit `7faa9acc2`, 2026-05-12;2026-05-23 起預設值改為 `RESERVE`):若 deadline 前未全部投票完成,系統 `activityIrgTimeoutDelegate` 把未投票者標記為預設 `RESERVE`(中性、不計為推薦),**跳過剩餘多實例任務**,直接進入「auto: AI 生成 IRG 摘要」 → ⑩ 摘要審核。Demo 中如要演示此分支,把 deadline 設成幾分鐘後,故意只讓部分 IRG Member 投票,等超時觸發。
 
 ### 6.2 IRG Members：完成投票
 
@@ -534,7 +541,7 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 
 提交後，IRG Secretary 進入摘要審核節點。
 
-> 若部分 IRG Member 未在 deadline 前提交,該成員的決定會由系統補為 `RECOMMEND`(見 §6.1 超時行為)。
+> 若部分 IRG Member 未在 deadline 前提交,該成員的決定會由系統補為 `RESERVE`(見 §6.1 超時行為)。
 
 ### 6.3 IRG Secretary：審核 AI Summary
 
@@ -563,7 +570,7 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 1. `VPSLA Member` 收到投票任務。
 2. ChairPerson 不參與本輪投票，只保留最終決策節點。
 
-> **超時行為**:若 deadline 前未全部投票,系統 `activityVpTimeoutDelegate` 把未投票者標記為 **`ABSTAIN`**(注意:跟 IRG timeout 不同,VP 超時是棄權而非 RECOMMEND),透過 `vpBranchMergeGateway` 匯流到 `parallelJoinGateway`。Demo 中如要演示此分支,把 deadline 設成幾分鐘後,讓部分 VP Member 不投票,等超時觸發。
+> **超時行為**:若 deadline 前未全部投票,系統 `activityVpTimeoutDelegate` 把未投票者標記為 **`ABSTAIN`**(注意:跟 IRG timeout 不同,VP 超時是棄權而非 RESERVE),透過 `vpBranchMergeGateway` 匯流到 `parallelJoinGateway`。Demo 中如要演示此分支,把 deadline 設成幾分鐘後,讓部分 VP Member 不投票,等超時觸發。
 
 ### 6.5 VPSLA Members：投票
 
@@ -612,8 +619,10 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
    - 活動資訊
    - Chair AI recommendation
    - VP 彙總意見
-3. 選擇 `PASS`。
+3. 選擇 `PASS`（意見可留空）。
 4. 提交。
+
+> 若改選 `RETURN`（退回）或 `REJECT`（拒絕），意見欄為必填（2026-09 起）：未填寫時「提交決定」按鈕不可按。退回或拒絕的意見會傳送給學生，請寫明具體原因。
 
 預期結果：
 
@@ -644,20 +653,22 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 
 如果主線走完後還想補充分支演示，建議按下面順序單獨再做一輪：
 
+> 以下每一個退回 / 拒絕分支都必須填寫具體原因，否則無法提交（見 §5 開頭說明）。
+
 1. **Coordinator Return**
-   - Coordinator 選擇 `Return`
+   - Coordinator 選擇 `Return` 並填寫退回原因
    - 驗證申請人看到 `RETURNED`
 
 2. **Checker Return**
-   - Checker 選擇紅色按鈕
+   - Checker 選擇紅色按鈕並填寫退回原因
    - 驗證流程最終狀態是 `RETURNED`，不是 `REJECTED`
 
 3. **Supervisor Return**
-   - 任一 Supervisor 選擇 `RETURN`
+   - 任一 Supervisor 選擇 `RETURN` 並填寫退回原因
    - 驗證流程直接回到申請人
 
 4. **EO Return**
-   - EO 選擇不通過 / 退回
+   - EO 選擇不通過 / 退回並填寫原因
    - 驗證流程回到 Supervisors
 
 5. **VP 多輪**
@@ -665,7 +676,7 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
    - VPSLA Secretary 發起第二輪
 
 6. **Chair Return**
-   - Chair 選擇 `RETURN`
+   - Chair 選擇 `RETURN` 並填寫退回原因
    - 驗證活動被退回
 
 ---
@@ -732,6 +743,15 @@ VP(RD) 在此節點走專屬端點 `POST /activity/approval/guest/decision`（�
 ### 9.8 Supervisor 看不到應有的活動
 
 2026-06 起 Supervisor 的活動列表只顯示**自己被指派為督導的活動**（狀態限 `APPROVED` / `PENDING`），且**未綁定任何活動時列表為空**。看到空列表請先確認該帳號是否已在目標活動上被指派為督導，而非判定資料遺失。詳見 `activity-publish-workflow-design.md §1.8.5`。
+
+### 9.9 審批頁「提交」按鈕按不下，或提示「請填寫具體拒絕意見」
+
+2026-09 起，選擇「退回」或「拒絕」時必須填寫原因（見 §5 開頭說明）。檢查：
+
+1. 是否已先選擇決定；
+2. 選了退回 / 拒絕時，意見欄是否已填入實際文字（只輸入空格不算）。
+
+選擇「通過」時意見可留空，不受此限制。
 
 ---
 

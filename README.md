@@ -12,10 +12,11 @@
 | 文檔 | 範圍 |
 | --- | --- |
 | [activity-publish-workflow-design.md](activity-publish-workflow-design.md) | 活動發布審批的完整業務流程（NSOA / 非 NSOA、Supervisor / IRG / VP / Dean 多層審批） |
-| [student-org-workflow-flowcharts.md](student-org-workflow-flowcharts.md) | 學生組織註冊與申訴審批的兩條流程 |
+| [student-org-workflow-flowcharts.md](student-org-workflow-flowcharts.md) | 學生組織註冊、申訴與續期的現行流程（含 Exco 認可、續期驗證碼、組織類別申請期） |
+| [revised-workflow-flowcharts.md](revised-workflow-flowcharts.md) | 學生組織流程修訂的設計記錄：需求確認、新舊流程對照、實作與原設計的差異及待確認事項 |
 | [activity-application-notification-design.md](activity-application-notification-design.md) | 活動申請主流程在「什麼環節、向誰、用什麼方式」發出站內消息 / 郵件 |
 | [activity-lifecycle-notification-design.md](activity-lifecycle-notification-design.md) | 活動生命週期（報名、出席、結案等環節）的通知設計 |
-| [activity-report-submission-design.md](activity-report-submission-design.md) | 活動總結報告的提交與審批流程（OC 共簽 → Coordinator → Checker → Supervisor → VPSLA／Reviewer），含退回矩陣與並行門控 |
+| [activity-report-submission-design.md](activity-report-submission-design.md) | 活動總結報告的提交與審批流程（OC 共簽 → Coordinator → Checker → Supervisor → VPSLA／Reviewer），含退回矩陣、並行門控及出席變更觸發的修訂輪次 |
 | [roles-menus-permissions-matrix.md](roles-menus-permissions-matrix.md) | 角色 × 菜單 × 權限對照表，便於客戶確認每個角色能看到 / 操作什麼 |
 
 ---
@@ -29,11 +30,11 @@
 | [activity-end-to-end-demo-guide.md](activity-end-to-end-demo-guide.md) | 活動從草稿、OC 認可、Supervisor / IRG / VP / Dean 審批到發布的全鏈路演練 |
 | [activity-enrollment-guide.md](activity-enrollment-guide.md) | 學生報名 → 組織者推薦 → 主管審核 → 關閉報名 → 名冊審批 |
 | [activity-promotion-guide.md](activity-promotion-guide.md) | 活動推廣的提交、審核與上架；含「導入活動 vs 系統內發布活動」的差異提醒 |
-| [activity-attendance-guide.md](activity-attendance-guide.md) | 活動出席（QR 簽到 + 手動補簽 + 出席終結） |
+| [activity-attendance-guide.md](activity-attendance-guide.md) | 活動出席（QR 簽到、手動簽到、出席定稿），以及定稿後的出席變更申請與審批、版本記錄 |
 | [activity-report-submission-guide.md](activity-report-submission-guide.md) | 活動總結報告：填寫 → OC 共簽 → Coordinator 分派 → Checker／Supervisor → 最終審批 |
 | [activity-report-guide.md](activity-report-guide.md) | 事件報告，以及事件性質的翌日 / 兩週活動報告（R00 / R01 / R14）的提交與審核 |
 | [import-modules-guide.md](import-modules-guide.md) | 活動成員、社團組織的 Excel 批次導入 |
-| [student-org-end-to-end-demo-guide.md](student-org-end-to-end-demo-guide.md) | 學生組織註冊 + 申訴流程全鏈路演練 |
+| [student-org-end-to-end-demo-guide.md](student-org-end-to-end-demo-guide.md) | 學生組織註冊、Exco 認可、審批、申訴與續期全鏈路演練 |
 
 ---
 
@@ -42,6 +43,10 @@
 - **第一次接觸 SLAS**：先讀 [activity-publish-workflow-design.md](activity-publish-workflow-design.md) 了解最核心的活動審批設計，再翻 [activity-end-to-end-demo-guide.md](activity-end-to-end-demo-guide.md) 跑一遍流程。
 - **準備 UAT / 培訓**：以「操作文檔」一節的 8 份為主，按業務模組分頭演練。
 - **驗收流程合規性**：以「設計文檔」一節為主，重點看 [activity-publish-workflow-design.md](activity-publish-workflow-design.md) 與 [activity-application-notification-design.md](activity-application-notification-design.md)。
+
+## 同步記錄
+
+- **2026-10-09**：按系統最新版本同步活動發布、報名、出席、活動報告、學生組織、通知及角色權限文檔。
 
 ## 反饋
 

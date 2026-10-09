@@ -1,51 +1,60 @@
-# SLAS Roles × Menus × Permissions Matrix
+# SLAS 角色 × 選單 × 權限對照表（Roles × Menus × Permissions Matrix）
+
+> 本文說明各系統角色可進入哪些選單（§1）、頁面內哪些操作受權限標識控制（§2），以及進入頁面後可見的資料範圍（§3）。
+> 角色名稱一律採用系統「角色管理」頁所顯示的正式名稱（`SYSTEM_ROLE.NAME`）；流程中的習慣稱呼以「功能別名」另行註明。
+> 更新日期：2026-10-09
+
 ---
 
-> ## ⚠️ 本文 §1 的矩阵数据已过期，请勿直接用于验收
+> ## ⚠️ 閱讀須知：§1 的逐格授權以 2026-05 基線快照為底
 >
-> §1 的 `✓` 是按 `sql/patch/0004_021`（2026-05-14/15）执行后的数据库状态抓的快照。此后**至少有 15 个补丁改动过角色 / 菜单 / 角色-菜单绑定**，其中 `0004_027` 是一次**全量重建**（`system_role` 47 行、`system_menu` 340 行、`system_role_menu` 2840 行全部重写，并清理了历史脏数据）。因此下表逐格的 `✓` 不再可信。
+> §1 各表的 `✓` 取自 2026-05 中旬的資料庫狀態。此後角色、選單與角色-選單綁定經過多次調整（其中 2026-06 曾全面重整一次角色、選單及綁定資料），因此 §1 未標示的格子只適合用來理解「哪類角色大致能進哪些選單」，**不宜直接作為驗收依據**。
 >
-> 快照之后落地的相关补丁：
->
-> | 补丁 | 影响 |
-> |---|---|
-> | `0004_022_add_supervisor_approval_permission` | 新增 Supervisor 审批权限 |
-> | **`0004_027_sync_role_menu_permissions`** | **全量重建 role / menu / role_menu 三张表** |
-> | `0004_029_grant_mgmt_center_to_irg_vp_secretary` | 管理中心授予 IRG / VP Secretary |
-> | `0004_034_hide_notification_template_and_my_group_menu` | 隐藏两个菜单 |
-> | `0004_035_restrict_activity_list_data_scope` | 115 / 149 / 150 改自定义部门范围 |
-> | `0004_036_reorder_rename_center_menus` | 各「中心」菜单重排与改名 |
-> | `0004_039` / `0004_040`（notification sample menu） | 新增菜单并授予 SAO Admin |
-> | `0004_043_checker_data_scope_all` | 142 改回 ALL |
-> | `0004_044_align_role_menu_uat_to_prod` | 对齐 UAT 与 PROD 的绑定 |
-> | `0004_045_backfill_dept_custom_scope` | 回填 115 / 149 / 150 的用户级 scope |
-> | `0004_046_unbind_supervisor_group_review_menu` | 解绑 Supervisor 的社团审核菜单 |
-> | `0004_047_head_data_scope_custom` | 148 由 ALL 收窄为本院系 |
-> | `0004_048_fix_coordinator_training_record_query_permission` | 修 Coordinator 培训记录查询权限 |
-> | `0004_052_add_activity_report_submission` | 新版活动报告相关菜单 |
-> | `0004_054_add_manage_activity_reports_menu` | 组织者中心（父菜单 81）下新增「管理活动报告」菜单 6580，路径 `/organiser/ActivityReportManagement`，沿用既有权限 `activity:report:query`（不新增权限节点）；授予 `Group Leader`（114）与 `SuperAdmin - Dev`（1） |
->
-> **正确用法**：把 §2（按钮权限现状）与 §3（数据范围）当作**机制说明**读，这部分仍然成立；§1 的逐格授权则以目标环境的实时查询为准：
+> - 基線之後的每項授權變更，按日期列於 §1.0。
+> - 基線之後新增或改動、並已按最新授權填寫的選單，在 §1 各表中以「**〔新〕**」或「**〔更新〕**」標示。
+> - 逐格授權請以目標環境的實際查詢為準：
 >
 > ```sql
 > SELECT r.id, r.name, m.id AS menu_id, m.name AS menu_name
 > FROM   SLAS.SYSTEM_ROLE_MENU rm
 > JOIN   SLAS.SYSTEM_ROLE r ON r.id = rm.role_id
 > JOIN   SLAS.SYSTEM_MENU m ON m.id = rm.menu_id
-> WHERE  m.type IN (1,2) AND r.deleted = 0 AND m.deleted = 0
+> WHERE  m.type IN (1,2) AND r.deleted = 0 AND m.deleted = 0 AND rm.deleted = 0
 > ORDER  BY r.id, m.id;
 > ```
 
-## 1. 菜单 × 角色 详细矩阵（三语）/ Menu × Role Detailed Matrix
+## 1. 選單 × 角色 詳細矩陣（三語）/ Menu × Role Detailed Matrix
 
-> 视图说明：纵向 = 每一个菜单节点（仅 `TYPE∈{1,2}`，即目录与菜单页，不含按钮），横向 = 12 个代表性角色。
-> 单元格 `✓` 表示该角色被授权访问该菜单（来自 `SYSTEM_ROLE_MENU`），空白表示未授权。
-> 列头一律采用 DB **`SYSTEM_ROLE.NAME`** 权威名。
-> Vertical = menu nodes (`TYPE∈{1,2}`, directories & pages only). Horizontal = 12 representative roles. `✓` = role bound to menu. Column headers use canonical `SYSTEM_ROLE.NAME`.
+### 1.0 基線之後的授權變更紀錄
 
-**列头说明 / Column legend**（列头使用完整 `SYSTEM_ROLE.NAME` 权威名）
+| 日期 | 變更 | 涉及角色 |
+|---|---|---|
+| 2026-05-15 | 新增 Supervisor 活動審批權限 | Supervisor |
+| 2026-06-14 | **全面重整**角色、選單及角色-選單綁定，清理歷史髒資料 | 全部 |
+| 2026-06-16 | 「管理中心」授予 IRG Secretary 與 VPSLA Secretary | IRG Secretary、VPSLA Secretary |
+| 2026-06-25 | 「通知模板」與「我的社團」設為不在側欄顯示（「我的社團」已於 2026-09-14 恢復，見下） | — |
+| 2026-06-26 | Coordinator、Activity Application Reviewer、Delegate 改為自定義部門資料範圍（見 §3） | 115、149、150 |
+| 2026-06-26 | 各「中心」選單重新排序並改名（例如管理中心的「管理出席」改名「查看出席」） | — |
+| 2026-06-27／28 | 新增「通知樣本」選單並授予 SAO Administrator | SAO Administrator |
+| 2026-06-30 | Checker 資料範圍改回「全部」；UAT 與 PROD 綁定對齊；為自定義部門角色回填使用者範圍；解除 Supervisor 的社團審核選單 | Checker、115、149、150、Supervisor |
+| 2026-07-03 | Head 資料範圍由「全部」收窄為本院系 | Head |
+| 2026-07-09 | 修正 Coordinator 的培訓記錄查詢權限 | Coordinator |
+| 2026-07-25 | 新版活動報告的權限標識 `activity:report:*`（見 §2.2） | Group Leader、Student、Coordinator、Checker、Supervisor、VPSLA Secretary／Member、Activity Application Reviewer、Delegate |
+| 2026-08-21 | 主辦中心新增「管理活動報告」選單 | Group Leader、SuperAdmin - Dev |
+| 2026-09-14 | 「我的社團」恢復在側欄顯示 | Student、Group Leader |
+| 2026-09-19 | 新增出席變更申請的權限標識 `activity:attendance:change:*`（見 §2.2） | Student、Group Leader、Coordinator、Supervisor、Checker、SuperAdmin - Dev |
+| 2026-09-28 | 新增角色 **Appeal Group Secretary（153）**，選單與 Registration Appeal Endorser（139）相同；角色 142 由「Activity Application Checker」改名為 **Checker**（活動申請與學生組織註冊共用） | 153、142 |
+| 2026-09-29 | 管理中心新增「組織類別申請期」「續期驗證碼」「評審小組成員」選單；「審批人管理」改掛管理中心並補上權限標識（見 §1.7、§2.2） | SAO Administrator、SuperAdmin - Dev、Registration Administrator、Appeal Group Secretary |
+| 2026-10-03 | Appeal Group Secretary（153）加入流程引擎候選組，申訴的秘書檢查與秘書審閱待辦由此可正確派發及通知 | 153 |
+| 2026-10-08 | 「續期驗證碼」頁新增「設定組織狀態」權限（停用、恢復、解散） | SAO Administrator、SuperAdmin - Dev |
 
-| 列头 / Column | code | ID |
+> 視圖說明：縱向 = 每一個選單節點（僅目錄與選單頁，不含按鈕），橫向 = 12 個代表性角色。
+> 儲存格 `✓` 表示該角色獲授權進入該選單，空白表示未授權。列頭一律採用系統角色正式名稱。
+> Vertical = menu nodes (directories & pages only). Horizontal = 12 representative roles. `✓` = role bound to menu. Column headers use canonical role names.
+
+**列頭說明 / Column legend**
+
+| 列頭 / Column | 角色代碼 / code | ID |
 |---|---|---:|
 | Staff | `staff` | 4 |
 | Student | `student` | 112 |
@@ -60,44 +69,45 @@
 | System Admin (OCIO) | `ocio_admin` | 121 |
 | SuperAdmin - Dev | `super_admin` | 1 |
 
-> 注 / Note：
-> - **三个 Dean 类角色务必区分**（以下为对库实测值）：
+> 註 / Note：
+> - **三個 Dean 類角色務必區分**：
 >
->   | ID | `SYSTEM_ROLE.NAME` | `CODE` |
+>   | ID | 正式名稱 | 代碼 |
 >   |---:|---|---|
 >   | 129 | Dean of Students | `do_student_admin` |
 >   | 130 | **Dean** | `doc_unit` |
 >   | 149 | **Activity Application Reviewer** | `act_app_reviewer` |
 >
->   旧版本文档把 **149 标为「Dean」**（`code=dean`）——**这是错的**。149 的正式名称是 `Activity Application Reviewer`，是活动发布 Non-NSOA 分支的审批候选角色；真正叫 `Dean` 的是 **130**。
-> - 「Supervisor」(id=116, `code=supervisor`) 是活动审批 ③ 步骤的多人并行审核角色,Java 代码与 BPMN 均以此命名。
-> - 自 `sql/patch/0004_021_add_ori_app_period_menu.sql`（2026-05-14/15）起，`Coordinator`（115）会继承 149 当时生效的菜单绑定，用于补齐 To-do / Review / incident query 等流程入口。**此后 `0004_027` 全量重建过绑定，该继承关系是否仍然成立需实测。**
+>   舊版本文件曾把 149 標為「Dean」，這是錯的。149 的正式名稱是 `Activity Application Reviewer`，是活動申請非 NSOA 分支的審批候選角色；真正名為 `Dean` 的是 130。
+> - 「Supervisor」（116）是活動審批中由 Coordinator 指定、多人並行審核的角色；自 2026-09 起亦是學生組織註冊的並行審核角色（見 §1.15）。
+> - 「Checker」（142）原名「Activity Application Checker」，2026-09-28 起改為「Checker」，同時負責活動申請、活動報告、出席變更及學生組織註冊的初審。
+> - 2026-05 起 Coordinator（115）曾按當時 149 的選單補齊「待辦／審核中心／事件查詢」等流程入口；2026-06 全面重整後此繼承關係是否仍完全成立，請以實際查詢為準。
 
 ---
 
 ### 1.1 首页 / Home / 首頁
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 首页 | 首頁 | Home | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### 1.2 仪表盘 / Dashboard / 儀表板
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 仪表盘 | 儀表板 | Dashboard | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 控制台 | └ 控制台 | └ Console | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### 1.3 待办事项 / To-do / 待辦事項
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 待办事项 | 待辦事項 | To-do | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 待办事项 | └ 待辦事項 | └ To-do List | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### 1.4 事件中心 / Incident Center / 事件中心
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 事件中心 | 事件中心 | Incident Center | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 查询突发事件 | └ 查詢突發事件 | └ Query Incidents | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -110,7 +120,7 @@
 
 ### 1.5 主办中心 / Organiser Center / 主辦中心
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 主办中心 | 主辦中心 | Organiser Center | | | | ✓ | | | | | | | ✓ | ✓ |
 | └ 创建活动 | └ 創建活動 | └ Create Activity | | | | ✓ | | | | | | | ✓ | ✓ |
@@ -119,11 +129,12 @@
 | └ 提交活动推广 | └ 提交活動推廣 | └ Submit Activity Promotion | | | | ✓ | | | | | | | ✓ | ✓ |
 | └ 提交事件报告 | └ 提交事件報告 | └ Submit Incident Report | | | | ✓ | | | | | | | ✓ | ✓ |
 | └ 提交活动报告 | └ 提交活動報告 | └ Submit Activity Report | | | | ✓ | | | | | | | ✓ | ✓ |
+| └ 管理活动报告 | └ 管理活動報告 | └ Manage Activity Reports **〔新〕** | | | | ✓ | | | | | | | | ✓ |
 | └ 管理活动发布 | └ 管理活動發佈 | └ Manage Activity Publish | | | | ✓ | | | | | | | | ✓ |
 
 ### 1.6 审核中心 (BPM) / Review Center / 審核中心
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 审核中心 | 審核中心 | Review Center | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 待办总览 | └ 待辦總覽 | └ Todo Overview | | | | | | ✓ | | | ✓ | ✓ | ✓ | ✓ |
@@ -134,7 +145,7 @@
 
 ### 1.7 管理中心 / Admin Oversight Center / 管理中心
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 管理中心 | 管理中心 | Admin Oversight Center | | | | | | | | | ✓ | ✓ | ✓ | ✓ |
 | └ 数据总览 | └ 數據總覽 | └ Data Overview | | | | | | | | | | ✓ | ✓ | ✓ |
@@ -143,15 +154,20 @@
 | └ 查阅活动清单 | └ 查閱活動清單 | └ View Activity List | | | | | | | | | | ✓ | ✓ | ✓ |
 | └ 查阅事件报告 | └ 查閱事件報告 | └ View Incident Reports | | | | | | | | | | ✓ | ✓ | ✓ |
 | └ 新生迎新申请期管理 | └ 新生迎新申請期管理 | └ Orientation Application Period Management | | | | | | | | | | ✓ | | ✓ |
-| └ 管理出席 | └ 管理出席 | └ Manage Attendance | | | | | | | | | ✓ | | | |
+| └ 查看出席 | └ 查看出席 | └ Attendance Records **〔更新〕** | | | | | | | | | ✓ | | | |
 | └ 管理报名 | └ 管理報名 | └ Manage Enrolment | | | | | | | | | | | | |
 | └ 管理推广可见性 | └ 管理推廣可見性 | └ Manage Promotion Visibility | | | | | | | | | | ✓ | | |
 | └ 查阅黑名单 | └ 查閱黑名單 | └ View Blacklist | | | | | | | | | | ✓ | | |
-| └ Reviewer Management | └ Reviewer Management | └ Reviewer Management | | | | | | | | | | | | |
+| └ 审批人管理 | └ 審批人管理 | └ Reviewer Management **〔更新〕**¹ | | | | | | | | | | ✓ | | ✓ |
+| └ 组织类别申请期 | └ 組織類別申請期 | └ Group Type Application Period **〔新〕** | | | | | | | | | | ✓ | | ✓ |
+| └ 续期验证码 | └ 續期驗證碼 | └ Renew Verification Codes **〔新〕** | | | | | | | | | | ✓ | | ✓ |
+| └ 评审小组成员 | └ 評審小組成員 | └ Review Group Members **〔新〕**¹ | | | | | | | | | | ✓ | | ✓ |
+
+> ¹ 表格以外的角色：「審批人管理」另授予 Registration Administrator（122）；「評審小組成員」另授予 Registration Administrator（122）與 Appeal Group Secretary（153）。兩者亦因此可見「管理中心」目錄。詳見 §1.15。
 
 ### 1.8 用户管理 / User Management / 用戶管理
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 用户管理 | 用戶管理 | User Management | | | | | | | | | | ✓ | ✓ | ✓ |
 | └ 账户管理 | └ 帳戶管理 | └ Account Management | | | | | | | | | | | ✓ | ✓ |
@@ -162,7 +178,7 @@
 
 ### 1.9 系统管理 / System Management / 系統管理
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 系统管理 | 系統管理 | System Management | | | | | | | | | | ✓ | ✓ | ✓ |
 | └ 系统设置 | └ 系統設定 | └ System Settings | | | | | | | | | | ✓ | ✓ | ✓ |
@@ -181,10 +197,10 @@
 
 ### 1.10 废弃 / Deprecated / 廢棄
 
-> ⚠️ 这些菜单已被 BPM 工作流取代，但仍绑定在多个角色上，建议清理。废弃角色与菜单不再维护。
+> ⚠️ 這些選單已被流程（BPM）待辦取代，但仍綁定在多個角色上，建議清理。廢棄角色與選單不再維護。
 > Legacy menus replaced by BPM workflow but still bound to roles — cleanup candidates. Deprecated roles are no longer maintained.
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 废弃 | 廢棄 | Deprecated | | ✓ | | | | ✓ | | | ✓ | ✓ | ✓ | ✓ |
 | └ 主办组织审核 | └ 主辦組織審核 | └ Organiser Group Review | | | | | | | | | ✓ | ✓ | ✓ | ✓ |
@@ -198,20 +214,22 @@
 
 ### 1.11 个人中心 / For You / 個人中心
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 个人中心 | 個人中心 | For You | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 通知及提醒 | └ 通知及提醒 | └ Notifications | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| └ 我的社团 | └ 我的社團 | └ My Group | | ✓ | | ✓ | | | | | | | ✓ | ✓ |
+| └ 我的社团 | └ 我的社團 | └ My Group **〔更新〕**² | | ✓ | | ✓ | | | | | | | ✓ | ✓ |
 | └ 我的资料 | └ 我的資料 | └ My Info | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 我的培训状态 | └ 我的培訓狀態 | └ My Training Status | | ✓ | ✓ | ✓ | | | | | | | | ✓ |
 | └ 我的组织 | └ 我的組織 | └ My Organisations | | ✓ | ✓ | ✓ | | | | | | | | ✓ |
 | └ 我的活动 | └ 我的活動 | └ My Activities | | ✓ | ✓ | ✓ | | | | | | | | ✓ |
 | └ 喜欢的活动 | └ 喜歡的活動 | └ Liked Activities | | ✓ | ✓ | ✓ | | | | | | | | ✓ |
 
+> ² 「我的社團」曾於 2026-06 被設為不在側欄顯示，2026-09-14 起恢復顯示（授權角色不變：Student、Group Leader）。學生組織的註冊申請、續期申請均由此頁進入。
+
 ### 1.12 关于 SLAS / About SLAS / 關於 SLAS
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 关于 SLAS | 關於 SLAS | About SLAS | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 联系我们 | └ 聯繫我們 | └ Contact Us | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -223,7 +241,7 @@
 
 ### 1.13 基础设施 / Infrastructure / 基礎設施
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | 基础设施 | 基礎設施 | Infrastructure | | | | | | | | | | ✓ | ✓ | ✓ |
 | └ 代码生成 | └ 程式碼生成 | └ Code Generation | | | | | | | | | | | ✓ | ✓ |
@@ -246,7 +264,7 @@
 
 ### 1.14 BPM 工作流 / BPM Workflow / BPM 工作流
 
-| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Dean | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
+| 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
 |---|---|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | BPM 工作流 | BPM 工作流 | BPM Workflow | | | | | | | | | | | | ✓ |
 | └ 手动部署管理 | └ 手動部署管理 | └ Manual Deployment | | | | | | | | | | | | ✓ |
@@ -254,133 +272,175 @@
 | └ └ 流程状态跟踪 | └ └ 流程狀態追蹤 | └ └ Process Status Tracking | | | | | | | | | | | | ✓ |
 | └ └ 待办任务 | └ └ 待辦任務 | └ └ Pending Tasks | | | | | | | | | | | | ✓ |
 
+
 ---
 
-### 1.15 速读 / Quick Reading
+### 1.15 學生組織註冊／續期／申訴流程角色（2026-09 修訂版）
 
-- 共通菜单（首页 / 个人中心 / 关于 SLAS）所有 12 个角色都能访问。
-- **Group Leader (`sg_leader`)** 是唯一进入「主办中心」的真正业务角色 — 12 列里只有 Group Leader + System Admin (OCIO) + SuperAdmin - Dev 三个有 ✓。
-- 「废弃」一栏在 11 个角色上仍然有 ✓（包括 Student 看到「事件报告审核」），是 dead-code 包袱。
-- **Coordinator (`coordinator`)** 自 `0004_021_add_ori_app_period_menu.sql` 起继承 `Dean` 的当前生效菜单集，因此现在也能看到 To-do / Review Center / incident query / incident detail 等流程入口；这是一种 SQL 侧授权补丁，不是 BPM 角色重命名。
-- **Dean (id=149)**（活动发布工作流中的 Dean，与 id=129 `Dean of Students` **不同角色**）在这张表里看起来很"窄"：除了通用菜单外，只在 待办 / 事件中心 / 审核中心 见到 ✓ — 因为它是 BPM 流程角色，真正的"批准"动作发生在 BPM 任务节点（candidate-group 绑定），不依赖菜单可见性。
-- **System Admin (OCIO)** ≈ **SuperAdmin - Dev**：除 BPM 工作流引擎管理 + 部分系统配置（OAuth/字典/邮件）外几乎相同。
+> 學生組織流程的處理權主要由流程指派決定（誰收到待辦就由誰處理），選單只決定能否進入相關管理頁。下表按 2026-09-28 修訂後的流程整理；續期申請沿用註冊流程。
+
+**註冊（含續期）**
+
+| 順序 | 環節 | 處理角色（正式名稱，ID） | 功能別名 | 說明 |
+|---:|---|---|---|---|
+| ① | 秘書檢查 | Registration Administrator（122） | Review Group Secretary／評審小組秘書 | 通過時須指定一名或多名 Checker 及 Supervisor；亦可退回申請人 |
+| ② | 初審 | Checker（142） | — | 由秘書指定，可多人並行；全部通過才進入下一步，任何一人退回即結束本輪 |
+| ③ | 活動指導審核 | Supervisor（116） | 活動指導 | 由秘書指定，可多人並行，規則同上。**取代舊流程的 Registration Referrer（132）** |
+| ④ | 設定傳閱期 | Registration Administrator（122） | 評審小組秘書 | — |
+| ⑤ | 評審意見 | Registration Reviewer（123） | 評審小組成員 | 傳閱期內提交意見；秘書可發回重新收集（另起一輪） |
+| ⑥ | 秘書審閱 | Registration Administrator（122） | 評審小組秘書 | 草擬批准條件、跟進事項或拒絕／退回理由；可補充秘書意見 |
+| ⑦ | 主席決定 | Registration Endorser（138） | Review Group Chairperson／評審小組主席 | 秘書提交後主席待辦才解鎖；可退回秘書或退回申請人 |
+| ⑧ | 最終審批 | Registration Approver（124）或 Registration Approver Delegate（134） | DSA／ADSA | 兩者決定權相同，任一人處理即可；可批准、拒絕或退回主席 |
+| ⑨ | 主席覆議 | Registration Endorser（138） | 評審小組主席 | 僅在最終審批退回主席時出現 |
+
+**申訴**
+
+| 順序 | 環節 | 處理角色（正式名稱，ID） | 功能別名 | 說明 |
+|---:|---|---|---|---|
+| ① | 秘書檢查 | **Appeal Group Secretary（153）〔新〕** | 申訴小組秘書 | 通過時設定傳閱期 |
+| ② | 評審意見 | Registration Appeal Reviewer（125） | 申訴小組成員 | — |
+| ③ | 秘書審閱 | Appeal Group Secretary（153） | 申訴小組秘書 | 原由 Registration Appeal Endorser（139）兼任，2026-09-28 起移交 153 |
+| ④ | 主席決定 | Registration Appeal Endorser（139） | Appeal Group Chairperson／申訴小組主席 | — |
+| ⑤ | 最終審批 | Registration Appeal Approver（126）或角色 135 | DSA／ADSA | 兩者決定權相同；可批准或拒絕，退回時只可退回主席（不可直接退回申請人） |
+| ⑥ | 主席覆議 | Registration Appeal Endorser（139） | 申訴小組主席 | — |
+
+**管理頁授權**
+
+| 選單 | 權限標識 | 授權角色 |
+|---|---|---|
+| 管理中心 > 審批人管理（更換未完成的 Checker／Supervisor 等） | `stugroup:reviewer-management:manage` | SAO Administrator、Registration Administrator（122）、SuperAdmin - Dev |
+| 管理中心 > 評審小組成員（維護評審小組／申訴小組成員） | `stugroup:review-group:manage` | SAO Administrator、Registration Administrator（122）、Appeal Group Secretary（153）、SuperAdmin - Dev |
+| 管理中心 > 續期驗證碼（簽發／撤銷驗證碼） | `stugroup:renew-code:manage` | SAO Administrator、SuperAdmin - Dev |
+| 同上頁：設定組織狀態（停用、恢復、解散） | `stugroup:group-standing:update` | SAO Administrator、SuperAdmin - Dev |
+| 管理中心 > 組織類別申請期（每個組織類別的新註冊申請起訖日） | `stugroup:group-type:query／create／update／delete` | SAO Administrator、SuperAdmin - Dev |
+| 個人中心 > 我的社團（提交註冊、續期申請） | — | Student、Group Leader |
+
+> 註：
+> - **角色 135 的名稱與代碼待統一**：系統中 135 的正式名稱為「Registration Appeal Administrator」（代碼 `sg_app_admin`），流程設計文件則稱之為「Appeal Approver Delegate」（代碼 `sg_app_approver_secretary`）。流程按角色 **ID 135** 指派最終審批，所以功能不受影響；但在「角色管理」中按名稱或代碼查找時請留意。
+> - Registration Referrer（132）與 Registration Checker（136）只用於修訂前已啟動、仍按舊版流程運行的個案。
+> - 組織類別申請期只限制**新註冊**及其退回後的重新提交；續期申請不受此限。
+
+---
+
+### 1.16 速讀 / Quick Reading
+
+- 共通選單（首頁／個人中心／關於 SLAS）所有 12 個角色都能進入。
+- **Group Leader（`sg_leader`）** 是唯一進入「主辦中心」的真正業務角色——12 列中只有 Group Leader、System Admin (OCIO) 與 SuperAdmin - Dev 有 ✓。
+- 「廢棄」一欄的舊審核選單仍綁定在多個角色上（包括 Student 可見「事件報告審核」），屬待清理項目。
+- **Activity Application Reviewer（149）** 在表中看起來很「窄」：除通用選單外，只在待辦／事件中心／審核中心見到 ✓——因為它是流程角色，真正的批准動作發生在流程待辦，與選單可見性無關。
+- **System Admin (OCIO)** 與 **SuperAdmin - Dev** 大致相同，差別在流程引擎管理及部分系統配置（OAuth／字典／郵件）。
+- 2026-09 起，學生組織相關的管理頁（審批人管理、評審小組成員、續期驗證碼、組織類別申請期）集中在「管理中心」，主要由 SAO Administrator 使用；評審小組秘書（122）與申訴小組秘書（153）只獲其職責所需的頁面。
 - All 12 roles share the common menus (Home / For You / About).
-- **Group Leader (`sg_leader`) is the sole real user of the Organiser Center** — only 3 of 12 columns show ✓.
-- The "Deprecated" group still shows ✓ on 11 roles incl. Student — clear cleanup target.
-- **Dean (id=149)** is the activity-publish workflow Dean, **not** `Dean of Students` (id=129) — its narrow row reflects BPM-task-driven approval rather than menu visibility.
+- **Group Leader (`sg_leader`) is the sole real business user of the Organiser Center.**
+- **Activity Application Reviewer (149)** has a narrow row because approval happens through workflow tasks, not menu visibility.
+- Since 2026-09 the student-organisation admin pages (Reviewer Management, Review Group Members, Renew Verification Codes, Group Type Application Period) live under the Admin Oversight Center.
 
 ---
 
-## 2. 按钮权限 / Button-level RBAC 注解状态
+## 2. 操作權限（按鈕層級）
 
-> §1 矩阵只覆盖 `TYPE∈{1,2}` 的目录与菜单页。`TYPE=3` 的"按钮权限"（即后端 `@PreAuthorize("@ss.hasPermission('xxx')")` 校验）不在表内。
-> §1 only covers menu directories/pages (`TYPE∈{1,2}`). Button-level permissions (`TYPE=3`) enforced by backend `@PreAuthorize` annotations are listed here.
+> §1 只涵蓋目錄與選單頁。頁面內的個別操作由「權限標識」控制（例如 `activity:report:submit`），可在「選單管理」中查看、在「角色管理」中分配。本節列出與活動、出席及學生組織流程相關的現行設定。
 
-### 2.1 P2 审批流相关按钮权限的现状
+### 2.1 審批類操作：不以權限標識把關，改按流程指派核對
 
-自 2026-05-15 起，多处 P2 审批流接口的 RBAC 注解被**移除**，权限校验下沉到 service 层（任务 assignee / 候选组校验）。这是为了避免 UAT/PROD 部署后因 menu seed 数据未同步导致 403 阻断流程。
+以下操作**不檢查權限標識**；系統在處理時核對「目前使用者是否為該待辦的處理人或候選人」：
 
-| Endpoint | Permission 字符串 | RBAC 注解状态 | 业务层兜底校验 | 改动 commit |
-|---|---|---|---|---|
-| `POST /activity/approval/supervisor/approve` | `activity:approval:supervisor-approve` | **已移除** | `validateTaskAndUser` 校验当前用户是该 BPM task 的 assignee/candidate | `aaff128ff` (2026-05-15) |
-| `POST /activity/ori-app-period/create` | `activity:ori-app-period:create` | **已移除** | （无） | `6213a252d` (2026-05-15) |
-| `PUT /activity/ori-app-period/update` | `activity:ori-app-period:update` | **已移除** | （无） | `6213a252d` |
-| `DELETE /activity/ori-app-period/delete` | `activity:ori-app-period:delete` | **已移除** | （无） | `6213a252d` |
-| `POST /activity/role-delegate/create` | `activity:role-delegate:create` | **已移除** | （无） | `6213a252d` |
-| `PUT /activity/role-delegate/update` | `activity:role-delegate:update` | **已移除** | （无） | `6213a252d` |
-| `DELETE /activity/role-delegate/delete` | `activity:role-delegate:delete` | **已移除** | （无） | `6213a252d` |
-| `POST /activity/unit-coordinator/create` | `activity:unit-coordinator:create` | **已移除** | （无） | `6213a252d` |
-| `PUT /activity/unit-coordinator/update` | `activity:unit-coordinator:update` | **已移除** | （无） | `6213a252d` |
-| `DELETE /activity/unit-coordinator/delete` | `activity:unit-coordinator:delete` | **已移除** | （无） | `6213a252d` |
-
-> Menu 层仍可在管理后台为相关角色配置可见性（控制 UI 是否显示入口）；但**接口层不再做 RBAC 闸门**——任何已登录用户调到 `/ori-app-period/create` 之类接口都会被后端接受，需要靠 menu 侧不暴露入口来事实上限制访问。
-> Background：commit `ae6aff405` (2026-04-24, P2 大版本) 一次性新增 21 个 `@PreAuthorize` 注解，但没有配套的 menu seed SQL；导致 UAT 上 `supervisor-approve` 等接口直接 403。修复方式是移除注解，而不是补 14 角色的菜单授权数据。
-
-### 2.2 仍保留 `@PreAuthorize` 的关键审批接口
-
-仅作参考，下列接口**仍**做 RBAC 校验（截至 2026-05-18，p2 分支）：
-
-| Endpoint | Permission | 备注 |
+| 範圍 | 操作 | 說明 |
 |---|---|---|
-| `POST /activity/approval/irg/select-group` | `activity:approval:irg-select-group` | |
-| `POST /activity/approval/irg/vote` | `activity:approval:irg-vote` | |
-| `POST /activity/approval/irg/review-summary` | `activity:approval:irg-review-summary` | |
-| `POST /activity/approval/vp/select-group` | `activity:approval:vp-select-group` | |
-| `POST /activity/approval/vp/vote` | `activity:approval:vp-vote` | |
-| `POST /activity/approval/vp/check-consensus` | `activity:approval:vp-check-consensus` | |
-| `POST /activity/approval/vp/secretary-decision` | `activity:approval:vp-secretary-decision` | |
-| `POST /activity/approval/chair/decision` | `activity:approval:chair-decision` | |
-| `GET /activity/approval/query` 系列 | `activity:approval:query` | |
-| `POST /activity/approval/ai-summary` | `activity:approval:ai-summary` | |
+| 活動申請審批 | Supervisor 審核、IRG／VPSLA 各環節（分組、評審、摘要、共識檢查、秘書決定）、主席決定、嘉賓審批、Dean 綜合審批 | 能否處理取決於流程指派，與角色是否勾選相關權限無關 |
+| 活動申請審批（唯讀） | 查看審批摘要、投票記錄、AI 摘要 | 持有 `activity:approval:query` 或 `activity:approval:ai-summary` 者可查看全部；其餘使用者只可查看自己正在處理或曾經參與的流程 |
+| 系統設定 | 新生迎新申請期、角色代理、單位 Coordinator 的新增／修改／刪除 | 只要能進入頁面即可操作；實際存取依靠「不開放選單」來限制 |
 
-> ⚠️ 这些接口若部署到 UAT/PROD 且未补对应 menu seed，会以同样方式 403。部署前请用 `tools/perm-diagnostic/perm-diff.sh diff 146 uat 'activity:approval'` 比对。
+> 背景：2026-04 曾為審批類操作一次性加上權限檢查，但相關角色的權限資料未同步到 UAT／PROD，導致流程被拒絕存取而中斷。因此改為按流程指派核對，不再依賴權限資料。
+
+### 2.2 受權限標識控制的操作（現行）
+
+| 權限標識 | 用途 | 授權角色 |
+|---|---|---|
+| `activity:report:query` | 查看活動報告（亦是「主辦中心 > 管理活動報告」選單的進入條件） | Group Leader、Student、Coordinator、Checker、Supervisor、VPSLA Secretary、VPSLA Member、Activity Application Reviewer、Delegate |
+| `activity:report:create`／`update` | 建立、修改活動報告 | Group Leader |
+| `activity:report:submit` | 提交活動報告（送 OC 聯署） | Group Leader、Student |
+| `activity:report:approve` | 處理活動報告審批待辦 | Coordinator、Checker、Supervisor、VPSLA Secretary、VPSLA Member、Activity Application Reviewer、Delegate |
+| `activity:attendance:change:query`／`create`／`submit` **〔新〕** | 查看、建立、提交出席變更申請；其中 `submit` 用於撤回已提交的申請 | Student、Group Leader、Coordinator、Supervisor、SuperAdmin - Dev |
+| `activity:attendance:change:approve` **〔新〕** | 出席變更審批：Checker 檢查、Supervisor 推薦 | Checker、Supervisor、SuperAdmin - Dev（Checker 另獲 `query`） |
+| `stugroup:reviewer-management:manage` **〔新〕** | 審批人管理 | 見 §1.15 |
+| `stugroup:review-group:manage` **〔新〕** | 評審小組／申訴小組成員維護 | 見 §1.15 |
+| `stugroup:renew-code:manage` **〔新〕** | 簽發、撤銷續期驗證碼 | SAO Administrator、SuperAdmin - Dev |
+| `stugroup:group-standing:update` **〔新〕** | 設定組織狀態（停用、恢復、解散） | SAO Administrator、SuperAdmin - Dev |
+| `stugroup:group-type:query`／`create`／`update`／`delete` **〔新〕** | 組織類別申請期 | SAO Administrator、SuperAdmin - Dev |
+
+> 註：
+> - 活動報告除權限標識外，系統亦按「是否為該活動的建立人或籌委（OC）成員」核對可否查看及提交；審批則按流程指派核對。
+> - 出席變更申請的**建立、提交與查看**目前只要求已登入，申請資格由系統按業務規則另行核對；`query`／`create` 兩個權限標識主要供選單管理使用。實際以權限標識把關的是「Checker 檢查」「Supervisor 推薦」（`approve`）與「撤回已提交申請」（`submit`）。
+> - 上述權限若部署到新環境時未一併建立權限資料，對應操作會被拒絕存取；部署後請以 §1 的查詢核對。
 
 ---
 
-## 3. 数据范围 / Data Scope（第三个维度）
+## 3. 資料範圍 / Data Scope（第三個維度）
 
-> §1 和 §2 只回答「**能不能进这个页面 / 调这个接口**」。它们回答不了「**进去之后看得见哪些数据**」——这是**独立的第三个维度**，由 `SYSTEM_ROLE.DATA_SCOPE` 与应用层过滤共同决定。同一个菜单，两个角色都有 `✓`，看到的行数可以完全不同。
+> §1 與 §2 只回答「**能不能進這個頁面／做這個操作**」，回答不了「**進去之後看得見哪些資料**」——這是獨立的第三個維度，由角色的「資料範圍」設定與系統的業務過濾共同決定。同一個選單，兩個角色都有 `✓`，看到的筆數可以完全不同。
 
-### 3.1 两条并行的过滤链路
+### 3.1 兩條並行的過濾方式
 
-| 链路 | 机制 | 典型角色 |
+| 方式 | 機制 | 典型角色 |
 |---|---|---|
-| **部门维度**（框架层） | `@DataPermission` + `DeptDataPermissionRule` 按部门 ID 集合过滤 | Coordinator、Dean、Head、Activity Application Reviewer、Delegate |
-| **关系维度**（应用层） | 在 Service 里显式拼 activity-id `IN` 过滤，**fail-closed**（解析不出就返回空页） | Activity Application Checker、EO Venue Reviewer、Group Leader |
+| **部門維度** | 按角色的資料範圍設定，以部門集合過濾 | Coordinator、Dean、Head、Activity Application Reviewer、Delegate |
+| **關係維度** | 按「分派給本人」等業務關係過濾；關係解析不出時一律返回空結果（寧缺勿濫） | Checker、EO Venue Reviewer、Group Leader |
 
-两条链路会**叠加**。这就是为什么走关系维度的角色必须把 `DATA_SCOPE` 设成 `1`（ALL）：否则部门规则会再 AND 一层部门条件，把分派给本人、但不在本人部门下的活动直接过滤掉。`0004_043` 就是为此把 Activity Application Checker（142）从 `2` 改回 `1` 的。
+兩種方式會**疊加**。因此走關係維度的角色，其資料範圍必須設為「全部」：否則部門條件會再收窄一層，把分派給本人、但不屬本人部門的活動過濾掉。2026-06-30 把 Checker（142）改回「全部」正是為此。
 
-### 3.2 `DATA_SCOPE` 取值与 scope 来源
+### 3.2 資料範圍取值與部門來源
 
-| `DATA_SCOPE` | 含义 | 部门集合怎么算 |
+| 資料範圍 | 含義 | 部門集合如何計算 |
 |---:|---|---|
-| `1` | ALL | 部门规则不生效（no-op） |
-| `2` | 自定义部门（DEPT_CUSTOM） | 见下 |
+| `1` | 全部 | 不按部門過濾 |
+| `2` | 自定義部門 | 見下 |
 
-`DATA_SCOPE = 2` 时，部门集合有**两个可能的来源**，这是最容易搞混的地方：
+資料範圍為 `2` 時，部門集合有**兩個可能的來源**，這是最容易混淆的地方：
 
-1. **`SYSTEM_USER_ROLE.SCOPE`（用户级，每人一份）**——JSON 数组，存**根部门 ID**，例如 `[10402,10403]`。`PermissionServiceImpl` 会自动把每个根部门**连同其全部子部门**展开。用于「每人负责不同院系」的角色（115 / 149 / 150）。
-2. **`SYSTEM_ROLE.DATA_SCOPE_DEPT_IDS = '[]'`（角色级留空）**——此时框架回落到 `includeOwnDept` 默认行为，返回**本人所属部门 + 其子部门**。用于「一律只看本院系」的角色（Dean 130、Head 148）。
+1. **使用者級範圍（每人一份）**——在「角色分配」時為該使用者指定的根部門，例如 `[10402,10403]`。系統會自動把每個根部門**連同其全部下級單位**展開。用於「每人負責不同院系」的角色（115／149／150）。
+2. **角色級留空**——此時採用預設行為，返回**本人所屬部門及其下級單位**。用於「一律只看本院系」的角色（Dean 130、Head 148）。
 
-> **坑：`SCOPE` 留空 ≠ 本院系全部。** 若某用户的 `SYSTEM_USER_ROLE.SCOPE` 为空，框架只会加入该用户**自己的部门、不含子部门**，下级单位的数据全部丢失。`0004_045` 就是为存量用户回填 `SCOPE = [本人 dept_id]` 来补回子部门的；`PermissionServiceImpl.assignUserRole` 则为**今后**新分配的 DEPT_CUSTOM 角色自动填入同样的默认值。两者都**只在为空时填**，不覆盖管理员的显式选择。
+> **注意：使用者級範圍留空 ≠ 本院系全部。** 若某使用者的使用者級範圍為空，系統只會加入該使用者**自己的部門、不含下級單位**，下級單位的資料會全部遺漏。2026-06-30 已為存量使用者回填「範圍 = 本人部門」；今後新分配的自定義部門角色亦會自動填入同樣的預設值。兩者都**只在為空時填入**，不會覆蓋管理員的明確選擇。
 >
-> **前置条件**：回填只对**有 `dept_id`** 的用户生效。`SYSTEM_USERS.DEPT_ID` 为 NULL 的用户会被跳过，必须先把部门补对。
+> **前置條件**：回填只對**有所屬部門**的使用者生效。所屬部門為空的使用者會被略過，須先補正部門。
 
-### 3.3 已知角色的数据范围（对库实测）
+### 3.3 已知角色的資料範圍
 
-| ID | 角色 | `DATA_SCOPE` | 实际可见范围 | 依据 |
+| ID | 角色 | 資料範圍 | 實際可見範圍 | 調整日期 |
 |---:|---|:---:|---|---|
-| 115 | Coordinator | 2 | 用户级 `SCOPE` 指定的院系 + 子单位 | `0004_035` / `0004_045` |
+| 115 | Coordinator | 2 | 使用者級範圍指定的院系及下級單位 | 2026-06-26／06-30 |
 | 129 | Dean of Students | 1 | 全部 | — |
-| 130 | Dean | 2（`dept_ids='[]'`） | 本人院系 + 子单位 | `0004_047` 参照对象 |
-| 141 | EO Venue Reviewer | 1 | 全部（再由应用层关系过滤收窄） | `0004_043` |
-| 142 | Activity Application Checker | 1 | 全部（再由应用层收窄为**分派给本人**的活动） | `0004_043` |
-| 148 | Head | 2（`dept_ids='[]'`） | 本人院系 + 子单位 | `0004_047`（此前为 `1`＝全部） |
-| 149 | Activity Application Reviewer | 2 | 用户级 `SCOPE` 指定的院系 + 子单位 | `0004_035` / `0004_045` |
-| 150 | Delegate | 2 | 同上 | `0004_035` / `0004_045` |
+| 130 | Dean | 2（角色級留空） | 本人院系及下級單位 | — |
+| 141 | EO Venue Reviewer | 1 | 全部（再按業務關係收窄） | 2026-06-30 |
+| 142 | Checker | 1 | 全部（再收窄為**分派給本人**的個案） | 2026-06-30 |
+| 148 | Head | 2（角色級留空） | 本人院系及下級單位 | 2026-07-03（此前為「全部」） |
+| 149 | Activity Application Reviewer | 2 | 使用者級範圍指定的院系及下級單位 | 2026-06-26／06-30 |
+| 150 | Delegate | 2 | 同上 | 2026-06-26／06-30 |
+| 153 | Appeal Group Secretary | 1 | 全部（處理權由流程指派決定） | 2026-09-28 |
 
-验证语句：
+驗證語句：
 
 ```sql
--- 角色级
+-- 角色級
 SELECT id, name, code, data_scope, data_scope_dept_ids
 FROM   SLAS.SYSTEM_ROLE WHERE deleted = 0 ORDER BY id;
 
--- 用户级（DEPT_CUSTOM 角色才需要）
+-- 使用者級（自定義部門角色才需要）
 SELECT ur.user_id, ur.role_id, ur.scope, u.dept_id
 FROM   SLAS.SYSTEM_USER_ROLE ur
 JOIN   SLAS.SYSTEM_USERS u ON u.id = ur.user_id
 WHERE  ur.role_id IN (115,149,150);
 ```
 
-### 3.4 排查「某角色看不到 / 看得太多」的顺序
+### 3.4 排查「某角色看不到／看得太多」的順序
 
-1. 菜单进得去吗？→ §1（以实时查询为准）
-2. 接口有没有 `@PreAuthorize`？→ §2
-3. `SYSTEM_ROLE.DATA_SCOPE` 是 1 还是 2？
-4. 若是 2：`SYSTEM_USER_ROLE.SCOPE` 填了吗？该用户的 `SYSTEM_USERS.DEPT_ID` 有值吗？
-5. 该列表是不是走应用层关系过滤（fail-closed）？——这类页面「看到空白」往往不是权限被拒，而是关系解析不出来。
+1. 選單進得去嗎？→ §1（以實際查詢為準）
+2. 操作有沒有權限標識把關？→ §2
+3. 角色的資料範圍是 1 還是 2？
+4. 若是 2：使用者級範圍填了嗎？該使用者有所屬部門嗎？
+5. 該列表是否按業務關係過濾？——這類頁面「看到空白」往往不是權限被拒，而是關係解析不出來。
 
-> 活动列表、事件列表、培训三个模块的数据范围口径仍在演进（例如 Coordinator 按自定义 scope、Supervisor 按督导的活动、SAO 看全部，均**与本人所属部门无关**）。涉及具体业务口径时，请以对应模块的专项文档与最新实现为准，不要只按本节的框架层规则推断。
+> 活動列表、事件列表、培訓三個模組的資料範圍口徑仍在演進（例如 Coordinator 按自定義範圍、Supervisor 按所督導的活動、SAO 看全部，均**與本人所屬部門無關**）。涉及具體業務口徑時，請以對應模組的專項文件與最新實現為準，不要只按本節的框架規則推斷。
 
-— end —
+— 完 —

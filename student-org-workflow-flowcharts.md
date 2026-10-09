@@ -1,7 +1,11 @@
-# 學生組織註冊與申訴流程
+# 學生組織註冊、申訴及續期流程
 
-> 本文檔描述 SLAS 系統中學生組織的註冊審批與申訴審批兩個業務流程。
-> 角色名稱已按 `SLAS_PRO/sql/patch/0004_017_update_approval_role_names.sql` 同步到最新 `SYSTEM_ROLE.NAME` 口徑；為了保持流程圖可讀性，正文仍保留少量功能別名。
+> 本文檔描述 SLAS 系統**現行**的學生組織註冊、申訴及續期（renew）流程，以及提交前的幹事會（Exco）認可、組織類別申請期等配套功能。內容已按 2026-10-08 版本系統核對。
+>
+> - 本文取代 2026-09 以前的舊版流程描述（舊版的「拒絕傳閱子流程」、Admin Checker／Academic Checker 已停用）。
+> - 修訂過程及甲方確認事項見 [revised-workflow-flowcharts.md](./revised-workflow-flowcharts.md)（設計紀錄）。
+> - 操作步驟見 [student-org-end-to-end-demo-guide.md](./student-org-end-to-end-demo-guide.md)。
+> - **舊流程在途案件**：新流程上線前已在審批中的案件，仍按舊流程走完（待辦名稱如「匯總審核」「拒絕通知草擬」等），與本文無關。
 
 ---
 
@@ -9,653 +13,717 @@
 
 ### 1.1 業務目標
 
-- **註冊流程**：對學生組織提交的註冊申請進行多層審批,通過後組別轉為正式狀態。
-- **申訴流程**：對被終局拒絕的學生組織提供再次評審的機會。
+- **註冊流程**：學生組織提交註冊申請，經多層審批，批准後組織正式生效。
+- **申訴流程**：註冊被終局拒絕的學生組織，可申請再次評審。
+- **續期流程**：已註冊組織的新一屆幹事會，憑 SAO 簽發的續期驗證碼提交續期申請；審批步驟與註冊相同（見 §8）。
 
-### 1.2 兩個流程的關係
+### 1.2 流程關係
 
 ```
-[新申請 / 重新提交] → 註冊流程 → 通過? → ACTIVE
-                                  → 退回 → PENDING_RESUBMIT(可重新提交,回到註冊流程)
-                                  → 終局拒絕 → REJECTED_FINAL(只能進入申訴流程)
+[草稿 / 需要修改後重提] → 申請人填妥並保存 → 全體 Exco 認可（§4.3）→ 申請人提交
+  → 註冊流程（須在該組織類別申請期內，§4.1）
+      → 批准 → ACTIVE（已啟用）
+      → 退回申請人 → PENDING_RESUBMIT（需要修改後重提，可修改後重新提交）
+      → 拒絕 → REJECTED_FINAL（註冊被拒絕，只能申訴）
 
-REJECTED_FINAL → 申訴流程 → 通過? → ACTIVE
-                          → 退回 → APPEAL_RESUBMIT(可重新提交申訴)
-                          → 拒絕 → APPEAL_REJECTED(終局)
+REJECTED_FINAL → 申訴流程
+      → 批准 → ACTIVE（已啟用）
+      → 退回補交資料 → APPEAL_RESUBMIT（申訴需修改，補件後重新提交申訴）
+      → 拒絕 → APPEAL_REJECTED（申訴已被拒絕，終局）
+
+已啟用／已停用組織 → SAO 簽發續期驗證碼 → 新一屆申請人發起續期 → 全體 Exco 認可 → 提交
+      → 沿用註冊審批步驟（§8）
 ```
 
-### 1.3 結束狀態總覽
+### 1.3 狀態總覽
 
-| 狀態 | 業務含義 | 學生後續操作 |
-|:-----|:--------|:-----------|
-| `ACTIVE` | 註冊／申訴通過,組別正式生效 | — |
-| `PENDING_RESUBMIT` | 註冊被退回 | 修改後重新提交註冊 |
-| `REJECTED_FINAL` | 註冊被終局拒絕 | 只能發起申訴 |
-| `APPEAL_RESUBMIT` | 申訴被退回（含「有條件批准」） | 修改後重新提交申訴 |
-| `APPEAL_REJECTED` | 申訴被終局拒絕 | 無後續操作 |
+「管理我的組織」頁面顯示的狀態名稱如下：
+
+| 狀態 | 頁面顯示 | 業務含義 | 頁面同時顯示 | 學生後續操作 |
+|:--|:--|:--|:--|:--|
+| `DRAFT` | 草稿 | 新註冊尚未提交（只有申請人看到） | 幹事會認可進度 | 繼續編輯、刪除；取得全體 Exco 認可後提交 |
+| `PENDING` | 註冊審核中 | 註冊審批中 | — | — |
+| `PENDING_RESUBMIT` | 需要修改後重提 | 註冊被退回申請人 | 退回原因、跟進事項（如有） | 修改並重新提交（須重新取得認可） |
+| `REJECTED_FINAL` | 註冊被拒絕 | 註冊被終局拒絕 | 拒絕原因、申訴程序說明 | 申訴 |
+| `APPEAL_PENDING` | 申訴審核中 | 申訴審批中 | — | — |
+| `APPEAL_RESUBMIT` | 申訴需修改 | 申訴資料不全，退回補件 | 須補交的項目 | 重新提交申訴 |
+| `APPEAL_REJECTED` | 申訴已被拒絕 | 申訴被終局拒絕 | 拒絕原因（最終） | 無 |
+| `ACTIVE` | 已啟用 | 註冊／申訴已批准，組織生效 | 批核條款、跟進事項（如有） | 可申請續期 |
+| `INACTIVE` | 已停用 | SAO 將組織轉為非活躍 | — | 仍可申請續期；續期獲批後恢復活躍 |
+| `DISSOLVED` | 已解散 | SAO 解散組織（不可復原） | — | 不能續期，亦不能舉辦新活動 |
+
+續期申請另有獨立狀態，見 §8.4。
 
 ---
 
 ## 2. 角色與職責
 
-### 2.1 註冊流程系統角色
+角色沿用系統英文名稱，不另設中文名稱；中文「初審」「審閱」「決定」等字眼只描述操作。
 
-下表為註冊流程涉及的系統定義角色,與 `SYSTEM_ROLE` 表（`ID`／`CODE`／`NAME`）以及 BPMN `<flowable:candidateParam>` 中的角色 ID 對齊：
+### 2.1 註冊流程角色
 
-| ID  | CODE                            | `SYSTEM_ROLE.NAME`                         | 文中功能別名 | 職責 |
-|----:|:--------------------------------|:-------------------------------------------|:-------------|:-----|
-| 122 | `sg_reg_secretary`              | Registration Administrator                 | Secretary | 初審；指派 Administrative Checker 與 Academic Checker；起草拒絕／退回意見；最終提交確認意見 |
-| 123 | `sg_reg_reviewer`               | Registration Reviewer                      | Registration Reviewer | 提供註冊意見；對起草的拒絕／退回意見並行確認 |
-| 124 | `sg_reg_approver`               | Registration Approver                      | Registration Approver | 最終批准／拒絕／退回決定 |
-| 132 | `sg_reg_checker_academic`       | Registration Referrer                      | Academic Checker | 學術審核（由 Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
-| 134 | `sg_reg_approver_secretary`     | Student Group Registration Approver Secretary | Registration Approver Secretary | 替代終審人,與 Registration Approver 享有相同決定權 |
-| 136 | `sg_reg_checker_administrative` | Registration Checker                       | Admin Checker | 行政審核（由 Secretary 在初審時指派）；摘要退回與最終拒絕／退回時收到通知 |
-| 138 | `sg_reg_summary_reviewer`       | Registration Endorser                      | Registration Summary Reviewer | 審核已收集的註冊意見；對起草的拒絕／退回意見作審核評論 |
+| 角色 ID | 角色名稱 | 職責 |
+|--:|:--|:--|
+| 122 | Review Group Secretary | 初審；指派 Checker 及 Supervisor；Supervisor 全員通過後設定傳閱期；秘書審閱（擬定批核條款／跟進事項／建議拒絕理由，可加入自己的意見）；可退回評審員重啟一輪；維護 Review Group 成員；可在「審批人管理」替換未完成的 Checker／Supervisor |
+| 142 | Checker | 由秘書指派，可多人並行；與活動申請流程共用同一 Checker 角色 |
+| 116 | Supervisor | 由秘書指派，可多人並行 |
+| 123 | Review Group Member | 提供意見及投票（贊成／反對），全體成員並行 |
+| 138 | Review Group Chairperson | 秘書提交後作出決定：提交終審、退回秘書或退回申請人；可修改秘書擬稿 |
+| 124 | Registration Approver | 最終審批：批准、拒絕或退回主席 |
+| 134 | Registration Approver Delegate | 終審代辦人，決定權與 Registration Approver 相同 |
 
-### 2.2 申訴流程系統角色
+> 舊流程的 Admin Checker（136）及 Academic Checker（132）不再參與新案件，只用於處理舊流程在途案件。
 
-下表為申訴流程涉及的系統定義角色,字段對齊規則同 §2.1：
+### 2.2 申訴流程角色
 
-| ID  | CODE                          | `SYSTEM_ROLE.NAME`                            | 文中功能別名 | 職責 |
-|----:|:------------------------------|:----------------------------------------------|:-------------|:-----|
-| 125 | `sg_app_reviewer`             | Registration Appeal Reviewer                  | Appeal Reviewer | 提供申訴意見（並行多人） |
-| 126 | `sg_app_approver`             | Registration Appeal Approver                  | Appeal Approver | 最終批准／拒絕／退回（有條件批准）決定 |
-| 135 | `sg_app_approver_secretary`*  | Student Group Appeal Approver Secretary       | Appeal Approver Secretary | 替代終審人,與 Appeal Approver 享有相同決定權 |
-| 139 | `sg_app_summary_reviewer`     | Registration Appeal Endorser                  | Appeal Summary Reviewer | 審核已收集的申訴意見；可提交至最終,或退回（結束流程） |
+| 角色 ID | 角色名稱 | 職責 |
+|--:|:--|:--|
+| 153 | Appeal Group Secretary | 申訴初審（資料齊全則設定傳閱期並開始傳閱，不齊全則退回補交資料）；秘書審閱；可退回評審員重啟一輪；維護 Appeal Group 成員 |
+| 125 | Appeal Group Member | 提供申訴意見及投票，全體成員並行 |
+| 139 | Appeal Group Chairperson | 秘書提交後作出決定：提交終審或退回秘書（**不可**退回申請人） |
+| 126 | Appeal Approver | 最終審批：批准、拒絕或退回主席（**不可**退回申請人） |
+| 135 | Appeal Approver Delegate | 終審代辦人，決定權與 Appeal Approver 相同 |
 
-> **流程外參與者**：Appeal Initiator（學生）—— 發起申訴；在 `APPEAL_RESUBMIT` 狀態時重新提交申訴。
->
-> **角色 135 的資料口徑待核對**：此表沿用申訴審批秘書的設計 `CODE=sg_app_approver_secretary`；`SLAS_PRO/sql/patch/0004_027_sync_role_menu_permissions.sql` 對同一角色 ID 寫入 `sg_app_admin`，而 `sql/patch/update_role_student_group_registration.sql` 使用前者。請以部署環境的 `SYSTEM_ROLE` 實際資料核對 `CODE`。當前 BPMN 按角色 **ID 135** 指派最終審批任務，不能單憑本表推定環境中的角色代碼。
->
-> **本文簡稱規則**：為保持流程圖與步驟詳述的可讀性,後續章節在不致歧義時使用功能別名（例如 `Registration Administrator` 簡作 `Secretary`；`Registration Checker` 簡作 `Admin Checker`；`Registration Referrer` 簡作 `Academic Checker`；`Registration Endorser` 簡作 `Registration Summary Reviewer`；`Registration Appeal Endorser` 簡作 `Appeal Summary Reviewer`）。
+### 2.3 流程外參與者
 
-### 2.3 多人並行 / 候選組規則
+| 參與者 | 職責 |
+|:--|:--|
+| 申請人（學生） | 填寫及提交註冊／續期申請；本身必定是 Exco 成員，同樣須認可；退回後修改並重新提交；發起及重新提交申訴。只有申請人可修改、提交、重新提交或申訴 |
+| Exco（學生） | 申請表所列的全體幹事會成員；提交前查看申請並認可，不能修改（§4.3） |
+| SAO Admin | 設定組織類別申請期；簽發／撤銷續期驗證碼；更改組織狀態（轉為非活躍、恢復活躍、解散） |
 
-| 任務 | 規則 |
-|:----|:----|
-| 意見收集（註冊 ④ / 申訴 ①） | 評審組成員並行提交意見;達到截止時間時系統自動將未提交意見標記為超時 |
-| 拒絕／退回意見確認（註冊 ⑧） | 評審組成員並行確認;達到截止時間時系統自動將未提交意見視為通過 |
-| 最終審批 | Registration Approver 與 Registration Approver Secretary（申訴流程：Appeal Approver 與 Appeal Approver Secretary）享有相同決定權,任一者可作出決定 |
+### 2.4 多人並行規則
+
+| 環節 | 規則 |
+|:--|:--|
+| Checker 審核、Supervisor 審核 | 各自多人並行；**全員通過**才進入下一步；**任一人退回申請人**即結束本次流程，其餘未完成的同節點待辦自動取消，已提交的意見保留 |
+| 意見收集 | 該輪開始時 Review Group／Appeal Group 的全體成員並行；全員提交或到達截止時間後彙總 |
+| 秘書、主席 | 公共角色，角色內任何一人處理即可 |
+| 最終審批 | Approver 與 Approver Delegate 任一人可作出決定 |
 
 ---
 
 ## 3. 圖例
 
-本節定義流程圖統一規範,兩份審批流程文檔共用。
+| 形狀 | 含義 |
+|:--|:--|
+| 矩形 | 人工任務（待辦） |
+| 平行四邊形 `auto:` | 系統自動執行 |
+| 菱形 | 判斷分流 |
+| 圓角 | 起點／終點 |
 
-### 3.1 節點形狀
+| 線條 | 含義 |
+|:--|:--|
+| 實線 | 正向流程 |
+| 虛線 | 計時器（提醒／截止）、流程內退回、結束流程的退回 |
 
-| 形狀 | Mermaid 語法 | 含義 |
-|:-----|:-------------|:-----|
-| 矩形 | `["Name"]` | **人工任務** — 需要審批人手動操作 |
-| 平行四邊形 | `[/"auto: Name"/]` | **系統任務** — 自動執行,無需用戶操作 |
-| 菱形 | `{Question?}` | **判斷網關** — 根據條件分流,文字以問號結尾 |
-| 圓角 | `(["Name"])` | **流程起點／終點** 或 並行 Fork/Join |
+步驟編號：
 
-### 3.2 連線類型
+| 流程 | 編號 | 待辦名稱（系統顯示） | 處理角色 |
+|:--|:--:|:--|:--|
+| 註冊 | ① | Review Group Secretary 初審 | Review Group Secretary |
+|  | ② | Checker 審核 | Checker（多人並行） |
+|  | ③ | Supervisor 審核 | Supervisor（多人並行） |
+|  | ④ | 設定傳閱期 | Review Group Secretary |
+|  | ⑤ | 收集意見 | Review Group Member（並行） |
+|  | ⑥ | Review Group Secretary 審閱 | Review Group Secretary |
+|  | ⑦ | Review Group Chairperson 決定／重新決定 | Review Group Chairperson |
+|  | ⑧ | 最終審批 | Registration Approver／Delegate |
+| 申訴 | ① | Appeal Group Secretary 初審 | Appeal Group Secretary |
+|  | ② | 多人意見收集 | Appeal Group Member（並行） |
+|  | ③ | Appeal Group Secretary 審閱 | Appeal Group Secretary |
+|  | ④ | Appeal Group Chairperson 決定／重新決定 | Appeal Group Chairperson |
+|  | ⑤ | 最終審批 | Appeal Approver／Delegate |
 
-| 樣式 | Mermaid 語法 | 含義 |
-|:-----|:-------------|:-----|
-| 實線箭頭 | `-->` | 正向順序流（happy path） |
-| 虛線箭頭 | `-.->` | 計時器觸發（超時／提醒）、退回循環、跨分支依賴 |
-
-### 3.3 節點標籤格式
-
-| 類型 | 格式 | 範例 |
-|:-----|:-----|:-----|
-| 人工任務 | `<編號> <步驟名><br/>(角色名)` | `① Secretary 初審<br/>(Secretary)` |
-| 系統任務 | `auto: <行為描述>` | `auto: 彙總意見` |
-| 判斷網關 | 以問號結尾的問句 | `{Secretary 是否通過?}` |
-| 結束點 | `End: <狀態><br/>(<業務含義>)` | `End: ACTIVE<br/>(註冊通過)` |
-
-### 3.4 步驟編號
-
-帶圈數字（①、②、…）標註單個流程內人工任務的執行順序。系統任務不參與編號。
-
-| 流程 | 編號 | 步驟 | 角色 |
-|:-----|:----:|:-----|:-----|
-| 註冊 | ① | Secretary 初審 | Secretary |
-|  | ② | Admin 審核 | Admin Checker |
-|  | ③ | Academic 審核 | Academic Checker |
-|  | ④ | 意見收集 | Registration Reviewer（並行） |
-|  | ⑤ | 摘要審核 | Registration Summary Reviewer |
-|  | ⑥ | 最終審批 | Registration Approver |
-| 註冊<br/>（拒絕子流程） | ⑦ | 起草綜合意見 | Secretary |
-|  | ⑧ | 評審員確認意見 | Registration Reviewer（並行） |
-|  | ⑨ | 審核草擬意見 | Registration Summary Reviewer |
-|  | ⑩ | 最終提交意見 | Secretary |
-| 申訴 | ① | 意見收集 | Appeal Reviewer（並行） |
-|  | ② | 摘要審核 | Appeal Summary Reviewer |
-|  | ③ | 最終審批 | Appeal Approver |
+> 審批人一律在「待辦事項」的「學生組織」標籤找到待辦，按「辦理」進入。
 
 ---
 
-## 4. 流程圖
+## 4. 提交前的條件
 
-### 4.1 註冊主流程
+### 4.1 組織類別申請期
+
+| 項目 | 規則 |
+|:--|:--|
+| 設定 | SAO Admin 在「管理中心 → 組織類別申請期」為每個組織類別設定一組開始日期及結束日期 |
+| 日期 | 開始及結束日期均包括當天；兩個日期都留空表示不限制；只留空其中一個即取消該端的限制 |
+| 適用 | 只限**提交新註冊**及**重新提交被退回的新註冊**；申請期外提交會提示「本類別申請期已於 YYYY-MM-DD 結束」或「本類別申請期將於 YYYY-MM-DD 開始」 |
+| 不適用 | 保存草稿、Exco 認可、申訴、續期均不受申請期限制 |
+| 列表狀態 | 不限制／開放中／尚未開始／已結束 |
+
+> 申請期結束前未完成全體 Exco 認可，新註冊同樣不能提交。
+
+### 4.2 申請表主要校驗
+
+申請表分六步：開始申請 → 組織資料 → 幹事會 → 年度規劃 → 文件上傳 → 審核。以下為提交（及 Exco 認可）前必須符合的主要規則：
+
+| 項目 | 規則 |
+|:--|:--|
+| 幹事會人數及職位 | 4 至 20 人；主席 1 名、副主席 1 至 2 名（副主席／內務副主席／外務副主席，每種職位各限一人）、司庫 1 名、秘書 1 名；同一學生不可重複；只可選用表格提供的職位 |
+| 幹事會多於 12 人 | 須填寫理據（12 人或以下毋須填寫） |
+| 申請人 | 必須列為幹事會成員；申請人一行預先載入，不能刪除，學號不能修改 |
+| 日期 | 會籍的開始／結束日期及幹事會任期，必須在「註冊期間」之內，且開始不得遲於結束；否則提示「日期須在註冊期間內。」 |
+| 年度活動計劃 | 至少 3 個，且每個活動須填妥 |
+| 組織宗旨 | 只須填寫英文版本 |
+| 新註冊專有 | 須說明「擬成立學生組織之獨特性」；須上傳草擬會章 |
+| 續期專有 | 見 §8.3 |
+
+申請資料未齊全時，Exco 不能認可，申請人亦不能提交；系統會列出未填妥的步驟。
+
+### 4.3 提交前全體 Exco 認可
+
+適用於新註冊、退回後重新提交、續期及續期退回後重新提交；**申訴不設認可**。認可不是審批步驟，不影響 §5 的審批流程。
 
 ```mermaid
 flowchart TD
-    Start(["Start: 註冊已提交"])
+    Edit["申請人填寫並按「保存」<br/>(新註冊草稿／需要修改後重提／續期草稿或已退回)"]
+    Edit --> Complete{申請資料<br/>是否齊全?}
+    Complete -->|"否"| Edit
+    Complete -->|"是"| Notify[/"auto: 通知名單內須認可的 Exco"/]
+    Notify --> Entry["Exco 在「管理我的組織 → 待我認可」<br/>按「查看並認可」(唯讀頁面)"]
+    Entry --> Endorse["勾選個人聲明後按「認可」<br/>(申請人亦須在「審核」步驟認可)"]
+    Endorse --> AllGate{全體 Exco<br/>已認可?}
+    AllGate -->|"否"| Remind[/"auto: 提醒未認可者"/]
+    Remind --> Entry
+    AllGate -->|"是"| NotifyApplicant[/"auto: 通知申請人可提交"/]
+    NotifyApplicant --> Submit["申請人按「提交申請」"]
+    Submit --> Review(["進入審批流程<br/>(§5.1；續期見 §8)"])
+
+    Edit -.->|"保存時內容有改動"| Invalidate[/"auto: 已作出的認可失效<br/>通知受影響 Exco 重新認可"/]
+    Invalidate -.-> Entry
+    Review -.->|"退回申請人"| Reset[/"auto: 清空全部認可並通知"/]
+    Reset -.-> Edit
+
+    style Review fill:#4CAF50,color:#fff
+```
+
+| 項目 | 規則 |
+|:--|:--|
+| 認可人 | 申請表所列全體 Exco；續期為續期申請表所列的新一屆 Exco。申請人必定在名單內，同樣須按「認可」，系統不會自動認可 |
+| 個人聲明 | 按「認可」前須勾選四項個人聲明（遵守法律及大學規例、學生行為守則、履行章程職責、知悉違規後果） |
+| 認可條件 | 申請資料必須齊全；資料未齊全時頁面顯示「申請人尚未填妥申請，待申請填妥後方可認可」 |
+| 內容改動 | 申請人保存任何內容改動後，已作出的認可全部失效，狀態顯示「需重新認可」；保存但內容沒有改動則不影響 |
+| 名單改動 | 新加入的 Exco 須認可；被移除者的認可記錄刪除 |
+| 過時內容 | Exco 開啟頁面後，若申請人再保存了新內容，按「認可」時會提示「申請內容已更新，請先查看最新版本再認可」並重新載入 |
+| Exco 權限 | 只可查看及認可，不能修改、保存、提交、重新提交或申訴 |
+| 提交 | 只有申請人可提交；須全體已認可，且沒有未保存的改動。重複按提交只會提交一次 |
+| 退回 | 申請被退回申請人時，全部認可清空，修改後須重新取得全體認可 |
+| 草稿 | 新註冊草稿存於系統，每名申請人一份，可刪除（相關認可記錄一併刪除）；草稿不產生組織編號、不佔用組織名稱，不會出現在管理後台的組織清單，也不會出現在其他人的組織列表（Exco 只在「待我認可」看到） |
+| 帳號 | 全體 Exco 學號均須能對應系統用戶，否則不能提交 |
+
+---
+
+## 5. 審批流程圖
+
+### 5.1 註冊主流程（續期沿用）
+
+```mermaid
+flowchart TD
+    Start(["Start: 申請已提交<br/>(全體 Exco 已認可；新註冊須在申請期內)"])
+    EndResubmit(["End: PENDING_RESUBMIT<br/>(需要修改後重提；顯示退回原因)"])
+    EndApproved(["End: ACTIVE<br/>(已啟用；顯示批核條款及跟進事項)"])
+    EndRejected(["End: REJECTED_FINAL<br/>(註冊被拒絕；顯示拒絕原因及申訴程序)"])
+
     Start --> SecretaryCheck
 
-    subgraph Phase1["Phase 1: 順序三方審核"]
-        SecretaryCheck["① Secretary 初審<br/>(Secretary)"]
-        SecretaryCheck --> SecretaryGate{Secretary 是否通過?}
-        SecretaryGate -->|"通過"| AdminCheck
-        SecretaryGate -->|"拒絕"| EndResubmit
+    subgraph Phase1["Phase 1: 前段審核"]
+        SecretaryCheck["① 初審<br/>(Review Group Secretary)<br/>指派 Checker(s) 及 Supervisor(s)"]
+        SecretaryCheck --> SecretaryGate{秘書決定?}
+        SecretaryGate -->|"通過並指派審核人"| CheckerReview
+        SecretaryGate -.->|"退回申請人"| EndResubmit
 
-        AdminCheck["② Admin 審核<br/>(Admin Checker)"]
-        AdminCheck --> AdminGate{Admin 是否通過?}
-        AdminGate -->|"通過"| AcademicCheck
-        AdminGate -->|"拒絕"| EndResubmit
+        CheckerReview["② Checker 審核<br/>(Checker, 多人並行)"]
+        CheckerReview --> CheckerGate{"全員通過?"}
+        CheckerGate -->|"全員通過"| SupervisorReview
+        CheckerGate -.->|"任一人退回申請人"| EndResubmit
 
-        AcademicCheck["③ Academic 審核<br/>(Academic Checker)"]
-        AcademicCheck --> AcademicGate{Academic 是否通過?}
-        AcademicGate -->|"通過"| InitOpinion
-        AcademicGate -->|"拒絕"| EndResubmit
+        SupervisorReview["③ Supervisor 審核<br/>(Supervisor, 多人並行)"]
+        SupervisorReview --> SupervisorGate{"全員通過?"}
+        SupervisorGate -->|"全員通過"| SetCirculation
+        SupervisorGate -.->|"任一人退回申請人"| EndResubmit
 
-        EndResubmit(["End: PENDING_RESUBMIT<br/>(學生可重新提交)"])
+        SetCirculation["④ 設定傳閱期<br/>(Review Group Secretary)<br/>預設 5 天，截止前 24 小時提醒"]
     end
 
-    subgraph Phase2["Phase 2: 意見收集"]
-        InitOpinion[/"auto: 初始化意見收集"/]
-        InitOpinion --> CollectOpinions["④ 意見收集<br/>(Registration Reviewer, 並行)"]
+    SetCirculation --> InitOpinion
 
-        CollectOpinions -->|"全部完成"| SummarizeOpinions
-        CollectOpinions -.->|"超時 (中斷型)"| TimeoutHandler[/"auto: 意見超時處理"/]
-        CollectOpinions -.->|"提醒 (非中斷型)"| SendReminder[/"auto: 發送提醒"/]
+    subgraph Phase2["Phase 2: 意見收集"]
+        InitOpinion[/"auto: 開始新一輪意見收集<br/>(以當時 Review Group 名單為準)"/]
+        InitOpinion --> CollectOpinions["⑤ 收集意見<br/>(Review Group Member, 並行)"]
+
+        CollectOpinions -->|"全員提交"| SummarizeOpinions
+        CollectOpinions -.->|"到達截止時間"| TimeoutHandler[/"auto: 未提交者標記為已逾期"/]
+        CollectOpinions -.->|"到達提醒時間"| SendReminder[/"auto: 提醒未提交者"/]
 
         TimeoutHandler --> SummarizeOpinions
         SendReminder --> ReminderEnd(["提醒結束"])
-    end
 
-    subgraph Phase3["Phase 3: 摘要審核"]
         SummarizeOpinions[/"auto: 彙總意見"/]
-        SummarizeOpinions --> SummaryReview["⑤ 摘要審核<br/>(Summary Reviewer)"]
-        SummaryReview --> SummaryGate{摘要決定?}
-        SummaryGate -->|"提交"| FinalApproval
-        SummaryGate -->|"退回"| NotifyReturn[/"auto: 通知退回"/]
     end
 
-    subgraph Phase4["Phase 4: 最終審批"]
-        FinalApproval["⑥ 最終審批<br/>(Registration Approver)"]
+    SummarizeOpinions --> SecretaryReview
+    SummarizeOpinions --> ChairLocked["主席同時收到待辦<br/>(唯讀：可查看全部意見，暫時不能處理)"]
+
+    subgraph Phase3["Phase 3: 秘書審閱"]
+        SecretaryReview["⑥ 秘書審閱<br/>(Review Group Secretary)<br/>擬定批核條款／跟進事項／建議拒絕理由<br/>可加入自己的意見"]
+        SecretaryReview --> SecretaryReviewGate{秘書決定?}
+    end
+
+    SecretaryReviewGate -.->|"退回評審員（重啟一輪）<br/>重新設定傳閱期"| InitOpinion
+    SecretaryReviewGate -->|"提交至 Review Group Chairperson<br/>(解鎖主席待辦)"| ChairDecision
+
+    subgraph Phase4["Phase 4: 主席決定"]
+        ChairDecision["⑦ 主席決定<br/>(Review Group Chairperson)<br/>可修改秘書擬稿"]
+        ChairDecision --> ChairGate{主席決定?}
+    end
+
+    ChairGate -.->|"退回至 Review Group Secretary<br/>(主席待辦恢復唯讀)"| SecretaryReview
+    ChairGate -.->|"退回申請人"| EndResubmit
+    ChairGate -->|"提交終審"| FinalApproval
+
+    subgraph Phase5["Phase 5: 最終審批"]
+        FinalApproval["⑧ 最終審批<br/>(Registration Approver / Delegate)"]
         FinalApproval --> FinalGate{最終決定?}
-        FinalGate -->|"批准"| EndApproved
-        FinalGate -->|"拒絕 / 退回"| RejectionSubProcess
     end
 
-    NotifyReturn --> EndRejected
-
-    RejectionSubProcess["拒絕子流程<br/>(見 §4.2)"]
-    RejectionSubProcess --> EndRejected
-
-    EndApproved(["End: ACTIVE<br/>(註冊通過)"])
-    EndRejected(["End: 流程結束<br/>(見 §6.1 結果對照表)"])
+    FinalGate -->|"批准"| EndApproved
+    FinalGate -->|"拒絕"| EndRejected
+    FinalGate -.->|"退回至 Review Group Chairperson<br/>(主席重新決定，可直接處理)"| ChairDecision
 
     style Start fill:#4CAF50,color:#fff
     style EndApproved fill:#4CAF50,color:#fff
     style EndRejected fill:#f44336,color:#fff
     style EndResubmit fill:#FF9800,color:#fff
     style ReminderEnd fill:#9E9E9E,color:#fff
+    style ChairLocked fill:#9E9E9E,color:#fff
     style Phase1 fill:#E3F2FD,stroke:#1565C0
     style Phase2 fill:#FFF3E0,stroke:#E65100
     style Phase3 fill:#E8F5E9,stroke:#2E7D32
-    style Phase4 fill:#F3E5F5,stroke:#6A1B9A
+    style Phase4 fill:#EDE7F6,stroke:#4527A0
+    style Phase5 fill:#F3E5F5,stroke:#6A1B9A
 ```
 
-> **Phase 2** 中的虛線箭頭代表計時器事件：`超時` 為中斷型（取消並行任務並將未提交意見標記為 `TIMEOUT`）;`提醒` 為非中斷型（僅通知待提交評審員,主流程繼續）。
+> **三條流程內退回路線**（不結束流程，學生毋須重新提交）：⑥ 秘書退回評審員重啟一輪；⑦ 主席退回秘書；⑧ 終審退回主席。
 >
-> `End: 流程結束` 節點的最終狀態取決於觸發原因（摘要退回 / 最終拒絕 / 最終退回）——見 [§6.1 註冊結果對照](#61-註冊結果對照)。
+> **結束流程的退回**：①②③ 及 ⑦ 可「退回申請人」，申請變為「需要修改後重提」。終審**不能**直接退回申請人。
+>
+> **續期**沿用本圖全部步驟，但結果不改變組織的狀態，按 §8 處理；續期被拒絕不能申訴。
 
-### 4.2 註冊拒絕／退回子流程
+### 5.2 註冊重新提交
 
-當 Registration Approver（⑥）選擇 **拒絕** 或 **退回** 時,流程進入此子流程,用以起草、傳閱並定稿一份綜合意見。兩條分支共享同一子流程,最終業務狀態由結束時的「退回類型」決定。
-
-```mermaid
-flowchart TD
-    EntryPoint(["⑥ Registration Approver 選擇<br/>拒絕 / 退回"])
-    EntryPoint --> InitRejection[/"auto: 初始化拒絕審核"/]
-    InitRejection --> DraftOpinion
-
-    DraftOpinion["⑦ 起草綜合意見<br/>(Secretary)"]
-    DraftOpinion --> InitConfirm[/"auto: 初始化評審員確認"/]
-    InitConfirm --> ReviewerConfirm
-
-    ReviewerConfirm["⑧ 評審員確認意見<br/>(Registration Reviewer, 並行)"]
-    ReviewerConfirm -->|"全部確認完成"| SummarizeFeedback
-    ReviewerConfirm -.->|"超時 (中斷型)"| ConfirmTimeout[/"auto: 確認超時處理"/]
-    ReviewerConfirm -.->|"提醒 (非中斷型)"| ConfirmReminder[/"auto: 發送確認提醒"/]
-
-    ConfirmTimeout --> SummarizeFeedback
-    ConfirmReminder --> ConfirmReminderEnd(["提醒結束"])
-
-    SummarizeFeedback[/"auto: 彙總拒絕反饋"/]
-    SummarizeFeedback --> SummaryReview["⑨ 審核草擬意見<br/>(Summary Reviewer)"]
-    SummaryReview --> SecretaryFinalSubmit["⑩ 最終提交意見<br/>(Secretary)"]
-    SecretaryFinalSubmit --> EndNotify[/"auto: 派發最終通知"/]
-    EndNotify --> TypeGate
-
-    TypeGate{退回類型?}
-    TypeGate -->|"退回 (return)"| EndResubmit(["End: PENDING_RESUBMIT<br/>(學生可重新提交)"])
-    TypeGate -->|"拒絕 (reject)"| EndRejected(["End: REJECTED_FINAL<br/>(學生只能申訴)"])
-
-    style EntryPoint fill:#FF9800,color:#fff
-    style EndRejected fill:#f44336,color:#fff
-    style EndResubmit fill:#FF9800,color:#fff
-    style ConfirmReminderEnd fill:#9E9E9E,color:#fff
-```
-
-### 4.3 註冊重新提交
-
-當狀態為 `PENDING_RESUBMIT` 時,學生可修正申請並重新提交。此操作 **啟動全新的註冊流程實例**——原流程已結束,沒有流程內回跳。
+狀態為「需要修改後重提」時，申請人按「修改並重新提交」，修改並保存後重新取得全體 Exco 認可，再提交。提交會**啟動一個全新的註冊流程**，由 ① 初審重新開始。
 
 ```mermaid
 flowchart LR
-    Rejected(["流程已結束：<br/>PENDING_RESUBMIT"])
-    Rejected -->|"學生重新提交"| Cancel[/"auto: 取消舊流程<br/>(如仍在運行)"/]
-    Cancel --> Update[/"auto: 更新組數據<br/>(狀態 → PENDING,<br/>清除拒絕信息)"/]
-    Update --> NewProcess(["啟動新的<br/>註冊流程<br/>(見 §4.1)"])
+    Returned(["PENDING_RESUBMIT<br/>(認可已全部清空)"])
+    Returned -->|"修改並重新提交"| Save["申請人修改並保存"]
+    Save --> Endorse["全體 Exco 重新認可<br/>(§4.3)"]
+    Endorse -->|"申請人提交"| CheckPeriod{申請期<br/>仍開放?}
+    CheckPeriod -->|"否"| Blocked(["不能提交<br/>(提示申請期已結束)"])
+    CheckPeriod -->|"是"| NewProcess(["啟動新的註冊流程<br/>(見 §5.1)"])
 
-    style Rejected fill:#FF9800,color:#fff
+    style Returned fill:#FF9800,color:#fff
+    style Blocked fill:#9E9E9E,color:#fff
     style NewProcess fill:#4CAF50,color:#fff
 ```
 
-### 4.4 申訴主流程
+### 5.3 申訴主流程
 
 ```mermaid
 flowchart TD
-    Start(["Start: 申訴已提交<br/>(前置條件：REJECTED_FINAL)"])
-    Start --> InitOpinion
+    Start(["Start: 申訴已提交<br/>(前置：REJECTED_FINAL)"])
+    EndSupplement(["End: APPEAL_RESUBMIT<br/>(申訴需修改；顯示須補交的項目)"])
+    EndApproved(["End: ACTIVE<br/>(已啟用；顯示批核條款及跟進事項)"])
+    EndRejected(["End: APPEAL_REJECTED<br/>(申訴已被拒絕；終局)"])
+
+    Start --> AppealSecretaryCheck
+
+    subgraph Phase0["Phase 0: 初審"]
+        AppealSecretaryCheck["① 初審<br/>(Appeal Group Secretary)<br/>查看申訴理由及申訴補充文件"]
+        AppealSecretaryCheck --> InitGate{資料是否齊全?}
+    end
+
+    InitGate -.->|"退回補交資料<br/>(填寫須補交的項目)"| EndSupplement
+    InitGate -->|"資料齊全，開始傳閱<br/>(同時設定傳閱期)"| InitOpinion
 
     subgraph Phase1["Phase 1: 意見收集"]
-        InitOpinion[/"auto: 初始化意見收集"/]
-        InitOpinion --> CollectOpinions["① 意見收集<br/>(Appeal Reviewer, 並行)"]
+        InitOpinion[/"auto: 開始新一輪意見收集<br/>(以當時 Appeal Group 名單為準)"/]
+        InitOpinion --> CollectOpinions["② 多人意見收集<br/>(Appeal Group Member, 並行)"]
 
-        CollectOpinions -->|"全部完成"| SummarizeOpinions
-        CollectOpinions -.->|"超時 (中斷型)"| TimeoutHandler[/"auto: 意見超時處理"/]
-        CollectOpinions -.->|"提醒 (非中斷型)"| SendReminder[/"auto: 發送提醒"/]
+        CollectOpinions -->|"全員提交"| SummarizeOpinions
+        CollectOpinions -.->|"到達截止時間"| TimeoutHandler[/"auto: 未提交者標記為已逾期"/]
+        CollectOpinions -.->|"到達提醒時間"| SendReminder[/"auto: 提醒未提交者"/]
 
         TimeoutHandler --> SummarizeOpinions
         SendReminder --> ReminderEnd(["提醒結束"])
-    end
 
-    subgraph Phase2["Phase 2: 摘要審核"]
         SummarizeOpinions[/"auto: 彙總意見"/]
-        SummarizeOpinions --> SummaryReview["② 摘要審核<br/>(Appeal Summary Reviewer)"]
-        SummaryReview --> SummaryDecision{摘要決定?}
-        SummaryDecision -->|"提交"| FinalApproval
-        SummaryDecision -->|"退回"| EndResubmitSummary
     end
 
-    subgraph Phase3["Phase 3: 最終審批"]
-        FinalApproval["③ 最終審批<br/>(Appeal Approver)"]
-        FinalApproval --> FinalDecision{最終決定?}
-        FinalDecision -->|"批准"| EndApproved
-        FinalDecision -->|"拒絕"| EndRejected
-        FinalDecision -->|"退回"| EndResubmitFinal
+    SummarizeOpinions --> AppealSecretaryReview
+    SummarizeOpinions --> AppealChairLocked["主席同時收到待辦<br/>(唯讀，暫時不能處理)"]
+
+    subgraph Phase2["Phase 2: 秘書審閱"]
+        AppealSecretaryReview["③ 秘書審閱<br/>(Appeal Group Secretary)<br/>擬定批核條款／跟進事項／建議拒絕理由"]
+        AppealSecretaryReview --> SecretaryGate{秘書決定?}
     end
 
-    EndApproved(["End: ACTIVE<br/>(申訴通過)"])
-    EndRejected(["End: APPEAL_REJECTED<br/>(終局拒絕)"])
-    EndResubmitSummary(["End: APPEAL_RESUBMIT<br/>(經摘要退回)"])
-    EndResubmitFinal(["End: APPEAL_RESUBMIT<br/>(經最終退回)"])
+    SecretaryGate -.->|"退回評審員（重啟一輪）"| InitOpinion
+    SecretaryGate -->|"提交至 Appeal Group Chairperson"| AppealChairDecision
+
+    subgraph Phase3["Phase 3: 主席決定"]
+        AppealChairDecision["④ 主席決定<br/>(Appeal Group Chairperson)<br/>可修改秘書擬稿"]
+        AppealChairDecision --> ChairGate{主席決定?}
+    end
+
+    ChairGate -.->|"退回至 Appeal Group Secretary"| AppealSecretaryReview
+    ChairGate -->|"提交終審"| FinalApproval
+
+    subgraph Phase4["Phase 4: 最終審批"]
+        FinalApproval["⑤ 最終審批<br/>(Appeal Approver / Delegate)"]
+        FinalApproval --> FinalGate{最終決定?}
+    end
+
+    FinalGate -->|"批准"| EndApproved
+    FinalGate -->|"拒絕"| EndRejected
+    FinalGate -.->|"退回至 Appeal Group Chairperson"| AppealChairDecision
 
     style Start fill:#2196F3,color:#fff
     style EndApproved fill:#4CAF50,color:#fff
     style EndRejected fill:#f44336,color:#fff
-    style EndResubmitSummary fill:#FF9800,color:#fff
-    style EndResubmitFinal fill:#FF9800,color:#fff
+    style EndSupplement fill:#FF9800,color:#fff
     style ReminderEnd fill:#9E9E9E,color:#fff
+    style AppealChairLocked fill:#9E9E9E,color:#fff
+    style Phase0 fill:#E3F2FD,stroke:#1565C0
     style Phase1 fill:#FFF3E0,stroke:#E65100
     style Phase2 fill:#E8F5E9,stroke:#2E7D32
-    style Phase3 fill:#F3E5F5,stroke:#6A1B9A
+    style Phase3 fill:#EDE7F6,stroke:#4527A0
+    style Phase4 fill:#F3E5F5,stroke:#6A1B9A
 ```
 
-> 申訴流程的「退回」業務上等同於「有條件批准」——學生需根據意見修改後重新提交申訴,而非直接通過。
->
-> **當前操作路徑與 BPMN 定義的差異**：`SLAS_PRO/p2` 的 `ReviewerOpinionController.completeFinal()` 將申訴終審的 `return` 轉為結束當前流程的 `reject` 路徑，再由狀態監聽器根據 `rejectionType=return` 設為 `APPEAL_RESUBMIT`。BPMN 仍保留 `finalAction=return` → `studentResubmitTask` → `summaryReviewTask` 的原流程內回跳路徑；此路徑與當前審批接口的操作行為不同。本圖按當前審批接口及重新提交服務的行為繪製。
+> 申訴有三條流程內退回路線：③ 秘書退回評審員、④ 主席退回秘書、⑤ 終審退回主席。**申訴主席及終審均不能退回申請人**；跟進事項可由組織成立後持續跟進。
 
-### 4.5 申訴重新提交
-
-當狀態為 `APPEAL_RESUBMIT` 時,學生可修改並重新提交。此操作 **啟動全新的申訴流程實例**——原實例已結束。
+### 5.4 申訴補件後重新提交
 
 ```mermaid
 flowchart LR
-    Rejected(["流程已結束：<br/>APPEAL_RESUBMIT"])
-    Rejected -->|"學生重新提交申訴"| Update[/"auto: 更新組數據<br/>(新的申訴理由,<br/>狀態 → APPEAL_PENDING)"/]
-    Update --> NewProcess(["啟動新的<br/>申訴流程<br/>(見 §4.4)"])
+    Supplement(["APPEAL_RESUBMIT<br/>(顯示須補交的項目)"])
+    Supplement -->|"重新提交申訴<br/>(可修改申訴理由、增刪補充文件)"| NewProcess(["啟動新的申訴流程<br/>(見 §5.3)"])
 
-    style Rejected fill:#FF9800,color:#fff
+    style Supplement fill:#FF9800,color:#fff
     style NewProcess fill:#2196F3,color:#fff
 ```
 
----
-
-## 5. 步驟詳述
-
-按 ①–⑩（註冊）與 ①–③（申訴）順序列出所有人工任務及相關業務規則。
-
-### 5.1 註冊主流程步驟
-
-#### 5.1.1 Phase 1：順序三方審核
-
-##### ① Secretary 初審
-
-- **執行人**：Secretary
-- **動作**：初次審核註冊申請;在通過時指派 Admin Checker 與 Academic Checker（後續可在「評審員管理」工具中替換,見 §9）
-- **結果**：
-  - 通過 → 進入 ② Admin 審核
-  - 拒絕 → 流程結束（`PENDING_RESUBMIT`）
-
-##### ② Admin 審核
-
-- **執行人**：由 Secretary 在 ① 中指派的 Admin Checker
-- **動作**：行政審核
-- **結果**：
-  - 通過 → 進入 ③ Academic 審核
-  - 拒絕 → 流程結束（`PENDING_RESUBMIT`）
-
-##### ③ Academic 審核
-
-- **執行人**：由 Secretary 在 ① 中指派的 Academic Checker
-- **動作**：學術審核
-- **結果**：
-  - 通過 → 進入 Phase 2 意見收集
-  - 拒絕 → 流程結束（`PENDING_RESUBMIT`）
-
-> Phase 1 任一步拒絕均直接結束於 `PENDING_RESUBMIT`,不進入拒絕子流程。
-
-#### 5.1.2 Phase 2：意見收集
-
-##### ④ 意見收集（並行）
-
-- **執行人**：所有 Registration Reviewer 成員並行
-- **動作**：每位評審員提交意見
-- **計時器規則**：
-  - **提醒**（非中斷型）：到達提醒時間時,系統通知尚未提交的評審員,主任務繼續運行
-  - **超時**（中斷型）：到達截止時間時,系統取消並行任務,將未提交的意見標記為 `TIMEOUT`,流程繼續到「auto: 彙總意見」
-- **結果**：全部完成（或超時觸發後）→ 進入 Phase 3
-
-#### 5.1.3 Phase 3：摘要審核
-
-##### ⑤ 摘要審核
-
-- **執行人**：Registration Summary Reviewer
-- **動作**：審核已彙總的意見,二選一
-- **結果**：
-  - **提交** → 進入 ⑥ 最終審批
-  - **退回** → 系統自動通知 Admin Checker 與 Academic Checker, 流程結束（`PENDING_RESUBMIT`）
-
-> **選「退回」時意見欄必填**：這條意見**就是**申請人看到的退回理由,留空會被系統擋下。舊版本允許留空,系統會退而去取某位個別評審員的意見顯示給申請人,內容往往與退回決定無關,現已修正。
-
-#### 5.1.4 Phase 4：最終審批
-
-##### ⑥ 最終審批
-
-- **執行人**：Registration Approver（或 Registration Approver Secretary）
-- **動作**：作出 `批准` / `拒絕` / `退回` 決定
-- **結果**：
-  - **批准** → 流程結束（`ACTIVE`）
-  - **拒絕** 或 **退回** → 進入拒絕子流程（見 §5.2）
-
-### 5.2 註冊拒絕／退回子流程步驟
-
-子流程的最終狀態取決於 Registration Approver 在 ⑥ 中選的是「拒絕」還是「退回」：
-
-| Registration Approver 選擇 | 最終狀態 |
-|:------------------|:--------|
-| 退回（return） | `PENDING_RESUBMIT` |
-| 拒絕（reject） | `REJECTED_FINAL` |
-
-##### ⑦ 起草綜合意見
-
-- **執行人**：Secretary
-- **動作**：保存第一版綜合意見;設定兩個傳閱參數（傳閱天數與「截止前提醒」天數,後者必須小於前者）
-- **結果**：進入「auto: 初始化評審員確認」, 系統據此計算確認截止時間與提醒時間,並進入 ⑧
-
-##### ⑧ 評審員確認意見（並行）
-
-- **執行人**：所有 Registration Reviewer 成員並行
-- **動作**：每位提交確認反饋,選擇 `APPROVE` / `SUGGEST` / `NO_COMMENT`
-- **計時器規則**：
-  - **提醒**（非中斷型）：到達提醒時間時,僅通知待提交評審員
-  - **超時**（中斷型）：到達截止時間時,系統將未提交的反饋自動視為 `APPROVE` 並標記為超時
-- **結果**：全部確認完成（或超時觸發後）→ 進入「auto: 彙總拒絕反饋」, 再進入 ⑨
-
-##### ⑨ 審核草擬意見
-
-- **執行人**：Registration Summary Reviewer
-- **動作**：對草擬意見作單次審核評論
-- **結果**：進入 ⑩
-
-> 此處的評論**獨立記錄**,不會覆寫 Secretary 在 ⑦ 起草的綜合意見。⑩ 最終提交意見的畫面預填的一律是 **Secretary 自己的草稿**,而非本步驟審核人的評論。舊版本會把審核人的評論寫進草稿欄位,造成秘書在 ⑩ 看到的是別人的文字,現已修正。
-
-##### ⑩ 最終提交意見
-
-- **執行人**：Secretary
-- **動作**：可修改最終意見,確認並持久化
-- **結果**：系統自動派發最終通知（行動方:申請人、協作者、Admin Checker、Academic Checker;知會方:Registration Approver、Registration Approver Secretary、Registration Summary Reviewer、Registration Secretary、Registration Reviewer）, 流程結束（依退回類型解析為 `PENDING_RESUBMIT` 或 `REJECTED_FINAL`）
-
-### 5.3 申訴流程步驟
-
-##### ① 意見收集（並行）
-
-- **執行人**：所有 Appeal Reviewer 成員並行
-- **動作**：每位評審員提交申訴意見
-- **計時器規則**：與註冊 ④ 相同（提醒 + 超時）
-- **結果**：全部完成（或超時觸發後）→ 進入 ②
-
-##### ② 摘要審核
-
-- **執行人**：Appeal Summary Reviewer
-- **動作**：審核已彙總的意見,二選一
-- **結果**：
-  - **提交** → 進入 ③ 最終審批
-  - **退回** → 流程結束（`APPEAL_RESUBMIT`,學生可重新提交申訴）
-
-> 與註冊 ⑤ 相同,選「退回」時意見欄必填,該意見即申請人看到的退回理由。
-
-##### ③ 最終審批
-
-- **執行人**：Appeal Approver（或 Appeal Approver Secretary）
-- **動作**：作出 `批准` / `拒絕` / `退回` 決定
-- **結果**：
-  - **批准** → 流程結束（`ACTIVE`）
-  - **拒絕** → 流程結束（`APPEAL_REJECTED`,終局）
-  - **退回** → 流程結束（`APPEAL_RESUBMIT`,業務上等同「有條件批准」）
-
-> 申訴流程沒有拒絕子流程；從當前審批接口選擇退回／拒絕會結束流程。學生透過重新提交接口操作時啟動新的流程實例。BPMN 尚有未與此操作路徑一致的原流程內回跳定義，見 §4.4。
+| 項目 | 規則 |
+|:--|:--|
+| 發起 | 只限「註冊被拒絕」的申請，由申請人在「管理我的組織」按「申訴」；每宗註冊只可發起一次申訴，其後只能在「申訴需修改」時重新提交 |
+| 申訴理由 | 必填，最多 1000 字 |
+| 申訴補充文件 | 選填；PDF、Word、PowerPoint、Excel 及圖片；最多 10 個；與註冊申請文件分開存放 |
+| 重新提交 | 對話框預先列出已上傳的文件（顯示檔名及大小），可保留、移除或新增；以提交時的清單為準。在對話框刪除文件會即時刪除，即使其後取消對話框 |
+| 查看 | 申訴秘書、小組成員、主席及終審人在審批頁的「申訴補充文件」查看及下載 |
+| 退回通知 | 退回補交資料時，申請人收到「學生組織申訴已退回 - 請補充材料」通知（結果為「已退回」），不是拒絕通知 |
+| 認可 | 申訴不設 Exco 認可 |
 
 ---
 
-## 6. 結果對照表
+## 6. 步驟詳述
 
-### 6.1 註冊結果對照
+### 6.1 決定與意見的填寫規則（各審批頁通用）
 
-| 拒絕點 | 決定 | 最終狀態 | 學生後續可進行 |
-|:-------|:-----|:--------|:--------------|
-| ① Secretary | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
-| ② Admin Checker | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
-| ③ Academic Checker | 拒絕 | `PENDING_RESUBMIT` | 重新提交註冊 |
-| ⑤ Registration Summary Reviewer | 退回 | `PENDING_RESUBMIT` | 重新提交註冊 |
-| ⑥ Registration Approver | 批准 | `ACTIVE` | — |
-| ⑥ Registration Approver | 拒絕（經拒絕子流程） | `REJECTED_FINAL` | 只能發起申訴 |
-| ⑥ Registration Approver | 退回（經拒絕子流程） | `PENDING_RESUBMIT` | 重新提交註冊 |
+- 先選擇決定，再填寫對應意見，最後提交。
+- **退回**（任何對象）及**拒絕**均須填寫具體理由，欄位標示 *；空白不能提交。批准／通過的意見選填。
+- 拒絕時，若秘書／主席已擬定「建議拒絕理由」，終審直接採用（顯示為「拒絕理由（採用已確認理由）」）；若未擬定，終審須自行填寫，頁面提示「請填寫具體拒絕意見」。
+- 每一步的操作、處理人、輪次、時間及意見，均記錄在審批頁的「決定記錄」。
 
-### 6.2 申訴結果對照
+### 6.2 註冊流程
 
-| 決策點 | 決定 | 最終狀態 | 學生後續可進行 |
-|:-------|:-----|:--------|:--------------|
-| ② Appeal Summary Reviewer | 提交 | （進入 ③ 最終審批） | — |
-| ② Appeal Summary Reviewer | 退回 | `APPEAL_RESUBMIT` | 重新提交申訴 |
-| ③ Appeal Approver | 批准 | `ACTIVE` | — |
-| ③ Appeal Approver | 拒絕 | `APPEAL_REJECTED` | 無後續操作（終局） |
-| ③ Appeal Approver | 退回（有條件批准） | `APPEAL_RESUBMIT` | 重新提交申訴 |
+#### ① Review Group Secretary 初審
+
+- **選項**：「通過並指派審核人」／「退回申請人」
+- 通過時須選擇**至少一名 Checker 及至少一名 Supervisor**（可多選，可按姓名、電郵或部門搜尋），只可選持有相應角色的用戶。
+- 退回時須填寫「退回原因」→ 流程結束（需要修改後重提）。
+
+#### ② Checker 審核／③ Supervisor 審核
+
+- **選項**：「通過」／「退回申請人」
+- 每名被指派者各自收到待辦。全員通過才進入下一步；任一人退回即結束流程（需要修改後重提），其餘未完成的同節點待辦自動消失。
+- 處理前可由秘書在「審批人管理」替換尚未完成的人員（§9.3）。
+
+#### ④ 設定傳閱期
+
+- **執行人**：Review Group Secretary（Supervisor 全員通過後收到待辦）
+- 「傳閱期（天）」預設 5，最少 1；「提醒時間（截止前小時數）」預設 24，最少 1，且須早於截止時間。頁面以現在時間預覽「意見截止時間」及「發送提醒時間」，實際由意見收集開始時起計。
+- 按「開始收集意見」後，Review Group 全體成員收到「收集意見」待辦。
+
+#### ⑤ 收集意見
+
+- 每名成員選擇「贊成」或「反對」並填寫意見（兩者必填）後提交。
+- 到達提醒時間：提醒尚未提交者，收集繼續。
+- 到達截止時間：未提交者標記為「已逾期」，流程繼續彙總。
+- 彙總後，秘書收到「Review Group Secretary 審閱」待辦，**主席同時**收到「Review Group Chairperson 決定」待辦（唯讀）。
+
+#### ⑥ Review Group Secretary 審閱
+
+- 頁面按輪次顯示成員意見及統計（已提交、贊成、反對、待提交）。
+- 「加入我的意見」：秘書可加入附加意見，帶「秘書」標籤，不計入成員統計。
+- 擬定「批核條款」「跟進事項」「建議拒絕理由」（僅在建議拒絕時填寫）。
+- **選項**：
+  - 「提交至 Review Group Chairperson」→ 主席收到可作出決定的通知，主席頁面變為可操作。
+  - 「退回評審員（重啟一輪）」→ 須填寫「退回評審員原因」並重新設定傳閱期（預設恢復 5 天／24 小時）；主席的唯讀待辦隨即取消；向全體成員重新派發新一輪意見收集，已提交者亦須重新提交。歷次意見保留並按輪次顯示；重啟輪次不設上限。
+
+#### ⑦ Review Group Chairperson 決定
+
+- 秘書提交前，頁面顯示「待 Review Group Secretary 提交 — 您可查看所有意見，但暫時不能處理」，只有「返回」。
+- 秘書提交後可操作，可修改批核條款、跟進事項及拒絕理由。
+- **選項**：
+  - 「提交終審」→ ⑧
+  - 「退回至 Review Group Secretary」（須填原因）→ 秘書重新收到審閱待辦；主席待辦保留但恢復唯讀，待秘書再次提交。
+  - 「退回申請人」（須填原因）→ 流程結束（需要修改後重提），申請人看到主席確認的退回原因及跟進事項。
+- 被終審退回時，待辦名稱為「Review Group Chairperson 重新決定」，頁面提示「Registration Approver / Delegate 已退回，請重新處理」，可直接處理，選項同上。若再退回秘書，主席待辦重新鎖定。
+
+#### ⑧ 最終審批
+
+- **執行人**：Registration Approver 或 Registration Approver Delegate
+- **選項**：
+  - 「批准」→ ACTIVE（已啟用），組織頁面顯示批核條款及跟進事項。
+  - 「拒絕」→ REJECTED_FINAL（註冊被拒絕），申請人看到拒絕原因、申訴程序說明及「申訴」按鈕。拒絕理由規則見 §6.1。
+  - 「退回至 Review Group Chairperson」（須填原因）→ 回到 ⑦（流程內，不結束）。
+
+### 6.3 申訴流程
+
+#### ① Appeal Group Secretary 初審
+
+- 查看原拒絕資訊、申訴理由及申訴補充文件。
+- **選項**：
+  - 「資料齊全，開始傳閱」→ 同時設定傳閱期（預設 5 天／24 小時，規則同註冊 ④），Appeal Group 全體成員收到意見收集待辦。
+  - 「退回補交資料」→ 須填寫「須補交的項目」→ 流程結束（申訴需修改）。
+
+#### ② 多人意見收集
+
+與註冊 ⑤ 相同（贊成／反對＋意見、提醒、截止、彙總後秘書及主席同時收到待辦）。
+
+#### ③ Appeal Group Secretary 審閱
+
+與註冊 ⑥ 相同；選項為「提交至 Appeal Group Chairperson」或「退回評審員（重啟一輪）」。
+
+#### ④ Appeal Group Chairperson 決定
+
+秘書提交前唯讀。選項只有「提交終審」及「退回至 Appeal Group Secretary」，**沒有**「退回申請人」。被終審退回時待辦名稱為「Appeal Group Chairperson 重新決定」。
+
+#### ⑤ 最終審批
+
+- **執行人**：Appeal Approver 或 Appeal Approver Delegate
+- **選項**：「批准」→ ACTIVE；「拒絕」→ APPEAL_REJECTED（終局）；「退回至 Appeal Group Chairperson」→ 回到 ④。**沒有**退回申請人。
 
 ---
 
-## 7. 場景示例
+## 7. 結果對照表
 
-### 7.1 註冊典型場景
+### 7.1 註冊
 
-#### 場景 1：一次通過
+| 決策點 | 決定 | 結果 | 申請人看到 | 申請人後續 |
+|:--|:--|:--|:--|:--|
+| ① 初審 | 退回申請人 | 需要修改後重提 | 退回原因 | 修改並重新提交 |
+| ② Checker | 任一人退回申請人 | 需要修改後重提 | 退回原因 | 修改並重新提交 |
+| ③ Supervisor | 任一人退回申請人 | 需要修改後重提 | 退回原因 | 修改並重新提交 |
+| ⑥ 秘書審閱 | 退回評審員 | 流程內，新一輪意見收集 | — | — |
+| ⑦ 主席 | 退回秘書 | 流程內 | — | — |
+| ⑦ 主席 | 退回申請人 | 需要修改後重提 | 退回原因、跟進事項 | 修改並重新提交 |
+| ⑧ 終審 | 退回主席 | 流程內 | — | — |
+| ⑧ 終審 | 批准 | 已啟用 | 批核條款、跟進事項 | — |
+| ⑧ 終審 | 拒絕 | 註冊被拒絕 | 拒絕原因、申訴程序說明 | 申訴 |
 
-```
-① Secretary(通過,指派 Admin Checker / Academic Checker) → ② Admin Checker(通過) → ③ Academic Checker(通過)
-→ ④ Registration Reviewer 全員提交意見 → ⑤ Registration Summary Reviewer(提交)
-→ ⑥ Registration Approver(批准) → ACTIVE ✅
-```
+### 7.2 申訴
 
-#### 場景 2：早期被退回（任一 Phase 1 步驟拒絕）
+| 決策點 | 決定 | 結果 | 申請人看到 | 申請人後續 |
+|:--|:--|:--|:--|:--|
+| ① 初審 | 退回補交資料 | 申訴需修改 | 須補交的項目 | 重新提交申訴 |
+| ③ 秘書審閱 | 退回評審員 | 流程內 | — | — |
+| ④ 主席 | 退回秘書 | 流程內 | — | — |
+| ⑤ 終審 | 退回主席 | 流程內 | — | — |
+| ⑤ 終審 | 批准 | 已啟用 | 批核條款、跟進事項 | — |
+| ⑤ 終審 | 拒絕 | 申訴已被拒絕 | 拒絕原因（最終） | 無（終局） |
 
-```
-① Secretary(通過) → ② Admin Checker(拒絕) → PENDING_RESUBMIT
-（學生修改後重新提交,啟動新流程）
-```
-
-#### 場景 3：摘要退回
-
-```
-① → ② → ③ → ④ → ⑤ Registration Summary Reviewer(退回) → 通知 Admin Checker / Academic Checker → PENDING_RESUBMIT
-（學生修改後重新提交）
-```
-
-#### 場景 4：終局拒絕（走完拒絕子流程）
-
-```
-① → ② → ③ → ④ → ⑤(提交) → ⑥ Registration Approver(拒絕)
-→ 拒絕子流程: ⑦ Secretary 起草 → ⑧ Registration Reviewer 確認 → ⑨ Registration Summary Reviewer 審核 → ⑩ Secretary 最終提交
-→ REJECTED_FINAL
-（學生只能發起申訴）
-```
-
-### 7.2 申訴典型場景
-
-#### 場景 5：申訴一次通過
+### 7.3 場景示例
 
 ```
-（前置: REJECTED_FINAL）
-① 意見收集 → ② Appeal Summary Reviewer(提交) → ③ Appeal Approver(批准) → ACTIVE ✅
-```
+場景 1（一次通過）
+① 初審（指派 1 名 Checker、2 名 Supervisor）→ ② Checker 通過 → ③ 兩名 Supervisor 均通過
+→ ④ 設定傳閱期 5 天／24 小時 → ⑤ 全體成員提交
+→ ⑥ 秘書擬定批核條款，提交主席 → ⑦ 主席提交終審 → ⑧ 批准 → 已啟用
 
-#### 場景 6：申訴被摘要退回
+場景 2（前段退回）
+① → ② → ③ 其中一名 Supervisor 退回申請人（另一名的待辦自動消失）
+→ 需要修改後重提 → 申請人修改、全體 Exco 重新認可 → 重新提交（新流程）
 
-```
-① 意見收集 → ② Appeal Summary Reviewer(退回) → APPEAL_RESUBMIT
-（學生修改後重新提交申訴）
-```
+場景 3（流程內往返）
+… → ⑥ 秘書退回評審員（第 2 輪）→ ⑤ 再收集 → ⑥ 提交主席
+→ ⑦ 主席退回秘書 → ⑥ 修訂後再提交 → ⑦ 提交終審
+→ ⑧ 退回主席 → ⑦ 重新決定，提交終審 → ⑧ 批准（全程學生毋須重新提交）
 
-#### 場景 7：申訴有條件批准
+場景 4（終審改判拒絕）
+⑥ 秘書擬批核條款、未擬拒絕理由 → ⑦ 主席提交終審 → ⑧ 選「拒絕」，須自行填寫理由 → 註冊被拒絕
 
-```
-① 意見收集 → ② Appeal Summary Reviewer(提交) → ③ Appeal Approver(退回) → APPEAL_RESUBMIT
-（學生根據意見修改後重新提交申訴）
+場景 5（申訴補件後通過）
+註冊被拒絕 → 申訴（附補充文件）→ ① 退回補交資料 → 申訴需修改
+→ 重新提交申訴（加上新文件）→ ① 資料齊全，開始傳閱 → ② → ③ → ④ → ⑤ 批准 → 已啟用
 ```
 
 ---
 
-## 8. 註冊與申訴關鍵差異對比
+## 8. 續期（renew）
 
-| 維度 | 註冊 | 申訴 |
-|:-----|:-----|:-----|
-| **進入前置條件** | 新申請或 `PENDING_RESUBMIT` 狀態 | `REJECTED_FINAL`（首次申訴）或 `APPEAL_RESUBMIT`（重新提交申訴） |
-| **前置審核閘** | 3 步順序審核（Secretary → Admin Checker → Academic Checker） | 無——直接進入意見收集 |
-| **意見評審組** | Registration Reviewer | Appeal Reviewer |
-| **摘要評審員** | Registration Summary Reviewer | Appeal Summary Reviewer |
-| **最終審批人** | Registration Approver | Appeal Approver |
-| **摘要退回行為** | 進入 `PENDING_RESUBMIT`,通知 Admin/Academic Checker | 直接結束流程,進入 `APPEAL_RESUBMIT` |
-| **拒絕子流程** | 有（⑦ Secretary 起草 → ⑧ Registration Reviewer 確認 → ⑨ Registration Summary Reviewer 審核 → ⑩ Secretary 最終提交） | 無 |
-| **早期拒絕結果** | `PENDING_RESUBMIT`（任一 Phase 1 步驟拒絕） | 不適用（無早期審核階段） |
-| **最終拒絕結果** | `REJECTED_FINAL`（經拒絕子流程） | `APPEAL_REJECTED`（終局,無後續） |
-| **「退回」的業務含義** | 學生需重新提交註冊 | 「有條件批准」——學生需根據意見修改後重新提交申訴 |
-| **重新提交方式** | 啟動全新註冊流程實例 | 啟動全新申訴流程實例 |
-| **計時器事件** | 意見收集 + 拒絕確認（兩者均有提醒 + 超時） | 僅意見收集（提醒 + 超時） |
-
----
-
-## 9. 評審員管理（管理工具）
-
-當 Secretary 在 ① 初審中指派的 Admin Checker 或 Academic Checker 因人員變動、休假等原因需要更換時,可通過此管理工具替換。替換後,新 Checker 在待辦列表中接手任務,原 Checker 不再看到。
-
-### 9.1 入口
-
-| 項目 | 值 |
-|:-----|:---|
-| 菜單位置 | 管理中心 → 評審員管理 |
-| 允許角色 | Registration Approver Secretary |
-
-### 9.2 工作流程
+### 8.1 流程
 
 ```mermaid
-sequenceDiagram
-    participant Sec as Registration Secretary
-    participant Sys as 系統
-    participant Old as 原 Checker
-    participant New as 新 Checker
+flowchart TD
+    Active(["組織狀態：已啟用或已停用"])
+    Active --> Issue["SAO Admin 在「續期驗證碼」<br/>為候選內閣簽發驗證碼"]
+    Issue --> Offline["以線下方式交給該候選內閣"]
+    Offline --> Enter["申請人在「管理我的組織」按「續期申請」<br/>輸入驗證碼 → 「驗證」"]
+    Enter --> Valid{驗證碼有效?}
+    Valid -->|"否"| Enter
+    Valid -->|"是：顯示組織名稱及有效期"| Confirm["按「確認並發起續期」<br/>驗證碼與申請人綁定，建立續期草稿"]
+    Confirm --> Fill["填寫續期申請（含新一屆幹事會）並保存"]
+    Fill --> Endorse["續期申請表所列全體 Exco 認可<br/>(§4.3)，申請人提交"]
+    Endorse --> Review["沿用註冊審批步驟 ①–⑧<br/>(§5.1)"]
+    Review --> Decision{結果?}
+    Decision -->|"批准"| Approved(["新一屆幹事會、資料及管理權限同時生效<br/>同一組織的其他續期申請取消"])
+    Decision -->|"退回申請人"| Returned["保留內容，清空認可<br/>修改並重新提交，毋須新驗證碼"]
+    Returned --> Fill
+    Decision -->|"拒絕"| Rejected(["本次續期結束<br/>組織資格、資料及負責人不變<br/>再續期須取得新驗證碼"])
 
-    Sec->>Sys: 打開評審員管理頁
-    Sys-->>Sec: 列出當前處於 Admin 審核或 Academic 審核的所有運行中註冊申請
-    Sec->>Sys: 選擇要替換的申請,點擊「修改評審員」
-    Sys-->>Sec: 顯示當前 Admin / Academic Checker
-    Sec->>Sys: 選擇新 Checker,填寫變更原因
-    Sys->>Old: 從待辦列表中移除任務
-    Sys->>New: 在待辦列表中新增任務
-    Sys-->>Sec: 變更完成
-    Note over Sec,New: 新 Checker 接手,原 Checker 不再看到任務
+    style Approved fill:#4CAF50,color:#fff
+    style Rejected fill:#f44336,color:#fff
 ```
 
-### 9.3 約束
+### 8.2 續期驗證碼規則
 
-- 僅作用於 **運行中** 的註冊流程,且當前停留在 Admin 審核或 Academic 審核步驟。
-- 每次操作必須至少更換 Admin 或 Academic 評審員之一。
-- 變更原因為必填項,用於審計。
-- 申訴流程不使用指派 Checker 機制,故不在此功能範圍內。
+| 項目 | 規則 |
+|:--|:--|
+| 簽發對象 | 只限「已啟用」或「已停用」的組織；草稿、審批中或已解散的組織顯示「不可續期」 |
+| 候選內閣 | 每個驗證碼對應一個候選內閣，簽發時須輸入候選內閣名稱（最多 200 字） |
+| 有效期 | 自簽發起 180 天，只可使用一次 |
+| 數量上限 | 每個組織同一時間最多 3 個有效驗證碼；每個候選內閣最多 1 個。已用於仍在處理中（草稿／已退回／審批中）的續期申請的驗證碼仍計算在內 |
+| 顯示 | 驗證碼只在簽發時顯示一次（可複製），列表不再顯示驗證碼本身；簽發新驗證碼**不會**令該組織其他驗證碼失效 |
+| 驗證 | 不分大小寫，空格及連字符會被忽略；只按「驗證」不會消耗驗證碼 |
+| 綁定 | 按「確認並發起續期」並成功建立申請時，驗證碼即被使用並與該申請人綁定 |
+| 每名學生 | 同一時間只可綁定一份處理中的續期申請 |
+| 無效提示 | 已使用：「驗證碼無效：此驗證碼已被使用」；已過期：「驗證碼無效：此驗證碼已過期」；其他：「驗證碼無效」 |
+| 撤銷 | 未使用的驗證碼可撤銷；已使用而續期申請仍為草稿或已退回的，撤銷會一併取消該續期申請；續期申請審批中時不能撤銷 |
+| 並行續期 | 不同候選內閣可同時為同一組織申請續期；其中一份獲批後，其餘續期申請（包括審批中的）自動取消，未使用的驗證碼亦被撤銷。每個組織最終只有不多於一份續期申請獲批 |
+
+### 8.3 續期申請表
+
+| 項目 | 規則 |
+|:--|:--|
+| 預載 | 以組織現行生效資料預載；申請類型為「註冊續期申請」 |
+| 與新註冊的差異 | 沒有「擬成立學生組織之獨特性」；須回答「組織是否擬修訂會章？」（選「是」須上傳草擬會章） |
+| 選舉結果 | 須回答是否已按會章完成選舉或委任程序：已完成須上傳「已簽署之幹事會選舉結果」或「通過委任幹事會之會議紀錄」；未完成須勾選知悉須在任期前提交 |
+| 終審前條件 | 終審**批准**前，申請必須已上傳選舉結果或委任紀錄；未上傳者系統不允許批准，審批人應退回申請人補交 |
+| 幹事會 | 填寫新一屆名單，規則同 §4.2；申請人必須列為幹事會成員 |
+| 申請期 | 不受組織類別申請期限制 |
+| 審批頁 | 分別顯示「擬續期內容」（標籤「擬議」）及「現行生效的組織資料」（標籤「現行（生效中）」） |
+
+### 8.4 續期申請狀態及結果
+
+| 狀態 | 含義 | 申請人可做 |
+|:--|:--|:--|
+| 草稿 | 已發起，尚未提交 | 繼續填寫 |
+| 審批中 | 已提交，按 §5.1 審批 | — |
+| 已退回 | 被退回申請人（①②③⑦ 任一步） | 修改並重新提交（毋須新驗證碼，須重新取得認可；由 ① 重新審批） |
+| 已批准 | 終審批准 | — |
+| 已拒絕 | 終審拒絕 | 無；頁面顯示「組織的註冊資格維持不變。如需再次續期，須向 SAO 取得新的驗證碼。」 |
+| 已取消 | 另一份續期已獲批、驗證碼被撤銷或組織被解散 | — |
+
+| 時點 | 組織資料及權限 |
+|:--|:--|
+| 審批期間 | 組織現行資料、狀態及原負責人權限不變；續期申請中的修改尚未生效；「我的組織」資料唯讀 |
+| 批准時 | 新一屆幹事會、更新資料及管理權限同時生效，申請人成為負責人；組織編號不變；已停用的組織恢復為已啟用；批核條款及跟進事項更新為本次結果 |
+| 交接期 | 不在新一屆幹事會內的原幹事會成員，可保留系統身份三個月以便交接（由註冊期屆滿日及續期獲批日兩者中較後者起計）；交接期內不計入成員列表，原負責人仍可審批入會申請；期滿後自動移除 |
+| 拒絕時 | 組織資格、資料及負責人不變；續期拒絕不能申訴 |
+
+### 8.5 組織狀態（SAO）
+
+SAO Admin 在「續期驗證碼」頁選定組織後，可更改其狀態：
+
+| 操作 | 前置狀態 | 效果 |
+|:--|:--|:--|
+| 轉為非活躍 | 活躍 | 組織仍可申請續期；續期獲批後恢復活躍 |
+| 恢復活躍 | 非活躍 | — |
+| 解散 | 活躍或非活躍 | **不可復原**；不能再申請續期或舉辦新活動；處理中的續期申請及未使用的驗證碼一併取消 |
 
 ---
 
-## 10. 角色與審批節點對照表
+## 9. 管理工具
 
-下表為註冊與申訴兩個流程中每個審批節點所對應的系統角色,及其工作職能與下一個環節的處理規則。多人並行的節點按典型實例數重複列出,以反映實際運行時並行的多個角色實例。
+| 功能 | 菜單位置 | 使用角色 |
+|:--|:--|:--|
+| 組織類別申請期 | 管理中心 → 組織類別申請期 | SAO Admin |
+| 續期驗證碼（含組織狀態） | 管理中心 → 續期驗證碼 | SAO Admin |
+| 評審小組成員 | 管理中心 → 評審小組成員 | SAO Admin、Review Group Secretary、Appeal Group Secretary |
+| 審批人管理 | 管理中心 → 審批人管理 | SAO Admin、Review Group Secretary |
 
-### 10.1 註冊流程主流程
+### 9.1 組織類別申請期
 
-| 角色 ID | 系統角色名稱 | 審批節點 | 工作職能描述 | 下一個環節 |
-|:-------:|:------------|:--------|:-----------|:----------|
-| - | Group Leader | 發起申請 | 學生組織負責人,提交註冊申請以觸發審批流程 | Node 1 秘書審核 |
-| 122 | Registration Administrator | Node 1: 秘書審核 | 對申請進行初審;通過時指派 Administrative Checker 與 Academic Checker | 通過 → Node 2 行政審核;拒絕 → 流程結束（`PENDING_RESUBMIT`,學生可重新提交） |
-| 136 | Registration Checker | Node 2: 行政審核 | 由 Secretary 指派,負責申請的行政合規審核 | 通過 → Node 3 學術審核;拒絕 → 流程結束（`PENDING_RESUBMIT`） |
-| 132 | Registration Referrer | Node 3: 學術審核 | 由 Secretary 指派,負責申請的學術相關審核 | 通過 → Node 4 收集意見;拒絕 → 流程結束（`PENDING_RESUBMIT`） |
-| 123 | Registration Reviewer | Node 4: 收集意見 (多實例) | 並行多人,各自提交對該申請的審核意見 | 全員提交（或超時將未提交意見標記為 `TIMEOUT`）→ Node 5 匯總審核 |
-| 123 | Registration Reviewer | Node 4: 收集意見 (多實例) | 同上 | 同上 |
-| 123 | Registration Reviewer | Node 4: 收集意見 (多實例) | 同上 | 同上 |
-| 138 | Registration Endorser | Node 5: 匯總審核 | 審核 Reviewer 提交的意見彙總 | 提交 → Node 6 最終審批;退回 → 系統通知 Admin Checker 與 Academic Checker,流程結束（`PENDING_RESUBMIT`） |
-| 124 | Registration Approver | Node 6: 最終審批 | 對註冊申請作最終 `批准` / `拒絕` / `退回` 決定 | 批准 → 流程結束（`ACTIVE`）;拒絕／退回 → 進入拒絕子流程（見 §10.2） |
-| 134 | Student Group Registration Approver Secretary | Node 6: 最終審批 (備選) | 替代終審人,與 Approver 享有相同決定權,任一者可作出決定 | 同 Node 6 |
+見 §4.1。按「編輯」修改開始／結束日期；開始日期不得遲於結束日期。
 
-### 10.2 註冊拒絕／退回子流程
+### 9.2 評審小組成員
 
-當 Node 6 Approver 選擇拒絕或退回時進入此子流程,共 4 個節點。
+- 「Review Group」標籤由 Review Group Secretary 維護；「Appeal Group」標籤由 Appeal Group Secretary 維護；SAO Admin 可維護兩者。不負責維護的標籤顯示「您不負責維護此小組。」
+- 可按姓名或帳號搜尋職員並「新增成員」，或「移除」成員（不影響該人的其他角色）。
+- 小組不設有效期；每輪意見收集以**該輪開始時**的成員名單為準，中途增減成員不影響進行中的一輪。
+- 同時持有多個角色的用戶，須先在頂欄切換到相應角色，菜單才會顯示對應功能。
 
-| 角色 ID | 系統角色名稱 | 審批節點 | 工作職能描述 | 下一個環節 |
-|:-------:|:------------|:--------|:-----------|:----------|
-| 122 | Registration Administrator | Sub-Node 7: 起草綜合意見 | Secretary 起草拒絕／退回意見初稿;設定傳閱天數與「截止前提醒」天數 | 完成 → 系統初始化評審員確認 → Sub-Node 8 |
-| 123 | Registration Reviewer | Sub-Node 8: 評審員確認意見 (多實例) | 並行多人,各自選擇 `APPROVE` / `SUGGEST` / `NO_COMMENT` 確認反饋 | 全員確認（或超時自動視為 `APPROVE`）→ 系統彙總拒絕反饋 → Sub-Node 9 |
-| 123 | Registration Reviewer | Sub-Node 8: 評審員確認意見 (多實例) | 同上 | 同上 |
-| 123 | Registration Reviewer | Sub-Node 8: 評審員確認意見 (多實例) | 同上 | 同上 |
-| 138 | Registration Endorser | Sub-Node 9: 審核草擬意見 | 對草擬綜合意見作審核評論 | 完成 → Sub-Node 10 |
-| 122 | Registration Administrator | Sub-Node 10: 最終提交意見 | Secretary 確認並最終提交意見;系統派發最終通知 | 流程結束（依退回類型解析）：「退回」→ `PENDING_RESUBMIT`;「拒絕」→ `REJECTED_FINAL`（學生只能發起申訴） |
+### 9.3 審批人管理
 
-### 10.3 申訴流程
+- 「現行流程」標籤列出停留在 Checker 審核或 Supervisor 審核步驟的註冊案件（含續期），顯示已指派評審員及其狀態（待審核／已完成）。
+- 只可「替換」**尚未完成**的評審員：選擇新評審員（不能選已指派的人）並填寫原因（必填）。
+- 替換後原評審員的待辦消失，新評審員收到待辦且必須完成審核；已通過者的意見保留，毋須重審；節點仍須全員通過才前進。
+- 「較早案件（舊流程）」標籤供處理舊流程在途案件的行政／學術審批人替換。
+- 申訴流程不使用此功能。
 
-| 角色 ID | 系統角色名稱 | 審批節點 | 工作職能描述 | 下一個環節 |
-|:-------:|:------------|:--------|:-----------|:----------|
-| - | Group Leader | 發起申訴 | 提交申訴（前置：組別處於 `REJECTED_FINAL` 或 `APPEAL_RESUBMIT`） | Node 1 收集意見 |
-| 125 | Registration Appeal Reviewer | Node 1: 收集意見 (多實例) | 並行多人,各自提交對申訴的審核意見 | 全員提交（或超時將未提交意見標記為 `TIMEOUT`）→ Node 2 匯總審核 |
-| 125 | Registration Appeal Reviewer | Node 1: 收集意見 (多實例) | 同上 | 同上 |
-| 125 | Registration Appeal Reviewer | Node 1: 收集意見 (多實例) | 同上 | 同上 |
-| 139 | Registration Appeal Endorser | Node 2: 匯總審核 | 審核已收集的申訴意見 | 提交 → Node 3 最終審批;退回 → 流程結束（`APPEAL_RESUBMIT`,學生可重新提交申訴） |
-| 126 | Registration Appeal Approver | Node 3: 最終審批 | 對申訴作最終 `批准` / `拒絕` / `退回` 決定 | 批准 → `ACTIVE`;拒絕 → `APPEAL_REJECTED`（終局,無後續）;退回（業務上等同「有條件批准」）→ `APPEAL_RESUBMIT` |
-| 135 | Student Group Appeal Approver Secretary | Node 3: 最終審批 (備選) | 替代終審人,與 Appeal Approver 享有相同決定權,任一者可作出決定 | 同 Node 3 |
+---
 
-> **多實例行說明**：上表中標 "多實例" 的角色（Reviewer）以 3 行重複列出,僅作格式示意。實際運行時並行的評審員人數依配置而定,可多可少。
+## 10. 通知
+
+| 時機 | 收件人 |
+|:--|:--|
+| 每個待辦產生 | 該待辦的處理人（右上角鈴鐺） |
+| 秘書提交至主席 | 主席另收到「可作出決定」通知 |
+| 流程內進展（秘書提交、重啟一輪、主席退回秘書、終審退回主席等）及結束結果（批准、退回、拒絕） | 只通知**本案參與者**：申請人、本案被指派的 Checker／Supervisor、本案各輪小組成員、曾處理本案的秘書／主席／終審人；未參與本案的同角色用戶不會收到 |
+| 意見收集到達提醒時間 | 尚未提交的成員 |
+| 申訴退回補交資料 | 申請人收到「學生組織申訴已退回 - 請補充材料」（結果為「已退回」） |
+| Exco 認可 | Exco 加入名單時收到須認可的通知；部分認可時提醒未認可者；全員認可時通知申請人可提交；內容修改或申請被退回時，通知受影響的 Exco 認可已失效 |
+
+通知標題及內容按**發送當時**收件人的語言偏好產生，其後切換語言不會改變舊通知。
+
+---
+
+## 11. 註冊與申訴主要差異
+
+| 維度 | 註冊（含續期） | 申訴 |
+|:--|:--|:--|
+| 進入條件 | 新申請／需要修改後重提（新註冊須在申請期內）；續期憑驗證碼 | 註冊被拒絕／申訴需修改 |
+| 提交前 Exco 認可 | 須全體認可 | 不設 |
+| 前段審核 | 初審 → Checker → Supervisor → 設定傳閱期 | 初審（同時設定傳閱期） |
+| 小組 | Review Group（123） | Appeal Group（125） |
+| 秘書 | Review Group Secretary（122） | Appeal Group Secretary（153） |
+| 主席 | Review Group Chairperson（138） | Appeal Group Chairperson（139） |
+| 主席可退回申請人 | 可 | 不可 |
+| 終審 | Registration Approver／Delegate（124／134）：批准／拒絕／退回主席 | Appeal Approver／Delegate（126／135）：批准／拒絕／退回主席 |
+| 流程內退回 | 秘書→評審員、主席→秘書、終審→主席 | 同左 |
+| 最終拒絕結果 | 註冊被拒絕（可申訴）；續期拒絕不可申訴 | 申訴已被拒絕（終局） |
+
+---
+
+## 12. 本次未提供的功能
+
+以下項目不在現行系統範圍內：
+
+| 項目 | 現況 |
+|:--|:--|
+| 批量審批／批量提醒 | 尚未定案，現時逐案審批及提醒 |
+| 社團資料變更申請 | 流程另議；現時「我的組織」資料唯讀，須透過續期更新 |
+| 流程結束後上載投票記錄 | 修訂設計曾提出，系統現時未提供上載入口 |
+| 審批人查看 Exco 認可記錄 | 不提供；送審的申請必定已獲全體認可 |

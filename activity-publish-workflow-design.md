@@ -81,13 +81,13 @@ await approveTask({
 
 BPMN 上的三個 gate（`guestEndorsementDecisionGate` / `sponsorshipDecisionGate` / `activityContentDecisionGate`）按 `${deanDecision == 'APPROVE' | 'RETURN' | 'REJECT'}` 分流，**`REJECT` 是真正的終止路徑**（→ `endEventRejected`），不再像舊版那樣與 `RETURN` 等價回到 Supervisor。
 
-###### Dean Combo `APPROVE` 必填每段評論（commit `8dc0b49e4`, 2026-05-22）
+###### Dean / Delegate 綜合審批的意見規則
 
-Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）獨立記錄評論**。本次新增業務規則：
+Dean 的綜合審批共用一個決定，但**每段（嘉賓背書 / 贊助 / 活動內容）獨立記錄意見**：
 
-- **`APPROVE` 時，每個觸達的段都必須帶非空評論**（透過 `resolveDeanComboTaskKeys` 在**任一段被 complete 前**統一校驗），否則拋出 `DEAN_COMBO_APPROVE_REASON_REQUIRED`。前置校驗的目的是避免「先 complete 第一段 → 第二段空評論失敗」造成 Flowable 副作用無法乾淨回滾。
-- `RETURN` / `REJECT` 不受此規則限制（可只填一段評論）。
-- `completeDeanSection` 不再用 `nullToEmpty` 兜底寫入固定英文字串 `"Dean comprehensive approval"`——空評論在 `APPROVE` 已被前置攔截，其他決定路徑保留段別空評論的原樣。
+- **`APPROVE`（通過）時意見可留空**（各段意見欄標示為「如有需要才填寫」）。留空時審批歷史只顯示「已通過」，不會自動補上任何預設文字。
+- **`RETURN`（退回）或 `REJECT`（拒絕）時，至少要有一段填寫意見**，否則無法提交。
+- 舊版（2026-05-22 至 2026-06-04 期間）曾要求通過時每段都必填意見，已取消。
 
 ##### 各節點 reject/return 的去向對照表
 
@@ -254,6 +254,13 @@ Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）
 - **移除 OC 時釋鎖**：`syncOcMembersFromActivityMembers` 先快照舊 OC 名單，對本次被移除的 OC 強制釋放編輯鎖（Mapper SQL 按鎖主過濾，對未持鎖者是安全 no-op）。
 - **釋鎖時機**：`releaseEditingLock` 移到 `updateActivity` 最後，所有關聯表寫入成功後才釋放。
 
+**申請人身份在編輯時保持不變（2026-09 起）：**
+
+- 白名單內任何人（OC 成員、Supervisor）編輯並保存草稿，**申請人仍是原申請人**，不會被換成正在編輯的人。此前編輯頁一打開就會以當前登入者覆蓋申請人欄位，導致申請表上的申請人被悄悄改成編輯者。
+- 申請表上的**申請人姓名一律按申請人學號帶出**（先查學生資料，再查系統帳號），不再取活動建立者的名稱。
+- **Copy from Previous（沿用計劃）**：複製舊申請後，申請人與第一位 OC 成員改為**目前登入的學生**；其餘 OC 成員按學號重新查核姓名，不照抄舊申請上的姓名。若系統讀不到目前登入者的學號，會提示錯誤並停止複製。
+- **OC 成員姓名按學號查核**：改動某位 OC 成員的學號時，先前帶出的姓名與單位會即時清空，再按新學號重新查出；輸入申請人本人的學號時，姓名同樣按學號查出，而非沿用畫面上的申請人姓名。
+
 ### 1.7 Endorse 模式（OC 互審不阻塞編輯）
 
 > 引入時間：commit `20239e1e`（前端，2026-05-07）。
@@ -355,6 +362,7 @@ Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）
 | `filterTasksByApprovalGroup` | IRG / VP 投票任務只對被選中的投票成員可見 |
 | `filterTasksByCheckerDesignation` | 學生組織註冊的 checker 指派過濾 |
 | `filterTasksByRoleDeptScope` | 角色 dept 數據權限邊界（見下） |
+| 過時 Supervisor 待辦過濾（2026-09 起） | ③ Supervisor 審核待辦若所屬活動**已不再等待審批**（已退回成草稿、已被拒絕或已取消），即從待辦清單、待辦計數與統計中隱藏。用於清除舊版流程遺留、永遠無法處理的 Supervisor 待辦；仍在審批中的活動不受影響 |
 
 #### 1.8.3 `filterTasksByRoleDeptScope` 的判定順序
 
@@ -447,6 +455,25 @@ Dean 的綜合審批共用一個決定但**每段（guest / sponsor / content）
   - **提交審批 / OC 認可**時校驗的是**已經存進資料庫的**日程。
   - 後者確保歷史遺留資料、以及繞過前端直接呼叫 API 的請求，都要通過同一條業務規則，無法迴避。
 - **OC 認可頁會直接顯示被日期問題擋住的原因**：認可狀態介面新增 `dateValid` / `dateValidationCode` / `dateValidationMessage` 三個欄位，OC 在認可面板上就能看到「哪一條日期規則不通過」，不必等到按下提交才收到錯誤（另見 §1.7）。
+
+### 1.12 審批決定與意見規則：先選決定，退回 / 拒絕必須寫明原因（2026-09 起）
+
+各審批表單統一為**先選擇決定，再填寫意見，最後提交**。意見是否必填取決於所選決定：
+
+| 審批環節 | 通過時意見 | 退回時意見 | 拒絕時意見 |
+|:--|:--|:--|:--|
+| ① Coordinator | 可留空 | **必填** | （無拒絕選項） |
+| ② Checker / ④ EO | 可留空 | **必填** | （無拒絕選項） |
+| ③ Supervisor | 可留空 | **必填** | **必填** |
+| ⑤ ⑥ ⑥' Dean / Delegate | 可留空 | **至少一段必填** | **至少一段必填** |
+| ⑦ VP(RD) / VP(RD) Delegate | 可留空 | **必填**（退回 Dean 或退回 Chair 皆是） | （無拒絕選項） |
+| ⑭ ChairPerson | 可留空 | **必填**（2026-09 新增） | **必填**（2026-09 新增） |
+| ⑨ IRG 投票 / ⑫ VP 投票 | 可留空 | — | 可留空（投票不受此規則限制） |
+
+- **只填空格不算填寫**。意見欄未填寫時，「提交」按鈕不可按，或提交時提示「請填寫退回原因」／「請填寫具體拒絕意見」。
+- **系統後台同樣把關**：⑦ 的退回與 ⑭ 的退回 / 拒絕即使繞過畫面直接送出，空白原因也會被拒絕。
+- **⑭ ChairPerson 是本次唯一行為改變的環節**：此前 Chair 選退回 / 拒絕時意見可留空，現在必須寫明原因。退回或拒絕的意見會傳送給學生。
+- 同一規則也適用於系統內其他審批：待辦中心的通用審批（拒絕須填意見，通過可留空；原本「意見必填且至少 5 個字」的限制已放寬為僅拒絕時必填）、嘉賓邀請的 Supervisor 審核（拒絕須填意見），以及出席更改審核（先選決定，退回須填意見）。
 
 ## 2. 角色與職責
 
@@ -917,12 +944,7 @@ flowchart TD
   - `APPROVE` → 進入 NSOA / 非 NSOA 分支
   - `RETURN` → 回到 ③ Supervisor 多實例**重新審核**
   - `REJECT` → 流程結束（`endEventRejected`），通知申請人及歷史已參與審批的人員
-- **動作**：對活動內容與預算等整體資訊作 `Approve` / `Return` / `Reject` 決定
-- **結果**：
-  - `Approve` → 進入 NSOA / 非 NSOA 分流
-  - `Return` / `Reject` → 回到 ③ Supervisor 多實例**重新審核**（見 §1.5.1）
-
-> 說明：表單上的 `Return` 與 `Reject` 兩個按鈕在當前實現裡都走 `approveTask(approved=false)`，由 BPMN gate `flow_activity_content_rejected` 真正觸發 → 重派 supervisor 多實例。兩按鈕在流程上等價，僅在前端 `taskStatus` / `reason` 欄位語義略有區別。如需區分業務語義（駁回 vs 暫退），目前只能依賴主管在 `reason` 欄位自行寫明，或將來把其中一個按鈕改走 `/bpm/task/reject` 走 endEventReturned 短路。
+- **意見**：`APPROVE` 可留空；`RETURN` / `REJECT` 至少一段必填（見 §1.12）
 
 ### ⑦ 最終嘉賓審批
 
@@ -941,6 +963,7 @@ flowchart TD
   - `RETURN_TO_CHAIR`（NSOA only）→ 退回 ⑭ Chair 重審；Chair 可再次決定 `PASS / REJECT / RETURN`
   - `RETURN_TO_DEAN`（非 NSOA only）→ 退回 ⑥' Dean / Delegate 活動內容審批；流程繼續按一般高級審批的 RETURN 邏輯走（見 §1.5.1）
   - **無 reject 路徑**——VPRD 不能在此節點直接駁回流程；如需駁回，由 NSOA 路徑下的 ⑭ Chair `REJECT` 完成，或由非 NSOA 路徑下退回 Dean 後再經 supervisor 重審觸發
+- **意見**：`APPROVE` 可留空；兩種退回都必須填寫退回原因（見 §1.12）
 
 > **注意**：`NSOA` 活動不是跳過 ⑦，而是將 ⑦ 延後到 `Chair PASS` 之後。
 
@@ -1010,6 +1033,7 @@ flowchart TD
     - 如 `hasExternalGuest == false` → 系統自動發布活動,流程結束（`APPROVED`）
   - `REJECT` → 流程結束（`REJECTED`）
   - `RETURN` → 流程結束（`RETURNED`）：BPMN `flow_chair_return → endEventReturned`；Java 同步將 `activity.approvalStatus` 置為 `RETURNED` 並發退回通知給申請人；**不再生成新的主管待辦**（見 §1.5.4）
+- **意見**：`PASS` 可留空；`RETURN` / `REJECT` **必須填寫具體原因**（2026-09 起，見 §1.12），該意見會傳送給學生
 - **另填「建議與跟進」**：ChairPerson 在做決定的同時，可另外填寫建議與跟進事項，以 stage `CHAIR` 獨立存檔（見下方說明）。
 
 #### VPSLA 建議與跟進表（⑬ / ⑭ 共用）
@@ -1035,9 +1059,12 @@ flowchart TD
 | ③ Supervisor 聚合 | `RETURN` | `RETURNED` | 修改後重新提交 |
 | ③ Supervisor 聚合 | `REJECT` | `REJECTED` | — |
 | ④ EO | 退回 | （回到 ③ 重審；最終狀態由重審結果決定） | 等 ③ 重審結束後再看（見 §1.5.1） |
-| ⑤ Guest Endorsement | 拒絕 | （回到 ③ 重審；最終狀態由重審結果決定） | 等 ③ 重審結束後再看（見 §1.5.1） |
-| ⑥ Sponsorship | 拒絕 | （回到 ③ 重審；最終狀態由重審結果決定） | 等 ③ 重審結束後再看（見 §1.5.1） |
-| ⑥' Activity Content | `Return` / `Reject` | （回到 ③ 重審；最終狀態由重審結果決定） | 等 ③ 重審結束後再看（兩按鈕當前都走 `approveTask(approved=false)`，流程上等價，見 §1.5.1） |
+| ⑤ Guest Endorsement | `RETURN` | （回到 ③ 重審；最終狀態由重審結果決定） | 等 ③ 重審結束後再看（見 §1.5.1） |
+| ⑤ Guest Endorsement | `REJECT` | `REJECTED` | — |
+| ⑥ Sponsorship | `RETURN` | （回到 ③ 重審；最終狀態由重審結果決定） | 等 ③ 重審結束後再看（見 §1.5.1） |
+| ⑥ Sponsorship | `REJECT` | `REJECTED` | — |
+| ⑥' Activity Content | `RETURN` | （回到 ③ 重審；最終狀態由重審結果決定） | 等 ③ 重審結束後再看（見 §1.5.1） |
+| ⑥' Activity Content | `REJECT` | `REJECTED` | — |
 | ⑦ Final Guest Approval（VPRD） | `APPROVE` | `APPROVED`（活動發布） | — |
 | ⑦ Final Guest Approval（VPRD） | `RETURN_TO_CHAIR`（NSOA only） | （回到 ⑭ Chair；最終狀態由 Chair 重新決定） | 等 ⑭ 重新決定後再看（見 §1.5.3） |
 | ⑦ Final Guest Approval（VPRD） | `RETURN_TO_DEAN`（非 NSOA only） | （回到 ⑥' Dean / Delegate 活動內容審批；最終狀態由其重審結果決定） | 等 ⑥' 重審結束後再看（見 §1.5.3） |
@@ -1124,13 +1151,13 @@ flowchart TD
 | 116 | Supervisor | ③ Supervisor 審核 (多實例) | 同上 | 同上 |
 | - | （系統聚合）| auto: 聚合 Supervisor 投票 | 規則(first-wins 短路)：第一個 `RETURN` → 整體 `RETURN`;第一個 `REJECT` → 整體 `REJECT`(即時取消其他待辦);全員 `RECOMMEND` → 整體 `RECOMMEND`。第一個終局票說了算、後續無法覆蓋（commit `82443a610`），詳見 §1.5.3.1 | `RECOMMEND` → ④ EO 審批（如涉及 `campus public venue` 或課後使用）或進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;`RETURN` → 流程結束（`RETURNED`）;`REJECT` → 流程結束（`REJECTED`） |
 | 141 | EO Venue Reviewer | ④ EO 審批 | 審批 `campus public venue` 與課後使用（僅當 Supervisor 在 ③ 確認其中任一項成立時觸發） | 通過 → 進入 ⑤ 嘉賓背書/⑥ 贊助/⑥' 內容審批 序列;退回 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
-| 149 | Dean | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 對外部嘉賓先作背書，承接贊助審批，並對活動內容 / 預算作必經的最終把關 | ⑤ 通過 → ⑥（如有贊助）或 ⑥'；⑥ 通過 → ⑥'；⑥' 通過 → 進入 NSOA / 非 NSOA 分流；⑤/⑥/⑥' 任一拒絕 → 回到 ③ Supervisor 重新審核（見 §1.5.1） |
+| 149 | Dean | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 對外部嘉賓先作背書，承接贊助審批，並對活動內容 / 預算作必經的最終把關 | ⑤ 通過 → ⑥（如有贊助）或 ⑥'；⑥ 通過 → ⑥'；⑥' 通過 → 進入 NSOA / 非 NSOA 分流；⑤/⑥/⑥' 任一退回 → 回到 ③ Supervisor 重新審核；任一拒絕 → 流程結束（`REJECTED`）（見 §1.5.1） |
 | 150 | Delegate | ⑤ 嘉賓背書 / ⑥ 贊助審批 / ⑥' 活動內容審批 (候選組之一) | 與 Dean 共用候選組，先到先審 | 同 ⑤ / ⑥ / ⑥' 各自的下一環節 |
 | 151 | VP(RD) | ⑦ 最終嘉賓審批 (候選組之一) | 最新 BPMN 中的最終外部嘉賓審批角色；`非 NSOA` 直接進入，`NSOA` 於 `Chair PASS` 後進入；走 `guestApprovalDecision` 專屬端點 | `APPROVE` → 直接發布;`RETURN_TO_DEAN`（非 NSOA only）→ 回到 ⑥' Dean / Delegate 活動內容審批;`RETURN_TO_CHAIR`（NSOA only）→ 回到 ⑭ Chair（見 §1.5.3） |
 | 152 | VP(RD) Delegate | ⑦ 最終嘉賓審批 (候選組之一) | VP(RD) 委派角色，與 VP(RD) 共候選組 | 同 VP(RD) |
 | - | （系統判斷）| 是否為 NSOA? | 根據活動是否標記為 NSOA 分流 | 是 → 進入並行 IRG / VP 評審分支;否 → 進入 `checkGuestGate`（有嘉賓 → ⑦；無嘉賓 → `APPROVED`） |
 | 144 | IRG Secretary | ⑧ IRG 選組 | 選擇本次的 IRG 評審組 | → 系統自動加載 IRG 成員,進入 ⑨ |
-| 145 | IRG Member | ⑨ IRG 投票 (多實例) | 並行多人,各自投 `RECOMMEND` / `RESERVE` / `REJECT`;有截止時間 `irgVoteDeadline` | 全員投票完成 → auto: AI 生成 IRG 摘要 → ⑩;或超時 → `activityIrgTimeoutDelegate` 將未投票者標記為預設 `RECOMMEND` → 直接進 AI 摘要(跳過剩餘多實例) |
+| 145 | IRG Member | ⑨ IRG 投票 (多實例) | 並行多人,各自投 `RECOMMEND` / `RESERVE` / `REJECT`;有截止時間 `irgVoteDeadline` | 全員投票完成 → auto: AI 生成 IRG 摘要 → ⑩;或超時 → `activityIrgTimeoutDelegate` 將未投票者標記為預設 `RESERVE` → 直接進 AI 摘要(跳過剩餘多實例) |
 | 145 | IRG Member | ⑨ IRG 投票 (多實例) | 同上 | 同上 |
 | 145 | IRG Member | ⑨ IRG 投票 (多實例) | 同上 | 同上 |
 | 144 | IRG Secretary | ⑩ IRG 摘要審核 | 審核系統 AI 自動生成的 IRG 投票摘要 | 完成 → IRG 分支結束 + 解鎖 VP 投票提交 + 進入並行 Join |

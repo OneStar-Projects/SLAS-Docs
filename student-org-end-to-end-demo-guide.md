@@ -1,473 +1,404 @@
 # 學生組織流程全流程 Demo 指南
 
-> 本文檔面向 Demo 執行人、UAT 測試人與業務培訓人員，目標是讓使用者**不依賴開發人員陪同**，也能完整走完：
+> 本文檔面向 Demo 執行人、UAT 測試人員與業務培訓人員，目標是讓使用者**不依賴開發人員陪同**，也能完整走完現行（2026-10 修訂版）的：
 >
-> 1. 學生組織註冊主流程
-> 2. 拒絕／退回子流程
-> 3. 註冊申訴流程
-> 4. Reviewer Management（評審員管理）
+> 1. 新註冊申請及提交前幹事會（Exco）認可
+> 2. 註冊審批（含三條流程內退回路線）
+> 3. 退回申請人及重新提交、終審拒絕
+> 4. 申訴（含申訴補充文件、退回補交資料）
+> 5. 續期（續期驗證碼）
+> 6. 管理工具：組織類別申請期、評審小組成員、審批人管理、組織狀態
+>
+> 流程規則見 [student-org-workflow-flowcharts.md](./student-org-workflow-flowcharts.md)。本指南的按鈕及欄位名稱以繁體中文介面為準，括號內為英文介面文字。
 
 ---
 
-## 1. Demo 目標
+## 1. Demo 主線
 
-本次 `org` Demo 建議至少覆蓋以下 3 條主線：
+| 主線 | 內容 | 章節 |
+|:--|:--|:--|
+| A | 新註冊：填表、保存草稿、全體 Exco 認可、提交 | §4 |
+| B | 註冊審批全流程，包括秘書重啟一輪、主席退回秘書、終審退回主席，最後批准 | §5 |
+| C | 前段退回及重新提交、主席退回申請人、終審拒絕 | §6 |
+| D | 申訴：上傳補充文件、退回補交資料、重新提交、批准或拒絕 | §7 |
+| E | 續期：簽發驗證碼、發起續期、認可、審批、批准或拒絕 | §8 |
+| F | 管理工具 | §9 |
 
-1. **註冊通過主線**
-   - 覆蓋：`Registration Administrator → Registration Checker → Registration Referrer → Registration Reviewer → Registration Endorser → Registration Approver`
-
-2. **註冊拒絕／退回子流程**
-   - 覆蓋：`Registration Approver -> Rejection Draft -> Reviewer Confirm -> Registration Endorser Review -> Secretary Final Submit`
-
-3. **申訴主線**
-   - 覆蓋：`Registration Appeal Reviewer → Registration Appeal Endorser → Registration Appeal Approver`
-
-如時間允許，可再補演示：
-
-4. **Reviewer Management**
-   - 演示如何替換 `Registration Checker` / `Registration Referrer`
+時間有限時，建議最少演示 A → B（簡化為一次通過）→ C 的終審拒絕 → D → E。
 
 ---
 
-## 2. 參與角色
+## 2. 參與角色及帳號
 
-建議至少準備以下帳號：
+### 2.1 角色
 
-| Demo 角色 | 建議系統角色 / 身份 | 用途 |
-|:---|:---|:---|
-| 註冊申請人 | `Group Leader` | 提交學生組織註冊申請 |
-| Registration Administrator | `Registration Administrator` | 初審、指派 Reviewer |
-| Registration Checker | `Registration Checker` | 行政審核 |
-| Registration Referrer | `Registration Referrer` | 學術審核 |
-| Registration Reviewer 1 / 2 / 3 | `Registration Reviewer` | 收集意見 / 拒絕意見確認 |
-| Registration Endorser | `Registration Endorser` | 匯總審核 / 拒絕草擬意見審核 |
-| Registration Approver | `Registration Approver` | 最終審批 |
-| Registration Approver Secretary | `Student Group Registration Approver Secretary` | 最終審批備選 |
-| 申訴申請人 | `Group Leader` | 發起申訴 |
-| Registration Appeal Reviewer 1 / 2 / 3 | `Registration Appeal Reviewer` | 收集申訴意見 |
-| Registration Appeal Endorser | `Registration Appeal Endorser` | 匯總審核 |
-| Registration Appeal Approver | `Registration Appeal Approver` | 最終申訴審批 |
-| Registration Appeal Approver Secretary | `Student Group Appeal Approver Secretary` | 最終申訴審批備選 |
+| Demo 角色 | 系統角色（ID） | 用途 |
+|:--|:--|:--|
+| 申請人 | 學生（本身亦是 Exco 主席） | 填表、認可、提交、重新提交、申訴；續期時作新一屆申請人 |
+| Exco 成員 × 3 | 學生 | 提交前認可 |
+| SAO 管理員 | SAO Admin | 申請期、續期驗證碼、組織狀態 |
+| 註冊秘書 | Review Group Secretary（122） | 初審、設定傳閱期、秘書審閱、評審小組成員、審批人管理 |
+| Checker | Checker（142） | Checker 審核 |
+| Supervisor × 2–3 | Supervisor（116） | Supervisor 審核，可多選 |
+| 註冊小組成員 × 3 | Review Group Member（123） | 收集意見 |
+| 註冊主席 | Review Group Chairperson（138） | 主席決定 |
+| 註冊終審 | Registration Approver（124）／Delegate（134） | 最終審批 |
+| 申訴秘書 | Appeal Group Secretary（153） | 申訴初審、秘書審閱 |
+| 申訴小組成員 × 3 | Appeal Group Member（125） | 申訴意見收集 |
+| 申訴主席 | Appeal Group Chairperson（139） | 申訴主席決定 |
+| 申訴終審 | Appeal Approver（126）／Delegate（135） | 申訴最終審批 |
 
-> 如果環境仍顯示舊角色名稱，例如 `Student Group Registration Secretary`、`Student Group Registration Summary Reviewer`，請按其**等價最新角色名稱**理解。
+### 2.2 建議帳號
 
-### 2.1 DEV Demo 帳號清單
+> 以下為測試帳號的建議分配。**Demo 前請先由管理員確認各帳號在該環境已獲指派對應角色**（尤其 Checker 142、Supervisor 116、Appeal Group Secretary 153 為本次新增使用的角色），否則審批人不會收到待辦。
 
-> DEV 請使用**本地帳號**方式登入，預設密碼：`admin123`
->
-> **2026-08 起的前置條件**：帳密登入對 `USER_SOURCE = SSO` 的帳號受系統參數 `sso.user.allow_default_password` 管控——該值為 `false`（或讀取失敗）時一律擋下，只能走 SSO。DEV / UAT 請先確認此值為 `true`，否則下表帳號可能登不進去。
+| 用途 | 帳號 |
+|:--|:--|
+| SAO 管理員 | `admin` |
+| 申請人（Exco 主席） | `S1132367` |
+| Exco 成員 | `S1141577`、`S1138111`、`S1154233`（建議職位：副主席、司庫、秘書） |
+| Review Group Secretary | `hro-test-093` |
+| Checker | `hro-test-073` |
+| Supervisor | `hro-test-074`、`hro-test-075`、`hro-test-076` |
+| Review Group Member | `hro-test-094`、`hro-test-095`、`hro-test-096` |
+| Review Group Chairperson | `hro-test-106` |
+| Registration Approver | `hro-test-097` |
+| Appeal Group Secretary | `hro-test-105` |
+| Appeal Group Member | `hro-test-098`、`hro-test-099`、`hro-test-100` |
+| Appeal Group Chairperson | `hro-test-107` |
+| Appeal Approver | `hro-test-101` |
 
-#### 2.1.1 註冊審批帳號
+### 2.3 登入及切換帳號
 
-| 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
-|:---|:---:|:---|:---:|:---|:---|
-| `S1132367` | - | Group Leader | N | 發起申請 | 註冊申請人 |
-| `hro-test-093` | 122 | Registration Administrator | N | Node 1: 秘書審核 | 初審 |
-| `hro-test-105` | 136 | Registration Checker | N | Node 2: 行政審核 | 行政 |
-| `ro-test-102` | 132 | Registration Referrer | N | Node 3: 學術審核 | 學術 |
-| `hro-test-094` | 123 | Registration Reviewer | N | Node 4: 收集意見（多實例） | Reviewer 1 |
-| `hro-test-095` | 123 | Registration Reviewer | N | Node 4: 收集意見（多實例） | Reviewer 2 |
-| `hro-test-096` | 123 | Registration Reviewer | N | Node 4: 收集意見（多實例） | Reviewer 3 |
-| `hro-test-106` | 138 | Registration Endorser | N | Node 5: 匯總審核 | Summary |
-| `hro-test-097` | 124 | Registration Approver | Y | Node 6: 最終審批 | Final Approver |
-| `hro-test-103` | 134 | Student Group Registration Approver Secretary | - | Node 6: 最終審批（備選） | 備用 |
-
-#### 2.1.2 註冊申訴審批帳號
-
-| 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
-|:---|:---:|:---|:---:|:---|:---|
-| `S1132367` | - | Group Leader | N | 發起申訴 | 申訴發起人 |
-| `hro-test-098` | 125 | Registration Appeal Reviewer | N | Node 1: 收集意見（多實例） | Reviewer 1 |
-| `hro-test-099` | 125 | Registration Appeal Reviewer | N | Node 1: 收集意見（多實例） | Reviewer 2 |
-| `hro-test-100` | 125 | Registration Appeal Reviewer | N | Node 1: 收集意見（多實例） | Reviewer 3 |
-| `hro-test-107` | 139 | Registration Appeal Endorser | N | Node 2: 匯總審核 | Summary |
-| `hro-test-101` | 126 | Registration Appeal Approver | Y | Node 3: 最終審批 | Final Approver |
-| `hro-test-104` | 135 | Student Group Appeal Approver Secretary | - | Node 3: 最終審批（備選） | 備用 |
-
-#### 2.1.3 其他可用 Group Leader 帳號
-
-- `S1155707`
-- `S1154233`
-- `S1155654`
-- `S1155751`
-- `S1155738`
-- `S1155923`
-
-### 2.2 建議切號順序
-
-如果只有 1 台電腦演示，建議按下面順序切換帳號：
-
-1. 註冊申請人
-2. Registration Administrator
-3. Registration Checker
-4. Registration Referrer
-5. Registration Reviewer 1
-6. Registration Reviewer 2
-7. Registration Reviewer 3
-8. Registration Endorser
-9. Registration Approver
-10. Registration Administrator
-11. Registration Reviewer 1
-12. Registration Reviewer 2
-13. Registration Reviewer 3
-14. Registration Endorser
-15. Registration Administrator
-16. 申訴申請人
-17. Registration Appeal Reviewer 1
-18. Registration Appeal Reviewer 2
-19. Registration Appeal Reviewer 3
-20. Registration Appeal Endorser
-21. Registration Appeal Approver
-
-### 2.3 切號執行備忘
-
-1. 每個帳號都先完成至少一次登入。
-2. 只有上一個節點提交成功，下一個節點才會收到待辦。
-3. Registration 流程的 `122 / 136 / 132` 是順序審核，不要跳過。
-4. `123` 和 `125` 都是多實例並行，Demo 時至少切 2–3 個 Reviewer 帳號。
-5. 若要演示 Reviewer Management，請在 `122` 完成指派後、`136 / 132` 處理前進行。
+1. 在登入頁選「訪客登入」標籤，以帳號及密碼登入（測試環境預設密碼 `admin123`）。帳號若屬 SSO 來源，須系統容許預設密碼登入，否則只能經 SSO 登入。
+2. 測試帳號的電郵可能相同，頁面右上角未必看得出目前是誰；切換帳號前請先登出，或用瀏覽器無痕視窗分別登入。
+3. 同時持有多個角色的帳號（例如 `hro-test-105`），須先在頂欄角色切換器切換到相應角色，菜單才會顯示對應功能。
+4. 審批人一律在「待辦事項」的「學生組織」標籤找到待辦，按「辦理」進入審批頁。只有上一步提交成功，下一步的處理人才會收到待辦。
 
 ---
 
 ## 3. 演示前準備
 
-### 3.1 一次性系統配置
+### 3.1 檢查清單
 
-在開始 Demo 前，先確認以下條件：
+1. 2.2 所列帳號均可登入，且角色正確。
+2. **評審小組成員**：以 `hro-test-093` 進入「管理中心 → 評審小組成員」，確認「Review Group」標籤列出三名註冊小組成員；以 `hro-test-105`（先切換到 Appeal Group Secretary）確認「Appeal Group」標籤列出三名申訴小組成員。名單為空時，意見收集不會有人收到待辦。
+3. **組織類別申請期**：以 `admin` 進入「管理中心 → 組織類別申請期」，確認演示所用組織類別的狀態為「開放中」或「不限制」。
+4. 準備一套完整的申請資料（見 §4.2 校驗要點），可大幅縮短填表時間。
 
-1. **註冊申請人可建立或載入一筆學生組織註冊申請**
-   - 可是全新申請
-   - 也可以是已退回後重新編輯的申請
+### 3.2 頁面入口速查
 
-2. **註冊審批帳號都能看到待辦**
-   - `122 / 136 / 132 / 123 / 138 / 124 / 134`
+| 功能 | 入口 |
+|:--|:--|
+| 新註冊、草稿、重新提交、申訴、續期、待我認可 | 主辦中心 → 管理我的組織 |
+| 審批 | 待辦事項 →「學生組織」標籤 →「辦理」 |
+| 組織類別申請期 | 管理中心 → 組織類別申請期 |
+| 續期驗證碼、組織狀態 | 管理中心 → 續期驗證碼 |
+| 評審小組成員 | 管理中心 → 評審小組成員 |
+| 審批人管理 | 管理中心 → 審批人管理 |
 
-3. **申訴帳號都能看到待辦**
-   - `125 / 139 / 126 / 135`
-
-4. **Reviewer Management 功能可进入**
-   - 菜單位置：`管理中心 → 評審員管理`
-
-5. **演示用申請建議具備完整表單內容**
-   - 組別基本資料
-   - Membership / EXCO / 初始活動草稿等
-
-### 3.2 建議示範資料
-
-建議先準備一筆“容易演示”的註冊申請：
-
-1. 基本資料完整
-2. 附件已上傳
-3. 至少 3 名 reviewer 可共同評審
-4. 申請人知道如何重新提交被退回資料
-
-### 3.3 頁面入口速查
-
-為避免 Demo 時臨場找不到入口，建議先記住以下頁面：
-
-1. **學生組織註冊頁**
-   - 路由：`/student/StudentGroupRegister`
-   - 用途：新建註冊申請、修改並重新提交
-   - 補充：若是 `pending_resubmit`，系統會帶 `resubmitGroupId`
-
-2. **學生組織申訴頁**
-   - 路由：`/student/group-appeal?id=<groupId>`
-   - 用途：發起申訴、重新提交申訴
-   - 補充：申請人也可從 `My Group` 頁面點 `Appeal / Resubmit Appeal`
-
-3. **學生組織審批詳情頁**
-   - 路由：`/bpm/student-group-review`
-   - 用途：各審批角色打開待辦後處理任務
-   - 補充：通常從 `BPM To-do` 點入，不需要手工拼路由
-
-4. **Reviewer Management**
-   - 頁面：`管理中心 → 評審員管理`
-   - 用途：替換 `Registration Checker / Registration Referrer`
+「管理我的組織」頁面上方有「申請註冊社團」（Apply to register a Group）及「續期申請」（Renewal Applications）兩個按鈕；下方為一個列表，以標籤篩選：「全部」「運作中」「申請中」「待我認可」。
 
 ---
 
-## 4. 註冊主線 Demo
+## 4. 主線 A：新註冊及 Exco 認可
 
-### 4.1 申請人：提交學生組織註冊申請
+### 4.1 申請人填表
 
-1. 使用 `Group Leader` 登入。
-2. 進入 `Student Group Register` 頁面。
-3. 依序完成 6 個步驟：
-   - `Application Cover`
-   - `Organisation Information`
-   - `Governing Body / Correspondence`
-   - `Annual Operation`
-   - `Supporting Documents`
-   - `Review & Submit`
-4. 在最後一步確認預覽內容後，點擊 `Submit`。
+1. `S1132367` 登入 → 主辦中心 → 管理我的組織 →「申請註冊社團」。
+2. 按六個步驟填寫：「開始申請」→「組織資料」→「幹事會」→「年度規劃」→「文件上傳」→「審核」。
+3. 「幹事會」步驟：申請人已預載為第一位成員，**不能刪除，學號不能修改**；再加入 `S1141577`、`S1138111`、`S1154233`。
+4. 按「保存」（Save）。草稿存於系統，之後可在「申請中」標籤的草稿卡片按「繼續編輯」回到草稿。
 
-預期結果：
+### 4.2 校驗要點
 
-1. 流程啟動。
-2. `Registration Administrator` 收到待辦。
+| 項目 | 要求 |
+|:--|:--|
+| 幹事會 | 4–20 人；主席 1、副主席 1–2（副主席／內務副主席／外務副主席各限一人）、司庫 1、秘書 1；學生不可重複 |
+| 多於 12 人 | 須填寫理據 |
+| 日期 | 會籍及任期日期須在「註冊期間」內，否則提示「日期須在註冊期間內。」 |
+| 年度活動 | 至少 3 個，每個須填妥 |
+| 組織宗旨 | 只須填英文 |
+| 新註冊 | 須填「擬成立學生組織之獨特性」及上傳草擬會章 |
 
-### 4.2 Registration Administrator：初審
+資料未齊全時，「審核」步驟會列出未填妥的步驟，Exco 不能認可，申請人亦不能提交。
 
-1. 進入 `BPM To-do`，打開學生組織待辦。
-2. 進入 `Student Group Review` 詳情頁。
-3. 在 `approval-decision-panel` 中檢查資料。
-4. 指派：
-   - 1 名 `Registration Checker`
-   - 1 名 `Registration Referrer`
-5. 點擊 `Select Admin` / `Select Academic` 完成指派。
-6. 選擇 `Approve` 並提交。
+### 4.3 全體 Exco 認可
 
-預期結果：
+1. 申請人在「審核」步驟查看「幹事會認可」面板（顯示「已認可 0/4」），提交按鈕停用並提示「所有幹事會成員認可後方可提交申請」。
+2. 申請人勾選四項個人聲明，按「認可」（Endorse）並確認。
+3. `S1141577`、`S1138111`、`S1154233` 各自登入 → 管理我的組織 →「待我認可」標籤 → 該申請按「查看並認可」（Review and Endorse）→ 唯讀頁面（沒有保存、提交按鈕）→ 勾選個人聲明 →「認可」。
+4. 全員認可後，申請人收到可提交的通知；回到草稿，面板顯示「已認可 4/4」，按「提交申請」（Submit Application）。
 
-1. `Registration Checker` 收到行政審核待辦。
-2. `Registration Referrer` 还需等待行政通过后才会收到待办。
+**預期**：提交成功，狀態「註冊審核中」；`hro-test-093` 的待辦出現「Review Group Secretary 初審」。
 
-### 4.3 Registration Checker：行政審核
+### 4.4 可選演示：認可失效
 
-1. 從 `BPM To-do` 打開 `Admin Check`。
-2. 在審批操作區選擇 `Approve`。
-3. 如有需要填寫 comment。
-4. 提交。
-
-預期結果：
-
-1. `Registration Referrer` 收到學術審核待辦。
-
-### 4.4 Registration Referrer：學術審核
-
-1. 從 `BPM To-do` 打開 `Academic Check`。
-2. 在審批操作區選擇 `Approve`。
-3. 如有需要填寫 comment。
-4. 提交。
-
-預期結果：
-
-1. `Registration Reviewer` 群組收到並行收集意見任務。
-
-### 4.5 Registration Reviewers：收集意見
-
-1. 依序切到 `hro-test-094 / 095 / 096`。
-2. 打開 `Student Group Review` 頁面中的 `Collect Opinions` 表單。
-3. 每位 reviewer 選擇 `APPROVE / REJECT` 並填寫意見。
-4. 點擊 `Submit`。
-
-預期結果：
-
-1. 全部 reviewer 完成後，系統自動彙總意見。
-2. `Registration Endorser` 收到匯總審核任務。
-
-### 4.6 Registration Endorser：匯總審核
-
-1. 打開待辦中的 `Summary Review`。
-2. 查看 reviewer 意見摘要與 AI Summary Panel。
-3. 填寫 summary comment。
-4. 點擊 `Submit`。
-
-預期結果：
-
-1. `Registration Approver` 收到最終審批任務。
-
-### 4.7 Registration Approver：最終審批
-
-1. 打開待辦中的 `Final Approval`。
-2. 選擇 `Approve`。
-3. 如有需要填寫最終 comment。
-4. 提交。
-
-預期結果：
-
-1. 流程結束為 `ACTIVE`。
-2. 學生組織狀態變為正式有效。
+| 操作 | 預期 |
+|:--|:--|
+| 兩名 Exco 已認可後，申請人修改任一欄位並保存 | 該兩人狀態變為「需重新認可」，並收到認可失效通知 |
+| Exco 先開啟「查看並認可」頁不操作；申請人修改並保存；Exco 再按「認可」 | 提示「申請內容已更新，請先查看最新版本再認可」，頁面重新載入 |
+| 申請人不作修改再按「保存」 | 已作出的認可不受影響 |
+| 草稿期間，以 Exco 或管理員帳號查看 | 草稿只在申請人的列表出現；Exco 只在「待我認可」看到；管理後台組織清單看不到草稿 |
+| 在草稿卡片按「刪除」 | 草稿及相關認可記錄一併刪除 |
 
 ---
 
-## 5. 註冊拒絕／退回子流程 Demo
+## 5. 主線 B：註冊審批全流程
 
-### 5.1 觸發方式
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| B1 | `hro-test-093` | 辦理「Review Group Secretary 初審」：選「通過並指派審核人」，不選 Checker 直接提交 | 提示「請至少選擇一名 Checker」，不能提交 |
+| B2 | `hro-test-093` | Checker 選 `hro-test-073`，Supervisor 選 `hro-test-074`、`hro-test-075`，提交 | `hro-test-073` 出現「Checker 審核」 |
+| B3 | `hro-test-073` | 選「退回申請人」，退回原因留空提交 | 退回原因標 *，不能提交 |
+| B4 | `hro-test-073` | 改選「通過」（意見可留空），提交 | `hro-test-074`、`hro-test-075` 各自出現「Supervisor 審核」 |
+| B5 | `hro-test-074` | 選「通過」 | 流程仍停在 Supervisor 審核，等待 `hro-test-075` |
+| B6 | `hro-test-075` | 選「通過」 | `hro-test-093` 出現「設定傳閱期」 |
+| B7 | `hro-test-093` | 「傳閱期（天）」填 1、「提醒時間（截止前小時數）」填 24，提交 | 提示提醒時間須早於截止時間，不能提交 |
+| B8 | `hro-test-093` | 保持預設 5 天／24 小時（頁面預覽截止及提醒時間），按「開始收集意見」 | 三名小組成員各出現「收集意見」 |
+| B9 | `hro-test-094`、`095`、`096` | 各自選「贊成」或「反對」，填寫意見，提交 | 三人全部提交後，`hro-test-093` 出現「Review Group Secretary 審閱」，**同時** `hro-test-106` 出現「Review Group Chairperson 決定」 |
+| B10 | `hro-test-106` | 開啟主席待辦 | 橫幅顯示「待 Review Group Secretary 提交 — 您可查看所有意見，但暫時不能處理」；只有「返回」 |
+| B11 | `hro-test-093` | 在「加入我的意見」輸入意見，按「加入意見」 | 意見列表出現該條，帶「秘書」標籤，不計入成員統計 |
+| B12 | `hro-test-093` | 選「退回評審員（重啟一輪）」，原因留空提交 | 原因必填，不能提交 |
+| B13 | `hro-test-093` | 填寫「退回評審員原因」，傳閱期保持預設，提交 | 主席待辦消失；三名小組成員再次出現「收集意見」 |
+| B14 | 三名小組成員 | 再次提交意見 | 秘書及主席再次同時收到待辦；意見區顯示「第 2 輪（本輪）」，第 1 輪意見可展開查看 |
+| B15 | `hro-test-093` | 填寫「批核條款」「跟進事項」，選「提交至 Review Group Chairperson」 | 主席收到可作出決定的通知，主席頁面變為可操作 |
+| B16 | `hro-test-106` | 選「退回至 Review Group Secretary」，填寫原因 | 秘書重新收到審閱待辦；主席待辦**仍在**但恢復唯讀 |
+| B17 | `hro-test-093` | 修改擬稿後再次「提交至 Review Group Chairperson」 | 主席待辦恢復可操作 |
+| B18 | `hro-test-106` | 可修改批核條款，選「提交終審」 | `hro-test-097` 出現「最終審批」 |
+| B19 | `hro-test-097` | 選「退回至 Review Group Chairperson」，填寫原因 | `hro-test-106` 出現「Review Group Chairperson 重新決定」，可直接處理 |
+| B20 | `hro-test-106` | 選「提交終審」 | `hro-test-097` 再次出現「最終審批」 |
+| B21 | `hro-test-097` | 選「拒絕」，拒絕理由留空 | 理由標 *，提示「請填寫具體拒絕意見」，不能提交 |
+| B22 | `hro-test-097` | 改選「批准」，提交 | 流程結束 |
+| B23 | `S1132367` | 管理我的組織 →「運作中」 | 該組織狀態「已啟用」，顯示批核條款及跟進事項 |
 
-在 `Registration Approver` 的 `Final Approval` 節點：
-
-1. 選擇 `Reject` 或 `Return`
-2. 提交
-
-預期結果：
-
-1. 進入拒絕／退回意見子流程。
-
-### 5.2 Registration Administrator：起草綜合意見
-
-1. 打開 `Draft Rejection Opinion`。
-2. 填寫綜合意見。
-3. 設定 circulation / reminder 相關天數。
-4. 點擊 `Submit`。
-
-### 5.3 Registration Reviewers：確認意見
-
-1. `hro-test-094 / 095 / 096` 依序登入。
-2. 打開 `Rejection Opinion Feedback` 表單。
-3. 對綜合意見作 `APPROVE / SUGGEST / NO_COMMENT` 反饋。
-4. 若選 `SUGGEST`，補充修改建議後提交。
-
-### 5.4 Registration Endorser：審核草擬意見
-
-1. `Registration Endorser` 打開 `summaryReviewerReviewTask`。
-2. 查看 reviewer 反饋摘要。
-3. 填寫 review comment。
-4. 點擊 `Submit`。
-
-### 5.5 Registration Administrator：最終提交意見
-
-1. 回到 `Registration Administrator`。
-2. 打開 `secretaryFinalSubmitTask`。
-3. 最終確認意見內容。
-4. 確認 `finalContent` 已填寫完整。
-5. 點擊 `Submit`。
-
-預期結果：
-
-1. 若原決策是 `return`：流程結束為 `PENDING_RESUBMIT`
-2. 若原決策是 `reject`：流程結束為 `REJECTED_FINAL`
+**附加檢查**：任一審批人在審批頁的「決定記錄」可見每一步的操作、處理人、輪次、時間及意見。
 
 ---
 
-## 6. 申訴主線 Demo
+## 6. 主線 C：退回、重新提交及終審拒絕
 
-### 6.1 Group Leader：發起申訴
+每項建議用一份新申請（按 §4 準備）。
 
-前提：學生組織狀態已是 `REJECTED_FINAL`。
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| C1 | `hro-test-093` | 初審選「退回申請人」，填寫退回原因 | 申請「需要修改後重提」；申請人看到退回原因及「修改並重新提交」 |
+| C2 | `hro-test-073` | Checker 審核選「退回申請人」，填寫原因 | 同上，退回原因為 Checker 所填 |
+| C3 | `hro-test-075` | 指派兩名 Supervisor，Checker 通過後由 `hro-test-075` 選「退回申請人」 | `hro-test-074` 的 Supervisor 待辦**自動消失**；申請「需要修改後重提」 |
+| C4 | `hro-test-106` | 走到主席決定（秘書已提交），選「退回申請人」，填寫原因 | 申請「需要修改後重提」；申請人看到主席確認的退回原因及跟進事項 |
+| C5 | `hro-test-097` | 走到終審，秘書及主席均**沒有**填寫建議拒絕理由；選「拒絕」並填寫拒絕理由 | 申請「註冊被拒絕」；申請人看到終審所填理由、申訴程序說明及「申訴」按鈕 |
 
-1. 使用 `Group Leader` 登入。
-2. 透過以下任一入口進入申訴：
-   - `My Group` 頁面點 `Appeal`
-   - 或直接打開 `/student/group-appeal?id=<groupId>`
-3. 在申訴頁填寫 `Appeal Reason`。
-4. 點擊 `Submit`。
+**重新提交**（承 C1–C4）：
 
-預期結果：
+1. `S1132367` → 管理我的組織 →「申請中」→ 該申請按「修改並重新提交」。退回時全體認可已清空。
+2. 按需修改並「保存」，全體 Exco 按 §4.3 重新認可。
+3. 按「提交申請」。
 
-1. `Registration Appeal Reviewer` 群組收到並行待辦。
+**預期**：提交成功，新一輪審批由「Review Group Secretary 初審」重新開始。若該組織類別申請期已結束，會提示「本類別申請期已於 YYYY-MM-DD 結束」。
 
-### 6.2 Registration Appeal Reviewers：收集申訴意見
-
-1. 依序切到 `hro-test-098 / 099 / 100`。
-2. 每位 reviewer 提交申訴審核意見。
-
-預期結果：
-
-1. 全部 reviewer 完成後，系統自動彙總意見。
-2. `Registration Appeal Endorser` 收到匯總審核任務。
-
-### 6.3 Registration Appeal Endorser：匯總審核
-
-1. 打開申訴流程中的 `Summary Review`。
-2. 查看 reviewer 意見與摘要。
-3. 選擇：
-   - `Submit`：送最終審批
-   - `Return`：結束為 `APPEAL_RESUBMIT`
-
-### 6.4 Registration Appeal Approver：最終申訴審批
-
-1. 打開 `Final Approval`。
-2. 選擇：
-   - `Approve` → `ACTIVE`
-   - `Reject` → `APPEAL_REJECTED`
-   - `Return` → `APPEAL_RESUBMIT`
-3. 提交。
+> C5 的結果可直接作為主線 D 的起點。
 
 ---
 
-## 7. Reviewer Management Demo
+## 7. 主線 D：申訴
 
-### 7.1 演示目標
+前提：申請狀態為「註冊被拒絕」（例如 C5）。
 
-演示 `Registration Administrator` 如何在註冊流程中替換：
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| D1 | `S1132367` | 管理我的組織 → 該申請按「申訴」（Appeal）→「提交申訴」對話框：填寫申訴理由（必填，最多 1000 字），在「申訴補充文件（選填）」上傳一個 PDF，按「提交申訴」 | 狀態「申訴審核中」；`hro-test-105` 出現「Appeal Group Secretary 初審」並收到通知 |
+| D2 | `hro-test-105` | （先切換到 Appeal Group Secretary）開啟初審 | 可見原拒絕資訊、申訴理由；「申訴補充文件」列出 D1 的文件，可下載 |
+| D3 | `hro-test-105` | 選「退回補交資料」，填寫「須補交的項目」，提交 | 狀態「申訴需修改」；申請人看到須補交的項目，並收到「學生組織申訴已退回 - 請補充材料」通知（結果為「已退回」，不是拒絕） |
+| D4 | `S1132367` | 按「重新提交申訴」：對話框預先列出 D1 的文件，再上傳第二個文件，提交 | `hro-test-105` 再次出現初審待辦；「申訴補充文件」列出兩個文件 |
+| D5 | `hro-test-105` | 選「資料齊全，開始傳閱」，傳閱期保持預設（5 天／24 小時），提交 | 三名申訴小組成員出現意見收集待辦 |
+| D6 | `hro-test-098`、`099`、`100` | 各自提交意見 | `hro-test-105` 出現「Appeal Group Secretary 審閱」，**同時** `hro-test-107` 出現唯讀的「Appeal Group Chairperson 決定」 |
+| D7 | `hro-test-105` | 填寫批核條款，選「提交至 Appeal Group Chairperson」 | 主席頁面變為可操作 |
+| D8 | `hro-test-107` | 查看決定選項 | 只有「提交終審」「退回至 Appeal Group Secretary」，**沒有**「退回申請人」 |
+| D9 | `hro-test-107` | 選「提交終審」 | `hro-test-101` 出現「最終審批」 |
+| D10 | `hro-test-101` | 查看決定選項 | 只有「批准」「拒絕」「退回至 Appeal Group Chairperson」，**沒有**退回申請人 |
+| D11 | `hro-test-101` | 選「退回至 Appeal Group Chairperson」，填寫原因 | `hro-test-107` 出現「Appeal Group Chairperson 重新決定」 |
+| D12 | `hro-test-107` | 選「退回至 Appeal Group Secretary」，填寫原因 | 秘書重新收到審閱待辦，主席待辦恢復唯讀 |
+| D13 | `hro-test-105` → `hro-test-107` | 秘書再次提交 → 主席「提交終審」 | `hro-test-101` 出現「最終審批」 |
+| D14 | `hro-test-101` | 選「批准」 | 狀態「已啟用」，顯示批核條款 |
+| D15（另一次） | `hro-test-101` | 在 D10 改選「拒絕」並填寫理由 | 狀態「申訴已被拒絕」（終局），申請人只看到拒絕原因，沒有後續操作 |
 
-1. `Registration Checker`
-2. `Registration Referrer`
-
-### 7.2 建議演示時機
-
-最適合在下列時機進行：
-
-1. `Registration Administrator` 已完成初審并指派 reviewer
-2. `Registration Checker / Registration Referrer` 尚未开始处理待办
-
-### 7.3 操作步骤
-
-1. 使用有权限的账号进入 `管理中心 → 評審員管理`
-2. 可先按：
-   - `Group Name`
-   - `Task Node`
-   - `Registration Type`
-   过滤目标申请
-3. 查看当前：
-   - `Registration Checker`
-   - `Registration Referrer`
-4. 点 `Modify Reviewer`
-5. 使用 `Select Admin` / `Select Academic` 选择新的替代人选
-6. 填写变更原因
-7. 提交变更
-
-預期結果：
-
-1. 原 reviewer 不再看到待办
-2. 新 reviewer 在待办中心接手任务
+> 在申訴對話框刪除已上傳的文件，文件會即時刪除，即使其後取消對話框；不想刪除的文件請勿按刪除。
 
 ---
 
-## 8. Demo 完成后的验收点
+## 8. 主線 E：續期
 
-1. 注册主线完成后，状态应为 `ACTIVE`
-2. 注册退回后，状态应为 `PENDING_RESUBMIT`
-3. 注册终局拒绝后，状态应为 `REJECTED_FINAL`
-4. 申诉退回后，状态应为 `APPEAL_RESUBMIT`
-5. 申诉拒绝后，状态应为 `APPEAL_REJECTED`
-6. Reviewer Management 替换后，新旧 reviewer 的待办归属应发生变化
+前提：一個狀態為「已啟用」的組織（例如 B23 或 D14 的組織：負責人 `S1132367`，Exco 含 `S1138111`、`S1141577`、`S1154233`）。以下由 `S1138111` 擔任新一屆申請人。
+
+> 續期獲批後組織負責人會變為 `S1138111`；如之後仍要用 `S1132367` 作負責人演示，請另用一個組織。
+
+### 8.1 簽發驗證碼
+
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| E1 | `admin` | 管理中心 → 續期驗證碼，在「搜尋已註冊的組織」輸入組織名稱 | 已啟用／已停用的組織可選；草稿、審批中或已解散的組織顯示「不可續期」 |
+| E2 | `admin` | 選定組織 →「簽發驗證碼」→ 輸入候選內閣名稱 → 確認 | 對話框顯示驗證碼、複製按鈕及有效期（180 天），並提示「此驗證碼不會再次顯示。該組織的其他驗證碼仍然有效。」；列表新增一行，狀態「已簽發」，「候選內閣」欄顯示名稱 |
+| E3 | `admin` | 以**同一**候選內閣名稱再簽發 | 提示「該候選內閣已有一個有效的驗證碼」 |
+| E4（可選） | `admin` | 以不同候選內閣名稱再簽發至共 3 個，然後再簽發第 4 個 | 第 4 個提示「該組織已有 3 個有效的驗證碼」 |
+
+記下 E2 的驗證碼，交給新一屆申請人。
+
+### 8.2 發起續期
+
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| E5 | `S1138111` | 主辦中心 → 管理我的組織 →「續期申請」 | 對話框列出注意事項（驗證碼數量、有效期、綁定、交接期等） |
+| E6 | `S1138111` | 輸入錯誤驗證碼 →「驗證」 | 提示驗證碼無效；「確認並發起續期」保持停用 |
+| E7 | `S1138111` | 輸入 E2 的驗證碼（不分大小寫，空格及連字符會被忽略）→「驗證」 | 顯示組織名稱及「有效期至」；「確認並發起續期」可用。按「取消」後再驗證仍可通過（驗證不會消耗驗證碼） |
+| E8 | `S1138111` | 按「確認並發起續期」（Confirm and start renewal） | 提示「已發起續期，請更新申請內容後提交。」並進入續期表單；`admin` 列表該碼變為「已使用」，使用人為 `S1138111` |
+| E9 | `S1132367` | 用同一驗證碼驗證 | 提示「驗證碼無效：此驗證碼已被使用」 |
+
+### 8.3 填寫、認可及提交
+
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| E10 | `S1138111` | 檢查續期表單 | 標題為續期註冊；申請類型為「註冊續期申請」；資料由組織現行資料預載；沒有「擬成立學生組織之獨特性」；須回答「組織是否擬修訂會章？」；「文件上傳」須回答是否已完成選舉或委任程序 |
+| E11 | `S1138111` | 「幹事會」步驟改為新一屆名單：`S1138111` 任主席、`S1132367` 改任副主席；「文件上傳」選已完成選舉並上傳選舉結果；按「保存」 | 提示「續期草稿已儲存」；「我的續期申請」顯示「草稿」及「繼續填寫」。名單內沒有申請人時，保存會提示「申請人必須列為幹事會成員」 |
+| E12 | 表內全體 Exco | 按 §4.3 認可：申請人在「審核」步驟認可；其餘 Exco 在「待我認可」找到帶「續期」標籤的一項 →「查看並認可」→「認可」 | 全員認可前提交按鈕停用 |
+| E13 | `S1138111` | 按「提交申請」 | 提示「續期申請已提交」；狀態「審批中」；`hro-test-093` 出現「Review Group Secretary 初審」 |
+
+### 8.4 審批及結果
+
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| E14 | 各審批人 | 按主線 B 的步驟處理，開啟審批頁 | 審批頁分別顯示「擬續期內容」（標籤「擬議」）及「現行生效的組織資料」（標籤「現行（生效中）」） |
+| E15 | `S1132367` | 審批期間查看該組織 | 負責人仍為 `S1132367`，組織資料未改變 |
+| E16 | `hro-test-093` | 初審選「退回申請人」，填寫原因（Checker／Supervisor／主席退回申請人效果相同） | 續期狀態「已退回」，`S1138111` 看到「退回原因」及「修改並重新提交」；全體 Exco 認可清空 |
+| E17 | `S1138111` → 全體 Exco | 「修改並重新提交」：修改並保存，全員重新認可後提交 | **毋須新驗證碼**；新一輪審批由初審重新開始 |
+| E18 | `hro-test-097` | 走到終審，選「批准」 | 續期「已批准」，顯示批核條款／跟進事項；組織資料及幹事會更新為續期內容，負責人變為 `S1138111`；組織狀態及編號不變 |
+| E19（另一次） | `hro-test-097` | 用另一個組織重做 E1–E14，終審選「拒絕」並填寫理由 | 續期「已拒絕」，顯示拒絕原因及「組織的註冊資格維持不變。如需再次續期，須向 SAO 取得新的驗證碼。」；組織資料與負責人不變；沒有重新提交或申訴入口 |
+
+> **選舉文件**：如在「文件上傳」選擇尚未完成選舉（並勾選知悉須其後提交），申請仍可提交及審批，但終審**不能批准**，須退回申請人補交選舉結果或委任紀錄。
+
+### 8.5 可選：並行續期及撤銷
+
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| E20 | `admin` → 另一學生 | 為同一組織的另一候選內閣簽發驗證碼，由另一名學生發起續期 | 可以發起；兩份續期可同時進行 |
+| E21 | 審批人 | 批准其中一份 | 另一份自動變為「已取消」（審批中的亦會取消），該組織未使用的驗證碼被撤銷 |
+| E22 | `S1138111` | 已有一份處理中的續期時，再用另一驗證碼發起 | 提示「您已綁定一個有效的續期申請驗證碼」 |
+| E23 | `admin` | 對「已簽發」的驗證碼按「撤銷」並確認 | 提示「驗證碼已撤銷」，狀態「已撤銷」 |
+| E24 | `admin` | 對已使用、續期仍為草稿或已退回的驗證碼按「撤銷」 | 確認後該續期申請一併取消 |
+| E25 | `admin` | 對續期正在審批中的驗證碼撤銷 | 提示「續期申請審批期間不能撤銷其驗證碼」 |
 
 ---
 
-## 9. 常見卡點與排查
+## 9. 主線 F：管理工具
 
-### 9.1 `Registration Checker` / `Registration Referrer` 没收到任务
+### 9.1 組織類別申請期
 
-检查：
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| F1 | `admin` | 管理中心 → 組織類別申請期 | 列出各組織類別及狀態（不限制／開放中／尚未開始／已結束） |
+| F2 | `admin` | 編輯某類別，把結束日期設為昨天 | 狀態「已結束」 |
+| F3 | 申請人 | 以該類別提交新註冊，或重新提交該類別被退回的新註冊 | 提示「本類別申請期已於 YYYY-MM-DD 結束」；保存草稿及 Exco 認可不受影響 |
+| F4 | 申請人 | 對同一類別的組織提交續期 | 不受影響 |
+| F5 | `admin` | 把開始及結束日期留空 | 狀態「不限制」，可再提交 |
 
-1. `Registration Administrator` 是否真的完成了初审并提交
-2. reviewer 是否被正确指派
-3. 是否有人通过 Reviewer Management 替换过该 reviewer
+> 開始及結束日期均包括當天；開始日期不得遲於結束日期。
 
-### 9.2 `Registration Reviewer` 多实例只出现一人
+### 9.2 評審小組成員
 
-检查：
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| F6 | `hro-test-093` | 管理中心 → 評審小組成員 | 「Review Group」標籤列出成員，可「新增成員」及「移除」；「Appeal Group」標籤顯示「您不負責維護此小組。」 |
+| F7 | `hro-test-105` | 切換到 Appeal Group Secretary 後進入同一頁面 | 可維護「Appeal Group」，「Review Group」顯示無維護權限 |
 
-1. `123` 角色下是否真的有多名有效用户
-2. BPM 环境中的候选组同步是否正常
+> 小組不設有效期；每輪意見收集以該輪開始時的名單為準。
 
-### 9.3 `Registration Endorser` / `Registration Appeal Endorser` 看不到摘要
+### 9.3 審批人管理
 
-检查：
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| F8 | — | 準備一份停在「Supervisor 審核」的申請（指派 `hro-test-074`、`hro-test-075`，兩人都未處理） | — |
+| F9 | `hro-test-093` | 管理中心 → 審批人管理 →「現行流程」標籤 | 列出該申請及兩名 Supervisor，狀態「待審核」，各有「替換」 |
+| F10 | `hro-test-093` | 替換 `hro-test-075`：新評審員下拉不會出現已指派的 `hro-test-074`；選 `hro-test-076`，原因留空 | 原因必填，不能提交 |
+| F11 | `hro-test-093` | 填寫原因後提交 | 列表顯示 074、076；`hro-test-075` 的待辦消失，`hro-test-076` 出現「Supervisor 審核」 |
+| F12 | `hro-test-074`、`hro-test-076` | 都選「通過」 | 流程進入「設定傳閱期」 |
 
-1. 前置 reviewer 是否已经全部完成
-2. 是否触发了 timeout 分支但没有正常汇总
+> 已完成審核的評審員不能替換，其意見保留。「較早案件（舊流程）」標籤只供處理舊流程的在途案件。
 
-### 9.4 申诉入口不可见
+### 9.4 組織狀態
 
-检查：
-
-1. 当前组织状态是否为 `REJECTED_FINAL`
-2. 申诉账号是否有对应权限
-
-### 9.5 最终提交时报 `finalContent` 必填
-
-检查：
-
-1. `secretaryFinalSubmitTask` 页面是否已补充最终意见
-2. `Registration Endorser` 是否已先完成 `summaryReviewerReviewTask`
+| # | 帳號 | 操作 | 預期 |
+|:--|:--|:--|:--|
+| F13 | `admin` | 續期驗證碼頁選定一個活躍組織 →「轉為非活躍」並確認 | 提示「狀態已更新」；組織狀態「非活躍」，仍可簽發續期驗證碼 |
+| F14 | `admin` | 「恢復活躍」 | 組織恢復「活躍」 |
+| F15（只用測試組織） | `admin` | 「解散」並確認 | **不可復原**；組織不能再續期或舉辦新活動，處理中的續期及未使用的驗證碼一併取消 |
 
 ---
 
-## 10. 關聯文檔
+## 10. 驗收點
 
-如需查看流程图和节点定义，可配合阅读：
+1. 未取得全體 Exco 認可、資料未齊全或有未保存改動時，不能提交。
+2. 新註冊在申請期外不能提交或重新提交；續期不受影響。
+3. Checker／Supervisor 全員通過才前進；任一人退回即「需要修改後重提」，其餘同節點待辦消失。
+4. 意見彙總後秘書及主席同時收到待辦；秘書提交前主席唯讀。
+5. 秘書重啟一輪、主席退回秘書、終審退回主席均不結束流程，學生毋須重新提交。
+6. 所有退回及拒絕都必須填寫理由；終審拒絕時，已擬定的建議拒絕理由會直接採用。
+7. 註冊批准 →「已啟用」並顯示批核條款；終審拒絕 →「註冊被拒絕」並可申訴。
+8. 申訴退回補交資料 →「申訴需修改」，申請人收到「已退回」通知；申訴主席及終審沒有「退回申請人」。
+9. 申訴拒絕 →「申訴已被拒絕」，沒有後續操作。
+10. 續期審批期間組織資料及負責人不變；批准後新一屆幹事會及負責人同時生效；拒絕後組織不變，再續期須新驗證碼。
+11. 審批人管理替換後，原評審員待辦消失，新評審員收到待辦。
+12. 通知只發給本案參與者，未參與的同角色用戶不會收到。
 
-- [student-org-workflow-flowcharts.md](./student-org-workflow-flowcharts.md)
+---
+
+## 11. 常見卡點與排查
+
+### 11.1 審批人沒有收到待辦
+
+1. 上一步是否已成功提交（可在審批頁「決定記錄」查看）。
+2. 該帳號是否持有對應角色；Checker、Supervisor 須由秘書在初審時指派。
+3. 是否曾在「審批人管理」替換該評審員。
+4. 小組成員：「評審小組成員」名單是否包含該帳號，且在該輪開始**之前**已加入。
+5. 申訴秘書：帳號是否持有 Appeal Group Secretary 角色。
+
+### 11.2 申請人不能提交
+
+1. 「幹事會認可」面板是否全員「已認可」。
+2. 是否有未保存的改動（先按「保存」，但有改動時已作出的認可會失效）。
+3. 申請資料是否齊全（「審核」步驟會列出未填妥的步驟）。
+4. 組織類別申請期是否已結束或尚未開始。
+5. 所有 Exco 學號是否均能對應系統用戶。
+
+### 11.3 Exco 不能認可
+
+1. 申請資料尚未齊全（頁面提示「申請人尚未填妥申請，待申請填妥後方可認可」）。
+2. 未勾選全部個人聲明。
+3. 申請人剛保存了新內容（重新載入後再認可）。
+4. 該帳號不在申請表的幹事會名單內。
+
+### 11.4 主席頁面沒有決定按鈕
+
+秘書尚未按「提交至 … Chairperson」，或主席剛退回秘書、秘書尚未重新提交。屬正常設計。
+
+### 11.5 看不到「申訴」按鈕
+
+1. 狀態是否為「註冊被拒絕」或「申訴需修改」。
+2. 是否以**申請人**帳號登入（其他 Exco 看不到申請人的操作按鈕）。
+3. 每宗註冊只可發起一次申訴；之後只能在「申訴需修改」時重新提交。
+4. 續期被拒絕不設申訴。
+
+### 11.6 續期驗證碼不能使用
+
+1. 已使用、已過期（180 天）或已撤銷。
+2. 申請人已綁定另一份處理中的續期。
+3. 組織已解散。
+
+### 11.7 續期終審不能批准
+
+續期申請未上傳選舉結果或委任紀錄；請退回申請人補交。
+
+---
+
+## 12. 關聯文檔
+
+- [student-org-workflow-flowcharts.md](./student-org-workflow-flowcharts.md)：現行流程圖及規則
+- [revised-workflow-flowcharts.md](./revised-workflow-flowcharts.md)：修訂背景及設計紀錄
