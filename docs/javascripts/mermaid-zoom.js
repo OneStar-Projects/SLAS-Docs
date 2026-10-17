@@ -64,6 +64,9 @@
     // flex 容器裡用 margin:auto 置中：圖比容器小時置中，比容器大時兩側仍捲得到。
     // 換成 justify-content:center 的話，放大後左半邊會捲不出來。
     el.style.margin = 'auto';
+    // flex 子元素預設 flex-shrink:1，會被壓縮以塞進容器，圖一進來就變小了。
+    // 設 0 才會保持原始尺寸，超出的部分交給容器捲動。
+    el.style.flexShrink = '0';
     var scale = 1;
     function apply() { el.style.zoom = scale; }
     function zoom(f) {
