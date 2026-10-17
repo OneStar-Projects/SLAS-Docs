@@ -56,8 +56,7 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
 
 extra_javascript:
-  # 本機打包而非 CDN：jsDelivr 在部分網路環境不可達，一旦載入失敗工具列會整組消失
-  - javascripts/svg-pan-zoom.min.js
+  # 自包含實作，不再依賴 svg-pan-zoom（縮放改用 CSS transform）
   - javascripts/mermaid-zoom.js
 
 extra_css:
