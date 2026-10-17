@@ -1,0 +1,6 @@
+# 站點建置依賴。版本已釘死：mkdocs-material 升級曾變更主題結構與設定項，
+# 浮動版本會讓 CI 在無人改動文檔時突然建置失敗。
+# 本機預覽：python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+mkdocs==1.6.1
+mkdocs-material==9.7.7
+pymdown-extensions==12.3

@@ -14,7 +14,7 @@ mkdocs.yml    站點設定與導航
 ## 本機預覽
 
 ```bash
-pip install mkdocs-material
+pip install -r requirements.txt
 mkdocs serve        # http://127.0.0.1:8000
 ```
 
