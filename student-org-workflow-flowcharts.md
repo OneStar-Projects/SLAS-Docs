@@ -1,6 +1,6 @@
 # 學生組織註冊、申訴及續期流程
 
-> 本文檔描述 SLAS 系統**現行**的學生組織註冊、申訴及續期（renew）流程，以及提交前的幹事會（Exco）認可、組織類別申請期等配套功能。內容已按 2026-10-08 版本系統核對。
+> 本文檔描述 SLAS 系統**現行**的學生組織註冊、申訴及續期（renew）流程，以及提交前的幹事會（Exco）認可、組織類別申請期等配套功能。內容已按 2026-10-18 版本系統核對（2026-10-14 新增 Supervisor 退回 Checker、秘書退回 Supervisor；2026-10-15 Checker 改為選填；2026-10-16 採用甲方確認的待辦名稱、投票新增「中立」、秘書「建議決定」改為必填）。
 >
 > - 本文取代 2026-09 以前的舊版流程描述（舊版的「拒絕傳閱子流程」、Admin Checker／Academic Checker 已停用）。
 > - 修訂過程及甲方確認事項見 [revised-workflow-flowcharts.md](./revised-workflow-flowcharts.md)（設計紀錄）。
@@ -64,10 +64,10 @@ REJECTED_FINAL → 申訴流程
 
 | 角色 ID | 角色名稱 | 職責 |
 |--:|:--|:--|
-| 122 | Review Group Secretary | 初審；指派 Checker 及 Supervisor；Supervisor 全員通過後設定傳閱期；秘書審閱（擬定批核條款／跟進事項／建議拒絕理由，可加入自己的意見）；可退回評審員重啟一輪；維護 Review Group 成員；可在「審批人管理」替換未完成的 Checker／Supervisor |
-| 142 | Checker | 由秘書指派，可多人並行；與活動申請流程共用同一 Checker 角色 |
-| 116 | Supervisor | 由秘書指派，可多人並行 |
-| 123 | Review Group Member | 提供意見及投票（贊成／反對），全體成員並行 |
+| 122 | Review Group Secretary | 初審；指派 Checker（選填）及 Supervisor；Supervisor 全員通過後設定傳閱期，亦可於此時退回 Supervisor；秘書審閱（必選「建議決定」，並擬定批核條款／跟進事項／建議拒絕理由，可加入自己的意見）；可退回評審員重啟一輪；維護 Review Group 成員；可在「審批人管理」替換未完成的 Checker／Supervisor |
+| 142 | Checker | 由秘書**選填**指派（可零名，零名時跳過 Checker 審核），可多人並行；與活動申請流程共用同一 Checker 角色 |
+| 116 | Supervisor | 由秘書指派，至少一名，可多人並行；審核時可退回申請人或退回 Checker |
+| 123 | Review Group Member | 提供意見及投票（贊成／反對／中立），全體成員並行 |
 | 138 | Review Group Chairperson | 秘書提交後作出決定：提交終審、退回秘書或退回申請人；可修改秘書擬稿 |
 | 124 | Registration Approver | 最終審批：批准、拒絕或退回主席 |
 | 134 | Registration Approver Delegate | 終審代辦人，決定權與 Registration Approver 相同 |
@@ -96,7 +96,8 @@ REJECTED_FINAL → 申訴流程
 
 | 環節 | 規則 |
 |:--|:--|
-| Checker 審核、Supervisor 審核 | 各自多人並行；**全員通過**才進入下一步；**任一人退回申請人**即結束本次流程，其餘未完成的同節點待辦自動取消，已提交的意見保留 |
+| Checker 審核、Supervisor 審核 | 各自多人並行；**全員通過**才進入下一步；**任一人退回申請人**即結束本次流程，其餘未完成的同節點待辦自動取消，已提交的意見保留。Checker 環節為選填，未指派時整個 ② 跳過 |
+| 流程內退回（不結束流程） | ③ 任一 Supervisor 可**退回 Checker**（僅限有指派 Checker 的案件）；④ 秘書設定傳閱期時可**退回 Supervisor**。兩者均取消本輪其餘未完成待辦，交回原指派的全體重新審核 |
 | 意見收集 | 該輪開始時 Review Group／Appeal Group 的全體成員並行；全員提交或到達截止時間後彙總 |
 | 秘書、主席 | 公共角色，角色內任何一人處理即可 |
 | 最終審批 | Approver 與 Approver Delegate 任一人可作出決定 |
@@ -121,21 +122,25 @@ REJECTED_FINAL → 申訴流程
 
 | 流程 | 編號 | 待辦名稱（系統顯示） | 處理角色 |
 |:--|:--:|:--|:--|
-| 註冊 | ① | Review Group Secretary 初審 | Review Group Secretary |
-|  | ② | Checker 審核 | Checker（多人並行） |
-|  | ③ | Supervisor 審核 | Supervisor（多人並行） |
-|  | ④ | 設定傳閱期 | Review Group Secretary |
-|  | ⑤ | 收集意見 | Review Group Member（並行） |
-|  | ⑥ | Review Group Secretary 審閱 | Review Group Secretary |
-|  | ⑦ | Review Group Chairperson 決定／重新決定 | Review Group Chairperson |
-|  | ⑧ | 最終審批 | Registration Approver／Delegate |
-| 申訴 | ① | Appeal Group Secretary 初審 | Appeal Group Secretary |
-|  | ② | 多人意見收集 | Appeal Group Member（並行） |
-|  | ③ | Appeal Group Secretary 審閱 | Appeal Group Secretary |
-|  | ④ | Appeal Group Chairperson 決定／重新決定 | Appeal Group Chairperson |
-|  | ⑤ | 最終審批 | Appeal Approver／Delegate |
+| 註冊 | ① | 註冊審議組秘書初審 | Review Group Secretary |
+|  | ② | 審查員審核申請 | Checker（多人並行） |
+|  | ③ | 活動指導審核申請 | Supervisor（多人並行） |
+|  | ④ | 註冊審議組秘書設定傳閱期 | Review Group Secretary |
+|  | ⑤ | 收集註冊審議組意見 | Review Group Member（並行） |
+|  | ⑥ | 註冊審議組秘書總結審閱 | Review Group Secretary |
+|  | ⑦ | 註冊審議組主席決策／註冊審議組主席重新決策 | Review Group Chairperson |
+|  | ⑧ | 註冊審批員最終審批 | Registration Approver／Delegate |
+| 申訴 | ① | 申訴審議組秘書初審 | Appeal Group Secretary |
+|  | ② | 收集申訴審查員意見 | Appeal Group Member（並行） |
+|  | ③ | 申訴審議組秘書總結審閱 | Appeal Group Secretary |
+|  | ④ | 申訴審議組主席決策／申訴審議組主席重新決策 | Appeal Group Chairperson |
+|  | ⑤ | 申訴審批員最終審批 | Appeal Approver／Delegate |
 
 > 審批人一律在「待辦事項」的「學生組織」標籤找到待辦，按「辦理」進入。
+>
+> 上表為 **2026-10-16 甲方確認的待辦名稱**。舊稱（如「Checker 審核」「Supervisor 審核」「設定傳閱期」）系統仍保留為搜尋別名，用舊稱搜尋待辦同樣找得到。
+>
+> 註：待辦名稱中的「審查員」即 Checker、「活動指導」即 Supervisor；角色本身仍沿用英文名稱（§2）。
 
 ---
 
@@ -189,7 +194,7 @@ flowchart TD
     Complete -->|"否"| Edit
     Complete -->|"是"| Notify[/"auto: 通知名單內須認可的 Exco"/]
     Notify --> Entry["Exco 在「管理我的組織 → 待我認可」<br/>按「查看並認可」(唯讀頁面)"]
-    Entry --> Endorse["勾選個人聲明後按「認可」<br/>(申請人亦須在「審核」步驟認可)"]
+    Entry --> Endorse["勾選個人聲明後按「認可」<br/>(申請人亦須認可，但在自己的申請頁進行，<br/>不出現在「待我認可」列表)"]
     Endorse --> AllGate{全體 Exco<br/>已認可?}
     AllGate -->|"否"| Remind[/"auto: 提醒未認可者"/]
     Remind --> Entry
@@ -235,10 +240,14 @@ flowchart TD
     Start --> SecretaryCheck
 
     subgraph Phase1["Phase 1: 前段審核"]
-        SecretaryCheck["① 初審<br/>(Review Group Secretary)<br/>指派 Checker(s) 及 Supervisor(s)"]
+        SecretaryCheck["① 初審<br/>(Review Group Secretary)<br/>指派 Checker(s)（選填）及 Supervisor(s)"]
         SecretaryCheck --> SecretaryGate{秘書決定?}
-        SecretaryGate -->|"通過並指派審核人"| CheckerReview
+        SecretaryGate -->|"通過並指派審核人"| CheckerAssignedGate
         SecretaryGate -.->|"退回申請人"| EndResubmit
+
+        CheckerAssignedGate{"有指派 Checker?"}
+        CheckerAssignedGate -->|"有"| CheckerReview
+        CheckerAssignedGate -->|"沒有（跳過 ②）"| SupervisorReview
 
         CheckerReview["② Checker 審核<br/>(Checker, 多人並行)"]
         CheckerReview --> CheckerGate{"全員通過?"}
@@ -249,8 +258,10 @@ flowchart TD
         SupervisorReview --> SupervisorGate{"全員通過?"}
         SupervisorGate -->|"全員通過"| SetCirculation
         SupervisorGate -.->|"任一人退回申請人"| EndResubmit
+        SupervisorGate -.->|"任一人退回 Checker<br/>（僅限有指派 Checker）"| CheckerReview
 
         SetCirculation["④ 設定傳閱期<br/>(Review Group Secretary)<br/>預設 5 天，截止前 24 小時提醒"]
+        SetCirculation -.->|"退回 Supervisor（須填原因）"| SupervisorReview
     end
 
     SetCirculation --> InitOpinion
@@ -273,7 +284,7 @@ flowchart TD
     SummarizeOpinions --> ChairLocked["主席同時收到待辦<br/>(唯讀：可查看全部意見，暫時不能處理)"]
 
     subgraph Phase3["Phase 3: 秘書審閱"]
-        SecretaryReview["⑥ 秘書審閱<br/>(Review Group Secretary)<br/>擬定批核條款／跟進事項／建議拒絕理由<br/>可加入自己的意見"]
+        SecretaryReview["⑥ 秘書審閱<br/>(Review Group Secretary)<br/>必選建議決定<br/>擬定批核條款／跟進事項／建議拒絕理由<br/>可加入自己的意見"]
         SecretaryReview --> SecretaryReviewGate{秘書決定?}
     end
 
@@ -448,33 +459,39 @@ flowchart LR
 #### ① Review Group Secretary 初審
 
 - **選項**：「通過並指派審核人」／「退回申請人」
-- 通過時須選擇**至少一名 Checker 及至少一名 Supervisor**（可多選，可按姓名、電郵或部門搜尋），只可選持有相應角色的用戶。
+- 通過時 **Checker 為選填**（可指派零名或多名），**Supervisor 須至少一名**；可多選，可按姓名、電郵或部門搜尋，只可選持有相應角色的用戶。表單提示「選填，不選則直接交由 Supervisor 審核」。
+- **未指派 Checker 時跳過 ②，直接進入 ③ Supervisor 審核**；該案的 Supervisor 亦不提供「退回 Checker」選項。
 - 退回時須填寫「退回原因」→ 流程結束（需要修改後重提）。
 
 #### ② Checker 審核／③ Supervisor 審核
 
-- **選項**：「通過」／「退回申請人」
-- 每名被指派者各自收到待辦。全員通過才進入下一步；任一人退回即結束流程（需要修改後重提），其餘未完成的同節點待辦自動消失。
+- **選項**：② 為「通過」／「退回申請人」；③ 為「通過」／「退回申請人」／**「退回 Checker」**（僅限 ① 有指派 Checker 的案件，否則不顯示，後端亦拒絕）
+- 每名被指派者各自收到待辦。全員通過才進入下一步；任一人退回申請人即結束流程（需要修改後重提），其餘未完成的同節點待辦自動消失。
+- **退回 Checker**（須填寫原因）：取消其餘未完成的 Supervisor 待辦，**流程不結束**；交回 ② 原指派的全部 Checker 重新審核（並行、全員通過才前進，Checker 仍可退回申請人），通過後再交回 ③ 原指派的全部 Supervisor 審核。退回記錄於決定記錄並通知相關人員。
 - 處理前可由秘書在「審批人管理」替換尚未完成的人員（§9.3）。
 
 #### ④ 設定傳閱期
 
 - **執行人**：Review Group Secretary（Supervisor 全員通過後收到待辦）
+- **選項**：「開始收集意見」／**「退回 Supervisor」**（須填寫原因）
 - 「傳閱期（天）」預設 5，最少 1；「提醒時間（截止前小時數）」預設 24，最少 1，且須早於截止時間。頁面以現在時間預覽「意見截止時間」及「發送提醒時間」，實際由意見收集開始時起計。
 - 按「開始收集意見」後，Review Group 全體成員收到「收集意見」待辦。
+- **退回 Supervisor**：由 ③ 原指派的全部 Supervisor 重新審核，**流程不結束**。
 
 #### ⑤ 收集意見
 
-- 每名成員選擇「贊成」或「反對」並填寫意見（兩者必填）後提交。
+- 每名成員選擇「贊成」「反對」或「中立」並填寫意見（兩者必填）後提交。「中立」在統計上與「贊成」同樣不構成反對。
 - 到達提醒時間：提醒尚未提交者，收集繼續。
 - 到達截止時間：未提交者標記為「已逾期」，流程繼續彙總。
 - 彙總後，秘書收到「Review Group Secretary 審閱」待辦，**主席同時**收到「Review Group Chairperson 決定」待辦（唯讀）。
 
 #### ⑥ Review Group Secretary 審閱
 
-- 頁面按輪次顯示成員意見及統計（已提交、贊成、反對、待提交）。
-- 「加入我的意見」：秘書可加入附加意見，帶「秘書」標籤，不計入成員統計。
-- 擬定「批核條款」「跟進事項」「建議拒絕理由」（僅在建議拒絕時填寫）。
+- 頁面按輪次顯示成員意見及統計（已提交、贊成、反對、中立、待提交）。
+- 「加入我的意見」：秘書可加入附加意見，帶「秘書」標籤，不計入成員統計。提交至主席前，秘書可**修改或刪除本輪自己的附加意見**。
+- **「建議決定」為必填**：須選擇「建議批准」「建議退回修改」或「建議拒絕」，未選擇不能提交至主席。
+- 擬定「批核條款」「跟進事項」「建議拒絕理由」。系統**只保留與所選建議決定對應的擬稿**（建議批准→批核條款；建議退回修改→跟進事項；建議拒絕→建議拒絕理由），其餘擬稿於提交時清除。
+- 審閱文字欄位上限 10000 字。
 - **選項**：
   - 「提交至 Review Group Chairperson」→ 主席收到可作出決定的通知，主席頁面變為可操作。
   - 「退回評審員（重啟一輪）」→ 須填寫「退回評審員原因」並重新設定傳閱期（預設恢復 5 天／24 小時）；主席的唯讀待辦隨即取消；向全體成員重新派發新一輪意見收集，已提交者亦須重新提交。歷次意見保留並按輪次顯示；重啟輪次不設上限。
@@ -487,7 +504,7 @@ flowchart LR
   - 「提交終審」→ ⑧
   - 「退回至 Review Group Secretary」（須填原因）→ 秘書重新收到審閱待辦；主席待辦保留但恢復唯讀，待秘書再次提交。
   - 「退回申請人」（須填原因）→ 流程結束（需要修改後重提），申請人看到主席確認的退回原因及跟進事項。
-- 被終審退回時，待辦名稱為「Review Group Chairperson 重新決定」，頁面提示「Registration Approver / Delegate 已退回，請重新處理」，可直接處理，選項同上。若再退回秘書，主席待辦重新鎖定。
+- 被終審退回時，待辦名稱為「註冊審議組主席重新決策」，頁面提示「Registration Approver / Delegate 已退回，請重新處理」，可直接處理，選項同上。若再退回秘書，主席待辦重新鎖定。
 
 #### ⑧ 最終審批
 
@@ -508,7 +525,7 @@ flowchart LR
 
 #### ② 多人意見收集
 
-與註冊 ⑤ 相同（贊成／反對＋意見、提醒、截止、彙總後秘書及主席同時收到待辦）。
+與註冊 ⑤ 相同（贊成／反對／中立＋意見、提醒、截止、彙總後秘書及主席同時收到待辦）。
 
 #### ③ Appeal Group Secretary 審閱
 
@@ -516,7 +533,7 @@ flowchart LR
 
 #### ④ Appeal Group Chairperson 決定
 
-秘書提交前唯讀。選項只有「提交終審」及「退回至 Appeal Group Secretary」，**沒有**「退回申請人」。被終審退回時待辦名稱為「Appeal Group Chairperson 重新決定」。
+秘書提交前唯讀。選項只有「提交終審」及「退回至 Appeal Group Secretary」，**沒有**「退回申請人」。被終審退回時待辦名稱為「申訴審議組主席重新決策」。
 
 #### ⑤ 最終審批
 
@@ -534,6 +551,8 @@ flowchart LR
 | ① 初審 | 退回申請人 | 需要修改後重提 | 退回原因 | 修改並重新提交 |
 | ② Checker | 任一人退回申請人 | 需要修改後重提 | 退回原因 | 修改並重新提交 |
 | ③ Supervisor | 任一人退回申請人 | 需要修改後重提 | 退回原因 | 修改並重新提交 |
+| ③ Supervisor | 任一人退回 Checker | 流程內，交回原指派 Checker 重審（僅限有指派 Checker） | — | — |
+| ④ 設定傳閱期 | 秘書退回 Supervisor | 流程內，交回原指派 Supervisor 重審 | — | — |
 | ⑥ 秘書審閱 | 退回評審員 | 流程內，新一輪意見收集 | — | — |
 | ⑦ 主席 | 退回秘書 | 流程內 | — | — |
 | ⑦ 主席 | 退回申請人 | 需要修改後重提 | 退回原因、跟進事項 | 修改並重新提交 |
