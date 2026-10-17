@@ -56,23 +56,33 @@
 
     // 縮放／平移套在 .mermaid 容器上，不進 shadow DOM
     /*
-     * 用 zoom 而不是 transform:scale()：scale 只是視覺變形，不改變版面尺寸，
-     * 外層永遠不會產生捲軸，放大的部分會直接被裁掉（看起來就像按鈕沒作用）。
-     * zoom 會實際撐大元素，配合上面的 overflow:auto 才捲得動。
+     * 實測：對這個元素設 zoom 完全無效（強制 zoom=2，offsetWidth 仍是 302）。
+     * 圖畫在 closed shadow DOM 裡，宿主不吃 zoom。
+     *
+     * 改用 transform:scale()——純視覺變形，對任何元素都生效。但 scale 不改變
+     * 版面尺寸，外層不會長出捲軸，所以再加一層 inner 依比例撐出實際佔位，
+     * 捲動與縮放才能同時成立。
      */
+    var inner = document.createElement('div');
+    inner.className = 'mzoom-inner';
+    el.parentNode.insertBefore(inner, el);
+    inner.appendChild(el);
+
+    var baseW = el.offsetWidth || 1;
+    var baseH = el.offsetHeight || 1;
+    el.style.transformOrigin = '0 0';
     el.style.cursor = 'grab';
-    // flex 容器裡用 margin:auto 置中：圖比容器小時置中，比容器大時兩側仍捲得到。
-    // 換成 justify-content:center 的話，放大後左半邊會捲不出來。
-    el.style.margin = 'auto';
-    // flex 子元素預設 flex-shrink:1，會被壓縮以塞進容器，圖一進來就變小了。
-    // 設 0 才會保持原始尺寸，超出的部分交給容器捲動。
-    el.style.flexShrink = '0';
+
     var scale = 1;
-    function apply() { el.style.zoom = scale; }
+    function apply() {
+      el.style.transform = 'scale(' + scale + ')';
+      inner.style.width = (baseW * scale) + 'px';
+      inner.style.height = (baseH * scale) + 'px';
+      inner.style.margin = 'auto';          // 比容器小時置中
+    }
     function zoom(f) {
       var old = scale;
       scale = Math.min(8, Math.max(0.3, scale * f));
-      // 以可視區中心為基準調整捲動位置，放大時不會跑掉焦點
       var cx = box.scrollLeft + box.clientWidth / 2;
       var cy = box.scrollTop + box.clientHeight / 2;
       apply();
@@ -81,8 +91,8 @@
       box.scrollTop = cy * r - box.clientHeight / 2;
     }
     function reset() { scale = 1; apply(); box.scrollLeft = 0; box.scrollTop = 0; }
+    apply();
 
-    // 拖曳改成捲動容器，和放大後的捲軸一致
     var drag = false, sx = 0, sy = 0, sl = 0, st = 0;
     el.addEventListener('mousedown', function (e) {
       drag = true; sx = e.clientX; sy = e.clientY;
