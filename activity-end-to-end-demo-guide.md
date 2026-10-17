@@ -6,6 +6,8 @@
 > 需注意：最新 guest 流程已拆成 `Dean / Delegate 背書` + `VP(RD) / VP(RD) Delegate 最終審批`。  
 > `非 NSOA` 會在一般高級審批後進入 `VP(RD)`；`NSOA` 會在 `Chair PASS` 後進入 `VP(RD)`。
 > 文中按最新 `SYSTEM_ROLE.NAME` 使用 `VP(RD)` / `VP(RD) Delegate`；流程實作與部分 UI 仍常寫作 `VPRD / VPRD Delegate`。
+>
+> **關於帳號與學號**：本文中的測試帳號、學號及姓名已部分遮蔽（如 `S1132***`、`1132****`），僅保留足以區分不同角色的前綴。實際演示帳號請向專案團隊索取內部測試清單。
 
 ---
 
@@ -70,7 +72,7 @@
 
 | 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
 |:---|:---:|:---|:---:|:---|:---|
-| `S1132367` | - | Group Leader | N | 發起申請 | 申請人 |
+| `S1132***` | - | Group Leader | N | 發起申請 | 申請人 |
 | `hro-test-071` | 115 | Coordinator | N | 活動協調審核 | 一審 / 指派 Checker |
 | `hro-test-072` | 141 | EO Venue Reviewer | N | 場地審批 | EO |
 | `hro-test-073` | 142 | Activity Application Checker | N | 活動審核 | Checker |
@@ -94,10 +96,10 @@
 
 | 用戶名 | 角色 ID | 最新角色名稱 | Delegate | 審批節點 | 備註 |
 |:---|:---:|:---|:---:|:---|:---|
-| `S1132367` | `11323677` | Group Leader | N | Student Group Leader（活動建立者） | 申請人 |
+| `S1132***` | `1132****` | Group Leader | N | Student Group Leader（活動建立者） | 申請人 |
 
 > `OC Endorsement` 需另外準備 2 名實際在該活動 `OC` 名單內的 `Group Leader` 帳號。  
-> 先前文檔中的 `S1132368 / S1132369` 已移除，後續請按實際演示名單補入。
+> 先前文檔中另外兩個同系列帳號已移除，後續請按實際演示名單補入。
 
 ### 2.2 建議切號順序
 

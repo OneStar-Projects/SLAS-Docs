@@ -163,7 +163,7 @@ flowchart TD
 |:--|:-:|:--|
 | Activity Code | ✓ | 活動編碼，如 `SLA-2425-001` |
 | Name of Activity | | 活動名稱（僅供參考） |
-| SID（學號） | ✓ | 如 `11557034` |
+| SID（學號） | ✓ | 如 `1155****` |
 | Full Name in English | | 英文姓名 |
 | Full Name in Chinese | | 中文姓名 |
 | Role in Activity | ✓ | 見下方角色枚舉的 code |

@@ -6,6 +6,8 @@
 >
 > 設計層面的環節條件、通知與需求對應見 [activity-report-submission-design.md](activity-report-submission-design.md)。
 > 角色稱呼以系統角色的正式名稱為準（見 [roles-menus-permissions-matrix.md](roles-menus-permissions-matrix.md)）。
+>
+> **關於帳號與學號**：本文中的測試帳號、學號及姓名已部分遮蔽（如 `S1132***`、`1132****`），僅保留足以區分不同角色的前綴。實際演示帳號請向專案團隊索取內部測試清單。
 
 > **⚠️ 先分清是哪一種「活動報告」。** 系統中同名的有兩套，入口、狀態、審批鏈完全不同：
 >
@@ -264,8 +266,8 @@ flowchart TD
 | 活動名稱 | Enrolment form testing |
 | 活動日期 | 2026-08-08 ~ 2026-08-09（已結束），狀態「已完成」 |
 | 是否 NSOA | 否 → 走**非 NSOA / Reviewer** 主線（6.2、6.3） |
-| 建立人 = 報告填報人 | `S1138111`（CHAN Chin Ching） |
-| OC 成員 | 1 位：CHAN Chin Ching（學號 11381112）——**與建立人是同一人** |
+| 建立人 = 報告填報人 | `S1138***`（姓名已隱去） |
+| OC 成員 | 1 位：同上帳號（姓名及學號已隱去）——**與建立人是同一人** |
 | 已存檔 Supervisor | 1 位：`hro-test-074`（Test Supervisor 1） |
 | 報告現況 | 已有一份草稿，共簽尚未發起（輪次 0），未啟動審批；財務、照片、共簽、審批記錄皆為空 |
 
@@ -296,7 +298,7 @@ flowchart TD
 
 ### 6.2 主線 A — 非 NSOA 最短路徑
 
-> DEV 對照：填報人 `S1138111` → 活動 `SLA-2526-00121` → Coordinator `hro-test-071` → Supervisor `hro-test-074` → Reviewer `hro-test-091`。因該活動的報告草稿已存在，第 1 步進去看到的狀態是「草稿」而非「未開始」。
+> DEV 對照：填報人 `S1138***` → 活動 `SLA-2526-00121` → Coordinator `hro-test-071` → Supervisor `hro-test-074` → Reviewer `hro-test-091`。因該活動的報告草稿已存在，第 1 步進去看到的狀態是「草稿」而非「未開始」。
 
 1. Group Leader 登入 → 管理活動報告 → 找到該活動（狀態「未開始」）→ 點入，確認 OC 名單、活動目標、財務、出席四塊已自動帶出。
 2. 補齊 05–08 文字欄與 §7 實際金額，上傳 §10 照片並**勾選 §10 媒體同意**，存草稿。
