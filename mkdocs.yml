@@ -1,0 +1,81 @@
+site_name: SLAS 文檔
+site_description: Student-Led Activities System — 對客戶開放的設計與操作文檔
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  language: zh-TW
+  features:
+    - navigation.instant        # 無刷新切頁
+    - navigation.tracking
+    - navigation.sections       # 左側按分組展開
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: 切換至深色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: 切換至淺色模式
+  font:
+    text: Noto Sans TC
+    code: JetBrains Mono
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  # Mermaid：16 份文檔中有 9 份使用流程圖，缺了這段會原樣輸出成程式碼區塊
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - search:
+      # 中文需要逐字切分，預設的空白分詞對中文無效
+      separator: '[\s​\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])'
+
+nav:
+  - 首頁: index.md
+  - 設計文檔:
+      - 活動發布審批流程: activity-publish-workflow-design.md
+      - 學生組織註冊、申訴及續期流程: student-org-workflow-flowcharts.md
+      - 學生組織流程修訂（設計紀錄）: revised-workflow-flowcharts.md
+      - 活動申請通知模板設計: activity-application-notification-design.md
+      - 活動生命週期通知模板設計: activity-lifecycle-notification-design.md
+      - 活動報告提交與審批流程: activity-report-submission-design.md
+      - 角色 × 選單 × 權限對照表: roles-menus-permissions-matrix.md
+  - 操作文檔:
+      - 活動流程全流程 Demo 指南: activity-end-to-end-demo-guide.md
+      - 學生組織流程全流程 Demo 指南: student-org-end-to-end-demo-guide.md
+      - 活動報告（活動總結報告）: activity-report-submission-guide.md
+      - 活動報名: activity-enrollment-guide.md
+      - 活動出席: activity-attendance-guide.md
+      - 活動推廣: activity-promotion-guide.md
+      - 事件報告 / 活動報告: activity-report-guide.md
+      - 活動成員導入 / 社團組織導入: import-modules-guide.md
