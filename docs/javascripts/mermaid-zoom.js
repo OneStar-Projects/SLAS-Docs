@@ -35,14 +35,16 @@
 
   function setup(svg) {
     if (svg.dataset.mzoom) return false;
-    var box = svg.parentElement;
-    while (box && !(box.classList && box.classList.contains('mermaid'))) box = box.parentElement;
-    if (!box) box = svg.parentElement;           // 退而求其次，至少掛得上
-    if (!box) return false;
+    if (!svg.parentNode) return false;
+
+    // 不去猜 SVG 被放在哪個容器裡：自己包一層，工具列就一定掛得上
+    var box = document.createElement('div');
+    box.className = 'mzoom-wrap';
+    box.style.cssText = 'position:relative;overflow:hidden;background:inherit;';
+    svg.parentNode.insertBefore(box, svg);
+    box.appendChild(svg);
 
     svg.dataset.mzoom = '1';
-    box.style.position = 'relative';
-    box.style.overflow = 'hidden';
 
     var scale = 1, tx = 0, ty = 0;
     function apply() {
@@ -98,10 +100,25 @@
     return true;
   }
 
+  /*
+   * 不靠「SVG 在 .mermaid 裡面」這個假設：實測 .mermaid 找得到 6 個，
+   * 但 .mermaid svg 一個都抓不到，表示 Mermaid 把 SVG 放到了別處。
+   * 改以 SVG 自身的特徵辨識：流程圖一定有 g.nodes / g.edgePaths，
+   * 或帶 aria-roledescription（flowchart-v2、sequence 等）。
+   */
+  function isChart(svg) {
+    if (svg.closest('.md-header, .md-nav, .md-footer, .md-search')) return false;  // 主題圖示
+    if (/^mermaid|^mmd/.test(svg.id || '')) return true;
+    if (svg.getAttribute('aria-roledescription')) return true;
+    if (svg.querySelector('g.nodes, g.edgePaths, g.edgeLabels, .flowchart-link')) return true;
+    return false;
+  }
+
   function scan() {
     var n = 0;
-    document.querySelectorAll('.mermaid svg, svg[id^="mermaid"], svg[id^="mmd"]')
-      .forEach(function (s) { if (setup(s)) n++; });
+    document.querySelectorAll('svg').forEach(function (s) {
+      if (isChart(s) && setup(s)) n++;
+    });
     if (n) console.info(TAG, '已加上工具列：' + n + ' 張（累計 ' + count + '）');
   }
 
