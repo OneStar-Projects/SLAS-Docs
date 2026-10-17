@@ -62,6 +62,7 @@ markdown_extensions:
 extra_javascript:
   # 自包含實作，不再依賴 svg-pan-zoom（縮放改用 CSS transform）
   - javascripts/mermaid-zoom.js
+  - javascripts/toc-toggle.js
 
 extra_css:
   - stylesheets/mermaid-zoom.css
