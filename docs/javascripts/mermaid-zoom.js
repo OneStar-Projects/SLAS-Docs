@@ -37,9 +37,12 @@
   }
 
   function setup(el) {
-    if (el.dataset.mzoom) return false;
     if (!el.parentNode) return false;
-    el.dataset.mzoom = '1';
+    // 以 DOM 結構判斷是否已處理：dataset 會在 Material 重新渲染時被清掉，
+    // 結果同一張圖被包第二層，畫面上就出現兩組工具列。
+    if (el.closest('.mzoom-wrap')) return false;
+    // Material 是捲到才渲染：圖還沒畫出來就包容器會干擾它，沒高度就留給下一輪
+    if (el.getBoundingClientRect().height < 40) return false;
 
     // 自己包一層當作視窗，裁切與工具列定位都放在這裡
     var box = document.createElement('div');
@@ -115,7 +118,11 @@
   window.__mermaidZoom = {
     rescan: scan,
     get info() {
-      return { 圖塊數: document.querySelectorAll('.mermaid').length, 已處理: count };
+      return {
+        圖塊數: document.querySelectorAll('.mermaid').length,
+        已處理: document.querySelectorAll('.mzoom-wrap').length,
+        工具列: document.querySelectorAll('.mzoom-bar').length
+      };
     }
   };
   console.info(TAG, '腳本已載入（容器模式）');
