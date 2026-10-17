@@ -40,40 +40,45 @@
 
   function enhance(svg) {
     if (svg.dataset.zoomReady) return false;
-    if (typeof svgPanZoom !== 'function') {
-      console.warn(TAG, 'svg-pan-zoom 未載入');
-      return false;
-    }
 
     var box = svg.closest('.mermaid');
-    if (!box) return false;
+    if (!box) {
+      console.warn(TAG, '找不到 .mermaid 容器，略過一張圖');
+      return false;
+    }
 
     svg.style.maxWidth = 'none';
     svg.style.width = '100%';
     if (!svg.style.height) svg.style.height = '60vh';
 
-    var api;
-    try {
-      api = svgPanZoom(svg, {
-        zoomEnabled: true,
-        controlIconsEnabled: false,   // 用下面自己的工具列
-        panEnabled: true,
-        fit: true,
-        center: true,
-        minZoom: 0.2,
-        maxZoom: 20,
-        mouseWheelZoomEnabled: false  // 完全不碰 wheel，交還給瀏覽器捲動
-      });
-    } catch (e) {
-      console.warn(TAG, '初始化失敗', e);
-      return false;
+    // 縮放依賴 svg-pan-zoom；即使它載入失敗，全螢幕仍可用，所以工具列照建
+    var api = null;
+    if (typeof svgPanZoom === 'function') {
+      try {
+        api = svgPanZoom(svg, {
+          zoomEnabled: true,
+          controlIconsEnabled: false,   // 用下面自己的工具列
+          panEnabled: true,
+          fit: true,
+          center: true,
+          minZoom: 0.2,
+          maxZoom: 20,
+          mouseWheelZoomEnabled: false  // 完全不碰 wheel，交還給瀏覽器捲動
+        });
+      } catch (e) {
+        console.warn(TAG, 'svg-pan-zoom 初始化失敗，只提供全螢幕', e);
+      }
+    } else {
+      console.warn(TAG, 'svg-pan-zoom 未載入，只提供全螢幕');
     }
 
     var bar = document.createElement('div');
     bar.className = 'mzoom-bar';
-    bar.appendChild(btn('zoomIn',  '放大',   function () { api.zoomIn(); }));
-    bar.appendChild(btn('zoomOut', '縮小',   function () { api.zoomOut(); }));
-    bar.appendChild(btn('reset',   '重設',   function () { api.resetZoom(); api.center(); api.fit(); }));
+    if (api) {
+      bar.appendChild(btn('zoomIn',  '放大', function () { api.zoomIn(); }));
+      bar.appendChild(btn('zoomOut', '縮小', function () { api.zoomOut(); }));
+      bar.appendChild(btn('reset',   '重設', function () { api.resetZoom(); api.center(); api.fit(); }));
+    }
 
     var full = btn('full', '全螢幕', function () {
       if (document.fullscreenElement) {
@@ -90,6 +95,7 @@
       var on = document.fullscreenElement === box;
       full.title = on ? '結束全螢幕' : '全螢幕';
       full.querySelector('path').setAttribute('d', on ? ICON.exit : ICON.full);
+      if (!api) return;
       setTimeout(function () {
         try { api.resize(); api.fit(); api.center(); } catch (e) {}
       }, 120);

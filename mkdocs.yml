@@ -56,8 +56,8 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
 
 extra_javascript:
-  # 讓流程圖可縮放／拖曳（對齊 GitHub 檢視 .md 的體驗）
-  - https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.2/dist/svg-pan-zoom.min.js
+  # 本機打包而非 CDN：jsDelivr 在部分網路環境不可達，一旦載入失敗工具列會整組消失
+  - javascripts/svg-pan-zoom.min.js
   - javascripts/mermaid-zoom.js
 
 extra_css:
