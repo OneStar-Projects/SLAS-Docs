@@ -1,5 +1,5 @@
-/* Material 產生的是 <pre class="mermaid">，選擇器要對上 pre；
-   pre 預設的 white-space / overflow 會干擾 pan-zoom，一併覆蓋。 */
+/* Material 產生的是 <pre class="mermaid">：pre 預設的 white-space / overflow
+   會干擾圖的拖曳，一併覆蓋。 */
 .mermaid {
   position: relative;
   white-space: normal;
@@ -11,7 +11,7 @@
   padding: 0;
 }
 
-/* 用後代選擇器：SVG 不保證是直接子元素 */
+/* SVG 不保證是直接子元素，用後代選擇器 */
 .mermaid svg {
   display: block;
   cursor: grab;
@@ -21,19 +21,60 @@
   cursor: grabbing;
 }
 
-/* svg-pan-zoom 的控制鈕在深色模式下預設是深色，會看不見 */
-[data-md-color-scheme="slate"] .mermaid #svg-pan-zoom-controls g {
-  fill: var(--md-default-fg-color--light);
+/* ---- 工具列（參考 GitHub 預覽 .md 時的樣式）---- */
+.mzoom-bar {
+  position: absolute;
+  top: .4rem;
+  right: .4rem;
+  display: flex;
+  gap: .15rem;
+  padding: .15rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: .2rem;
+  background: var(--md-default-bg-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+  opacity: .45;
+  transition: opacity .15s;
+  z-index: 2;
 }
 
-/* 操作提示，只在已啟用縮放的圖上顯示 */
-.mermaid:has(svg[data-zoom-ready])::after {
-  content: "拖曳平移 · 雙指捏合縮放 · 右下角按鈕";
-  position: absolute;
-  top: .3rem;
-  right: .5rem;
-  font-size: .6rem;
+/* 滑鼠移到圖上才完全顯示，不擋住內容 */
+.mermaid:hover .mzoom-bar,
+.mzoom-bar:focus-within {
+  opacity: 1;
+}
+
+.mzoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 0;
+  border-radius: .15rem;
+  background: transparent;
   color: var(--md-default-fg-color--light);
-  pointer-events: none;
-  opacity: .7;
+  cursor: pointer;
+}
+
+.mzoom-btn:hover {
+  background: var(--md-default-fg-color--lightest);
+  color: var(--md-accent-fg-color);
+}
+
+.mzoom-btn:active {
+  transform: scale(.92);
+}
+
+/* 全螢幕時填滿畫面，並把背景補上（否則是透明的） */
+.mermaid:fullscreen {
+  background: var(--md-default-bg-color);
+  border: 0;
+  border-radius: 0;
+  padding: 1rem;
+}
+
+.mermaid:fullscreen svg {
+  height: 100% !important;
 }
