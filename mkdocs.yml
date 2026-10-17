@@ -40,9 +40,13 @@ markdown_extensions:
   - attr_list
   - md_in_html
   - tables
+  # 預設的 slugify 會把非 ASCII 全部丟掉：「4.1 整體流程」會變成 id="41"，
+  # 中文標題則幾乎只剩編號，錨點互相撞號、分享連結也看不出是哪一節。
+  # 換成支援 Unicode 的版本，錨點才會是 #41-整體流程。
   - toc:
       permalink: true
       toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
   - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
