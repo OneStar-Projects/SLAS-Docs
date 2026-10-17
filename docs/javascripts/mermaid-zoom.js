@@ -45,13 +45,20 @@
     if (el.getBoundingClientRect().height < 40) return false;
 
     // 自己包一層當作視窗，裁切與工具列定位都放在這裡
+    // 外殼固定不捲動，工具列掛在這裡；box 才是真正捲動的那層。
+    // 工具列若放進 box，絕對定位會跟著內容一起捲走，放大後就看不到了。
+    var outer = document.createElement('div');
+    outer.className = 'mzoom-outer';
+    outer.style.cssText = 'position:relative;margin:1em 0;';
+
     var box = document.createElement('div');
     box.className = 'mzoom-wrap';
     // overflow:auto 而非 hidden：放大後要能捲動看到圖的其餘部分
     box.style.cssText = 'position:relative;overflow:auto;border:1px solid rgba(128,128,128,.25);'
-      + 'border-radius:4px;margin:1em 0;max-height:80vh;display:flex;'
+      + 'border-radius:4px;max-height:80vh;display:flex;'
       + 'background:var(--md-default-bg-color,#fff);';
-    el.parentNode.insertBefore(box, el);
+    el.parentNode.insertBefore(outer, el);
+    outer.appendChild(box);
     box.appendChild(el);
 
     // 縮放／平移套在 .mermaid 容器上，不進 shadow DOM
@@ -71,6 +78,7 @@
     var baseW = el.offsetWidth || 1;
     var baseH = el.offsetHeight || 1;
     el.style.transformOrigin = '0 0';
+    el.style.transition = 'transform .12s ease-out';
     el.style.cursor = 'grab';
 
     var scale = 1;
@@ -79,6 +87,14 @@
       inner.style.width = (baseW * scale) + 'px';
       inner.style.height = (baseH * scale) + 'px';
       inner.style.margin = 'auto';          // 比容器小時置中
+      if (pct) pct.textContent = Math.round(scale * 100) + '%';
+    }
+
+    // 初始：圖比容器寬就縮到剛好放得下，否則維持原尺寸（不放大，避免糊）
+    function fitInitial() {
+      var avail = box.clientWidth - 16;
+      scale = avail > 0 && baseW > avail ? Math.max(0.3, avail / baseW) : 1;
+      apply();
     }
     function zoom(f) {
       var old = scale;
@@ -90,13 +106,17 @@
       box.scrollLeft = cx * r - box.clientWidth / 2;
       box.scrollTop = cy * r - box.clientHeight / 2;
     }
-    function reset() { scale = 1; apply(); box.scrollLeft = 0; box.scrollTop = 0; }
-    apply();
+    function reset() { fitInitial(); box.scrollLeft = 0; box.scrollTop = 0; }
+    fitInitial();
+
+    // 雙擊快速重設，不必瞄準小按鈕
+    el.addEventListener('dblclick', function (e) { e.preventDefault(); reset(); });
 
     var drag = false, sx = 0, sy = 0, sl = 0, st = 0;
     el.addEventListener('mousedown', function (e) {
       drag = true; sx = e.clientX; sy = e.clientY;
       sl = box.scrollLeft; st = box.scrollTop;
+      el.style.transition = 'none';
       el.style.cursor = 'grabbing'; e.preventDefault();
     });
     window.addEventListener('mousemove', function (e) {
@@ -105,34 +125,55 @@
       box.scrollTop = st - (e.clientY - sy);
     });
     window.addEventListener('mouseup', function () {
+      if (drag) el.style.transition = 'transform .12s ease-out';
       drag = false; el.style.cursor = 'grab';
     });
+
+    var pct = document.createElement('span');
+    pct.className = 'mzoom-pct';
+    pct.style.cssText = 'display:inline-flex;align-items:center;padding:0 6px;font-size:11px;'
+      + 'color:#555;min-width:42px;justify-content:center;user-select:none;';
 
     var bar = document.createElement('div');
     bar.className = 'mzoom-bar';
     bar.style.cssText = 'position:absolute;top:8px;right:8px;display:flex;gap:4px;padding:4px;'
-      + 'border-radius:6px;background:rgba(255,255,255,.94);box-shadow:0 1px 4px rgba(0,0,0,.2);z-index:10;';
+      + 'border-radius:6px;background:rgba(255,255,255,.94);box-shadow:0 1px 4px rgba(0,0,0,.2);'
+      + 'z-index:10;opacity:.35;transition:opacity .15s;';
+    bar.appendChild(pct);
     bar.appendChild(mkBtn(P.zoomIn,  '放大', function () { zoom(1.3); }));
     bar.appendChild(mkBtn(P.zoomOut, '縮小', function () { zoom(1 / 1.3); }));
     bar.appendChild(mkBtn(P.reset,   '重設', reset));
 
     var fb = mkBtn(P.full, '全螢幕', function () {
-      if (document.fullscreenElement === box) document.exitFullscreen();
-      else if (box.requestFullscreen) box.requestFullscreen()['catch'](function (e) {
+      if (document.fullscreenElement === outer) document.exitFullscreen();
+      else if (outer.requestFullscreen) outer.requestFullscreen()['catch'](function (e) {
         console.warn(TAG, '全螢幕失敗', e);
       });
     });
     bar.appendChild(fb);
-    box.appendChild(bar);
+    outer.addEventListener('mouseenter', function () { bar.style.opacity = '1'; });
+    outer.addEventListener('mouseleave', function () { bar.style.opacity = '.35'; });
+    outer.appendChild(bar);
 
     document.addEventListener('fullscreenchange', function () {
-      var on = document.fullscreenElement === box;
+      var on = document.fullscreenElement === outer;
       fb.title = on ? '結束全螢幕' : '全螢幕';
       fb.querySelector('path').setAttribute('d', on ? P.exit : P.full);
-      box.style.background = on ? (getComputedStyle(document.body).backgroundColor || '#fff') : '';
+      outer.style.background = on ? (getComputedStyle(document.body).backgroundColor || '#fff') : '';
+      outer.style.height = on ? '100vh' : '';
       box.style.maxHeight = on ? 'none' : '80vh';
       box.style.height = on ? '100vh' : '';
-      reset();
+      box.scrollLeft = 0; box.scrollTop = 0;
+      if (on) {
+        // 全螢幕時縮放到剛好放得下，留一點邊距
+        setTimeout(function () {
+          scale = Math.max(0.3, Math.min(8,
+            Math.min((box.clientWidth - 24) / baseW, (box.clientHeight - 24) / baseH)));
+          apply();
+        }, 60);
+      } else {
+        reset();
+      }
     });
 
     count++;
