@@ -1,17 +1,20 @@
 /*
  * 讓 Mermaid 流程圖可縮放／拖曳，對齊 GitHub 上檢視 .md 時的體驗。
  *
- * Material 的 Mermaid 是在瀏覽器端渲染的：建置產物裡只有 <div class="mermaid">，
- * SVG 要等 mermaid.js 跑完才出現，所以不能在 DOMContentLoaded 直接抓。
- * 這裡用 MutationObserver 等 SVG 真的插進來再初始化。
+ * 幾個實測得出的前提：
+ *  - Material 產生的是 <pre class="mermaid">，不是 <div>；SVG 由 mermaid.js
+ *    在瀏覽器端插入，建置產物裡沒有，所以 DOMContentLoaded 時抓不到。
+ *  - SVG 不一定是直接子元素，用後代選擇器才穩；另外 mermaid 產生的 SVG
+ *    id 以 "mermaid" 或 "mmd" 開頭，當成備援匹配。
+ *  - 開了 navigation.instant，換頁不會重跑 DOMContentLoaded，必須掛 document$。
  *
- * document$ 是 Material 提供的 observable，navigation.instant 切頁時也會觸發，
- * 否則換頁後新頁面的圖不會被處理。
+ * 排查方式：F12 Console 會輸出 [mermaid-zoom] 開頭的訊息。
  */
 (function () {
-  var ZOOM_OPTS = {
+  var TAG = '[mermaid-zoom]';
+  var OPTS = {
     zoomEnabled: true,
-    controlIconsEnabled: true,   // 右下角 +/-/reset 按鈕
+    controlIconsEnabled: true,
     fit: true,
     center: true,
     minZoom: 0.5,
@@ -19,46 +22,72 @@
     zoomScaleSensitivity: 0.3
   };
 
-  function enhance(svg) {
-    if (svg.dataset.zoomReady) return;        // 避免重複初始化
-    if (typeof svgPanZoom !== 'function') return;
+  function collect() {
+    var set = new Set();
+    document.querySelectorAll('.mermaid svg, svg[id^="mermaid"], svg[id^="mmd"]')
+      .forEach(function (s) { set.add(s); });
+    return Array.from(set);
+  }
 
-    // mermaid 產生的 SVG 預設 max-width 會讓 pan-zoom 量不到尺寸
+  function enhance(svg) {
+    if (svg.dataset.zoomReady) return false;
+    if (typeof svgPanZoom !== 'function') {
+      console.warn(TAG, 'svg-pan-zoom 未載入，跳過');
+      return false;
+    }
+    // mermaid 的 SVG 帶 max-width，會讓 pan-zoom 量不到可用尺寸
     svg.style.maxWidth = 'none';
     svg.style.width = '100%';
-    if (!svg.style.height) svg.style.height = '70vh';
-
+    if (!svg.getAttribute('height') && !svg.style.height) {
+      svg.style.height = '70vh';
+    }
     try {
-      svgPanZoom(svg, ZOOM_OPTS);
+      svgPanZoom(svg, OPTS);
       svg.dataset.zoomReady = '1';
+      return true;
     } catch (e) {
-      /* 單張圖失敗不該影響整頁 */
+      console.warn(TAG, '初始化失敗', e);
+      return false;
     }
   }
 
-  function scan(root) {
-    (root || document).querySelectorAll('.mermaid > svg').forEach(enhance);
+  function scan() {
+    var found = collect();
+    var done = 0;
+    found.forEach(function (s) { if (enhance(s)) done++; });
+    if (done) console.info(TAG, '已啟用縮放的流程圖：' + done + ' 張');
+    return found.length;
   }
 
   function watch() {
-    scan();
-
     var blocks = document.querySelectorAll('.mermaid');
     if (!blocks.length) return;
+    console.info(TAG, '本頁 mermaid 區塊：' + blocks.length + ' 個');
 
-    // 不用 :has()，舊瀏覽器不支援會讓整段失效；直接全部掛上，enhance 自己會去重
-    var obs = new MutationObserver(function () { scan(); });
-    blocks.forEach(function (el) {
-      obs.observe(el, { childList: true, subtree: true });
-    });
-    // 保險：mermaid 偶爾在 observer 掛上前就渲染完
-    setTimeout(scan, 1200);
-    setTimeout(function () { obs.disconnect(); }, 15000);
+    scan();
+
+    // SVG 由 mermaid 非同步插入，用 observer + 輪詢雙保險
+    var obs = new MutationObserver(scan);
+    obs.observe(document.body, { childList: true, subtree: true });
+
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries++;
+      var n = scan();
+      if (n >= blocks.length || tries > 25) {      // 最多等約 7.5 秒
+        clearInterval(timer);
+        obs.disconnect();
+        if (n < blocks.length) {
+          console.warn(TAG, '仍有圖未渲染完成：' + n + '/' + blocks.length);
+        }
+      }
+    }, 300);
   }
 
   if (typeof document$ !== 'undefined') {
-    document$.subscribe(watch);        // Material：含 instant navigation
+    document$.subscribe(watch);
   } else {
+    console.warn(TAG, 'document$ 不存在，退回 DOMContentLoaded');
     document.addEventListener('DOMContentLoaded', watch);
   }
 })();

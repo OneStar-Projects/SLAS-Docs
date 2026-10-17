@@ -1,29 +1,33 @@
-/* Mermaid 圖容器：給 pan-zoom 一個穩定的畫布，並提示可互動 */
+/* Material 產生的是 <pre class="mermaid">，選擇器要對上 pre；
+   pre 預設的 white-space / overflow 會干擾 pan-zoom，一併覆蓋。 */
 .mermaid {
   position: relative;
+  white-space: normal;
+  overflow: hidden;
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: .2rem;
   background: var(--md-default-bg-color);
-  overflow: hidden;
   margin: 1em 0;
+  padding: 0;
 }
 
-.mermaid > svg {
+/* 用後代選擇器：SVG 不保證是直接子元素 */
+.mermaid svg {
   display: block;
   cursor: grab;
 }
 
-.mermaid > svg:active {
+.mermaid svg:active {
   cursor: grabbing;
 }
 
-/* svg-pan-zoom 的控制按鈕在深色模式下預設是黑的，會看不見 */
+/* svg-pan-zoom 的控制鈕在深色模式下預設是深色，會看不見 */
 [data-md-color-scheme="slate"] .mermaid #svg-pan-zoom-controls g {
   fill: var(--md-default-fg-color--light);
 }
 
-/* 操作提示 */
-.mermaid::after {
+/* 操作提示，只在已啟用縮放的圖上顯示 */
+.mermaid:has(svg[data-zoom-ready])::after {
   content: "可拖曳平移、滾輪縮放";
   position: absolute;
   top: .3rem;
