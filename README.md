@@ -1,3 +1,9 @@
+---
+title: 首頁
+nav_order: 1
+permalink: /
+---
+
 # SLAS 文檔（給客戶版）
 
 > 本倉庫存放 **Student-Led Activities System（SLAS）** 對客戶開放的設計與操作文檔。
