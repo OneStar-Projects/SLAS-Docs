@@ -28,7 +28,7 @@
 
 /* 操作提示，只在已啟用縮放的圖上顯示 */
 .mermaid:has(svg[data-zoom-ready])::after {
-  content: "可拖曳平移、滾輪縮放";
+  content: "拖曳平移 · 雙指捏合縮放 · 右下角按鈕";
   position: absolute;
   top: .3rem;
   right: .5rem;

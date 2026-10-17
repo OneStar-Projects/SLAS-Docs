@@ -19,8 +19,29 @@
     center: true,
     minZoom: 0.5,
     maxZoom: 10,
-    zoomScaleSensitivity: 0.3
+    zoomScaleSensitivity: 0.3,
+    // 觸控板沒有實體滾輪：雙指滑動會被當成 wheel，若開著預設行為，
+    // 使用者想捲動頁面卻變成亂縮放。改由下面 bindWheel 自行判斷。
+    mouseWheelZoomEnabled: false
   };
+
+  /*
+   * 手勢對應（以 Mac 觸控板為準，滑鼠同樣適用）：
+   *   拖曳              → 平移
+   *   雙指捏合 / ⌘+滑動 → 縮放（瀏覽器把捏合送成 ctrlKey + wheel）
+   *   普通雙指滑動      → 不攔截，讓頁面正常捲動，避免游標移到圖上就卡住
+   */
+  function bindWheel(svg, api) {
+    svg.addEventListener('wheel', function (e) {
+      if (!(e.ctrlKey || e.metaKey)) return;   // 讓頁面捲動
+      e.preventDefault();
+      var rect = svg.getBoundingClientRect();
+      api.zoomAtPointBy(
+        e.deltaY < 0 ? 1.12 : 1 / 1.12,
+        { x: e.clientX - rect.left, y: e.clientY - rect.top }
+      );
+    }, { passive: false });
+  }
 
   function collect() {
     var set = new Set();
@@ -42,7 +63,8 @@
       svg.style.height = '70vh';
     }
     try {
-      svgPanZoom(svg, OPTS);
+      var api = svgPanZoom(svg, OPTS);
+      bindWheel(svg, api);
       svg.dataset.zoomReady = '1';
       return true;
     } catch (e) {
