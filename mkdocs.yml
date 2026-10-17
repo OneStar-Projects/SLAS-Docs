@@ -55,6 +55,14 @@ markdown_extensions:
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
 
+extra_javascript:
+  # 讓流程圖可縮放／拖曳（對齊 GitHub 檢視 .md 的體驗）
+  - https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.2/dist/svg-pan-zoom.min.js
+  - javascripts/mermaid-zoom.js
+
+extra_css:
+  - stylesheets/mermaid-zoom.css
+
 plugins:
   - search:
       # 中文需要逐字切分，預設的空白分詞對中文無效
