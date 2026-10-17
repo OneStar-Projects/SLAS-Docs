@@ -47,29 +47,49 @@
     // 自己包一層當作視窗，裁切與工具列定位都放在這裡
     var box = document.createElement('div');
     box.className = 'mzoom-wrap';
-    box.style.cssText = 'position:relative;overflow:hidden;border:1px solid rgba(128,128,128,.25);'
-      + 'border-radius:4px;margin:1em 0;background:var(--md-default-bg-color,#fff);';
+    // overflow:auto 而非 hidden：放大後要能捲動看到圖的其餘部分
+    box.style.cssText = 'position:relative;overflow:auto;border:1px solid rgba(128,128,128,.25);'
+      + 'border-radius:4px;margin:1em 0;max-height:80vh;display:flex;'
+      + 'background:var(--md-default-bg-color,#fff);';
     el.parentNode.insertBefore(box, el);
     box.appendChild(el);
 
     // 縮放／平移套在 .mermaid 容器上，不進 shadow DOM
-    el.style.transformOrigin = '0 0';
+    /*
+     * 用 zoom 而不是 transform:scale()：scale 只是視覺變形，不改變版面尺寸，
+     * 外層永遠不會產生捲軸，放大的部分會直接被裁掉（看起來就像按鈕沒作用）。
+     * zoom 會實際撐大元素，配合上面的 overflow:auto 才捲得動。
+     */
     el.style.cursor = 'grab';
-    var scale = 1, tx = 0, ty = 0;
-    function apply() {
-      el.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+    // flex 容器裡用 margin:auto 置中：圖比容器小時置中，比容器大時兩側仍捲得到。
+    // 換成 justify-content:center 的話，放大後左半邊會捲不出來。
+    el.style.margin = 'auto';
+    var scale = 1;
+    function apply() { el.style.zoom = scale; }
+    function zoom(f) {
+      var old = scale;
+      scale = Math.min(8, Math.max(0.3, scale * f));
+      // 以可視區中心為基準調整捲動位置，放大時不會跑掉焦點
+      var cx = box.scrollLeft + box.clientWidth / 2;
+      var cy = box.scrollTop + box.clientHeight / 2;
+      apply();
+      var r = scale / old;
+      box.scrollLeft = cx * r - box.clientWidth / 2;
+      box.scrollTop = cy * r - box.clientHeight / 2;
     }
-    function zoom(f) { scale = Math.min(20, Math.max(0.2, scale * f)); apply(); }
-    function reset() { scale = 1; tx = 0; ty = 0; apply(); }
+    function reset() { scale = 1; apply(); box.scrollLeft = 0; box.scrollTop = 0; }
 
-    var drag = false, sx = 0, sy = 0;
+    // 拖曳改成捲動容器，和放大後的捲軸一致
+    var drag = false, sx = 0, sy = 0, sl = 0, st = 0;
     el.addEventListener('mousedown', function (e) {
-      drag = true; sx = e.clientX - tx; sy = e.clientY - ty;
+      drag = true; sx = e.clientX; sy = e.clientY;
+      sl = box.scrollLeft; st = box.scrollTop;
       el.style.cursor = 'grabbing'; e.preventDefault();
     });
     window.addEventListener('mousemove', function (e) {
       if (!drag) return;
-      tx = e.clientX - sx; ty = e.clientY - sy; apply();
+      box.scrollLeft = sl - (e.clientX - sx);
+      box.scrollTop = st - (e.clientY - sy);
     });
     window.addEventListener('mouseup', function () {
       drag = false; el.style.cursor = 'grab';
@@ -97,6 +117,8 @@
       fb.title = on ? '結束全螢幕' : '全螢幕';
       fb.querySelector('path').setAttribute('d', on ? P.exit : P.full);
       box.style.background = on ? (getComputedStyle(document.body).backgroundColor || '#fff') : '';
+      box.style.maxHeight = on ? 'none' : '80vh';
+      box.style.height = on ? '100vh' : '';
       reset();
     });
 
