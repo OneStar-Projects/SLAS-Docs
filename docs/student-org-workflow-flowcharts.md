@@ -1,6 +1,6 @@
 # 學生組織註冊、申訴及續期流程
 
-> 本文檔描述 SLAS 系統**現行**的學生組織註冊、申訴及續期（renew）流程，以及提交前的幹事會（Exco）認可、組織類別申請期等配套功能。內容已按 2026-10-18 版本系統核對（2026-10-14 新增 Supervisor 退回 Checker、秘書退回 Supervisor；2026-10-15 Checker 改為選填；2026-10-16 採用甲方確認的待辦名稱、投票新增「中立」、秘書「建議決定」改為必填）。
+> 本文檔描述 SLAS 系統**現行**的學生組織註冊、申訴及續期（renew）流程，以及提交前的幹事會（Exco）認可、組織類別申請期等配套功能。內容已按 2026-10-18 版本系統核對（2026-10-14 新增 Supervisor 退回 Checker、秘書退回 Supervisor；2026-10-15 Checker 改為選填；2026-10-16 採用甲方確認的待辦名稱、投票新增「中立」、秘書「建議決定」改為必填；2026-10-24 主席的唯讀待辦改為在意見收集開始時發出）。
 >
 > - 本文取代 2026-09 以前的舊版流程描述（舊版的「拒絕傳閱子流程」、Admin Checker／Academic Checker 已停用）。
 > - 修訂過程及甲方確認事項見 [revised-workflow-flowcharts.md](./revised-workflow-flowcharts.md)（設計紀錄）。
@@ -277,6 +277,7 @@ flowchart TD
     subgraph Phase2["Phase 2: 意見收集"]
         InitOpinion[/"auto: 開始新一輪意見收集<br/>(以當時 Review Group 名單為準)"/]
         InitOpinion --> CollectOpinions["⑤ 收集意見<br/>(Review Group Member, 並行)"]
+        InitOpinion --> ChairLocked["主席同時收到待辦<br/>(唯讀：可查看申請及已提交的意見，暫時不能處理)"]
 
         CollectOpinions -->|"全員提交"| SummarizeOpinions
         CollectOpinions -.->|"到達截止時間"| TimeoutHandler[/"auto: 未提交者標記為已逾期"/]
@@ -289,7 +290,6 @@ flowchart TD
     end
 
     SummarizeOpinions --> SecretaryReview
-    SummarizeOpinions --> ChairLocked["主席同時收到待辦<br/>(唯讀：可查看全部意見，暫時不能處理)"]
 
     subgraph Phase3["Phase 3: 秘書審閱"]
         SecretaryReview["⑥ 秘書審閱<br/>(Review Group Secretary)<br/>必選建議決定<br/>擬定批核條款／跟進事項／建議拒絕理由<br/>可加入自己的意見"]
@@ -376,6 +376,7 @@ flowchart TD
     subgraph Phase1["Phase 1: 意見收集"]
         InitOpinion[/"auto: 開始新一輪意見收集<br/>(以當時 Appeal Group 名單為準)"/]
         InitOpinion --> CollectOpinions["② 多人意見收集<br/>(Appeal Group Member, 並行)"]
+        InitOpinion --> AppealChairLocked["主席同時收到待辦<br/>(唯讀：可查看申訴及已提交的意見，暫時不能處理)"]
 
         CollectOpinions -->|"全員提交"| SummarizeOpinions
         CollectOpinions -.->|"到達截止時間"| TimeoutHandler[/"auto: 未提交者標記為已逾期"/]
@@ -388,7 +389,6 @@ flowchart TD
     end
 
     SummarizeOpinions --> AppealSecretaryReview
-    SummarizeOpinions --> AppealChairLocked["主席同時收到待辦<br/>(唯讀，暫時不能處理)"]
 
     subgraph Phase2["Phase 2: 秘書審閱"]
         AppealSecretaryReview["③ 秘書審閱<br/>(Appeal Group Secretary)<br/>建議批准或拒絕，並擬定對應文字<br/>(申訴批核原因及建議／建議拒絕理由)"]
@@ -496,7 +496,7 @@ flowchart LR
 - **執行人**：Review Group Secretary（Supervisor 全員通過後收到待辦）
 - **選項**：「開始收集意見」／**「退回 Supervisor」**（須填寫原因）
 - 「傳閱期（天）」預設 5，最少 1；「提醒時間（截止前小時數）」預設 24，最少 1，且須早於截止時間。頁面以現在時間預覽「意見截止時間」及「發送提醒時間」，實際由意見收集開始時起計。
-- 按「開始收集意見」後，Review Group 全體成員收到「收集意見」待辦。
+- 按「開始收集意見」後，Review Group 全體成員收到「收集意見」待辦；**主席同時**收到「Review Group Chairperson 決定」待辦（唯讀，見 ⑦），方便與成員一同查看申請（例如召開線下會議）。
 - **退回 Supervisor**：由 ③ 原指派的全部 Supervisor 重新審核，**流程不結束**。
 
 #### ⑤ 收集意見
@@ -504,7 +504,7 @@ flowchart LR
 - 每名成員選擇「贊成」「反對」或「中立」並填寫意見（兩者必填）後提交。「中立」在統計上與「贊成」同樣不構成反對。
 - 到達提醒時間：提醒尚未提交者，收集繼續。
 - 到達截止時間：未提交者標記為「已逾期」，流程繼續彙總。
-- 彙總後，秘書收到「Review Group Secretary 審閱」待辦，**主席同時**收到「Review Group Chairperson 決定」待辦（唯讀）。
+- 彙總後，秘書收到「Review Group Secretary 審閱」待辦；主席的唯讀待辦（意見收集開始時已收到）保持不變。
 
 #### ⑥ Review Group Secretary 審閱
 
@@ -515,11 +515,11 @@ flowchart LR
 - 審閱文字欄位上限 10000 字。
 - **選項**：
   - 「提交至 Review Group Chairperson」→ 主席收到可作出決定的通知，主席頁面變為可操作。
-  - 「退回評審員（重啟一輪）」→ 須填寫「退回評審員原因」並重新設定傳閱期（預設恢復 5 天／24 小時）；主席的唯讀待辦隨即取消；向全體成員重新派發新一輪意見收集，已提交者亦須重新提交。歷次意見保留並按輪次顯示；重啟輪次不設上限。
+  - 「退回評審員（重啟一輪）」→ 須填寫「退回評審員原因」並重新設定傳閱期（預設恢復 5 天／24 小時）；主席原有的待辦隨即取消，並隨新一輪意見收集重新發出（唯讀）；向全體成員重新派發新一輪意見收集，已提交者亦須重新提交。歷次意見保留並按輪次顯示；重啟輪次不設上限。
 
 #### ⑦ Review Group Chairperson 決定
 
-- 秘書提交前，頁面顯示「待 Review Group Secretary 提交 — 您可查看所有意見，但暫時不能處理」，只有「返回」。
+- 待辦在意見收集開始時已發出。秘書提交前（包括意見收集期間），頁面顯示「待 Review Group Secretary 提交 — 您可查看所有意見，但暫時不能處理」，只有「返回」；意見區顯示已提交的意見及各成員的提交狀態。
 - 秘書提交後可操作，可修改**建議決定**及批核條款、跟進事項、拒絕理由。主席最後確認的建議決定，決定了終審可選的決定（見 ⑧）。
 - **選項**：
   - 「提交終審」→ ⑧
@@ -556,12 +556,12 @@ flowchart LR
 
 - 查看原拒絕資訊、申訴理由及申訴補充文件。
 - **選項**：
-  - 「資料齊全，開始傳閱」→ 同時設定傳閱期（預設 5 天／24 小時，規則同註冊 ④），Appeal Group 全體成員收到意見收集待辦。
+  - 「資料齊全，開始傳閱」→ 同時設定傳閱期（預設 5 天／24 小時，規則同註冊 ④），Appeal Group 全體成員收到意見收集待辦，Appeal Group Chairperson 同時收到唯讀的決定待辦。
   - 「退回補交資料」→ 須填寫「須補交的項目」→ 流程結束（申訴需修改）。
 
 #### ② 多人意見收集
 
-與註冊 ⑤ 相同（贊成／反對／中立＋意見、提醒、截止、彙總後秘書及主席同時收到待辦）。
+與註冊 ⑤ 相同（贊成／反對／中立＋意見、提醒、截止；主席自意見收集開始已有唯讀待辦，彙總後秘書收到審閱待辦）。
 
 #### ③ Appeal Group Secretary 審閱
 
