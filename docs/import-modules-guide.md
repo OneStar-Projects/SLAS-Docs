@@ -139,6 +139,7 @@ flowchart TD
   2. **寫庫**：依前綴優先序（`SAOTeamtPrefix` > `DeptPrefix` > `FacultyPrefix`）解析 `deptId`；以 `studentGroupCode` 判斷新增/更新；缺碼時用 `prefix + 學年` 自動生成唯一碼。
 - **核心成員與自動建號**
   - `GroupCoreMember` 以分號分隔多個 `studentId`，第一個被設為 `leaderStudentId`。
+  - 導入的核心成員一律登記為該組織的**幹事會（Exco）成員**（2026-10 修正）。此前導入的核心成員沒有標記為幹事會，導致該組織其後的續期驗證、註冊詳情及 Exco 認可名單找不到幹事會成員。
   - `processCoreMembersForTemplate` 對每個 `studentId`：先查使用者（studentId → username）→ 查不到則在 `V_STUDENT_DETAIL` 核對學生身份 → **自動建立使用者**：
     - `username = studentId`、`email = {studentId}@s.eduhk.hk`；
     - `USER_SOURCE = SSO`——這類帳號代表已核實的 EdUHK 身份，與 SSO 回調建立的帳號同一套密碼政策（**2026-08 變更**，詳見下方說明）；
