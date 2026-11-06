@@ -2,7 +2,7 @@
 
 > 本文說明各系統角色可進入哪些選單（§1）、頁面內哪些操作受權限標識控制（§2），以及進入頁面後可見的資料範圍（§3）。
 > 角色名稱一律採用系統「角色管理」頁所顯示的正式名稱（`SYSTEM_ROLE.NAME`）；流程中的習慣稱呼以「功能別名」另行註明。
-> 更新日期：2026-10-09
+> 更新日期：2026-10-09（學生組織流程及待辦部分：2026-11-06）
 
 ---
 
@@ -47,6 +47,10 @@
 | 2026-09-29 | 管理中心新增「組織類別申請期」「續期驗證碼」「評審小組成員」選單；「審批人管理」改掛管理中心並補上權限標識（見 §1.7、§2.2） | SAO Administrator、SuperAdmin - Dev、Registration Administrator、Appeal Group Secretary |
 | 2026-10-03 | Appeal Group Secretary（153）加入流程引擎候選組，申訴的秘書檢查與秘書審閱待辦由此可正確派發及通知 | 153 |
 | 2026-10-08 | 「續期驗證碼」頁新增「設定組織狀態」權限（停用、恢復、解散） | SAO Administrator、SuperAdmin - Dev |
+| 2026-10-14 | 學生組織角色改用最新流程名稱：122 Review Group Secretary、123 Review Group Member、125 Appeal Group Member、126 Appeal Approver、138 Review Group Chairperson、139 Appeal Group Chairperson；停用角色 132、136、135，原持有人分別轉為 Supervisor（116）、Checker（142）、Appeal Group Secretary（153） | 116、122、123、125、126、132、135、136、138、139、142、153 |
+| 2026-10-14 | 「組織類別申請期」併入管理中心的「設定申請窗口」，「續期驗證碼」併入「查閱組織清單」：兩個舊選單刪除，其按鈕權限移到新宿主頁，原持有舊選單的角色獲授宿主頁 | SAO Administrator、SuperAdmin - Dev |
+| 2026-10-29 | 「評審小組成員」改名「管理註冊審議組」，並可維護審議組／申訴組的主席及秘書（權限標識不變） | SAO Administrator、Review Group Secretary、Appeal Group Secretary、SuperAdmin - Dev |
+| 2026-11-02 | 「設定申請窗口」加入學生組織註冊及續期申請期（屬會、宿生會），以及學生組織申訴期限 | SAO Administrator、SuperAdmin - Dev |
 
 > 視圖說明：縱向 = 每一個選單節點（僅目錄與選單頁，不含按鈕），橫向 = 12 個代表性角色。
 > 儲存格 `✓` 表示該角色獲授權進入該選單，空白表示未授權。列頭一律採用系統角色正式名稱。
@@ -105,6 +109,8 @@
 | 待办事项 | 待辦事項 | To-do | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | └ 待办事项 | └ 待辦事項 | └ To-do List | | | | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
+> 待辦列表第二個標籤為「學生組織」，欄位為「參考編號」「任務」「事項」「創建時間」及「操作」，可搜尋並就整個列表排序；已辦列表亦有相同的「學生組織」標籤。列表內容按流程指派顯示（誰是處理人或候選人），與選單授權無關。
+
 ### 1.4 事件中心 / Incident Center / 事件中心
 
 | 菜单（SC） | 菜單（TC） | Menu (EN) | Staff | Student | Guest | Group Leader | Coordinator | Incident Level Classifier | Dean of Students | Activity Application Reviewer | Supervisor | SAO Administrator | System Admin (OCIO) | SuperAdmin - Dev |
@@ -153,17 +159,17 @@
 | └ 查阅组织清单 | └ 查閱組織清單 | └ View Organisation List | | | | | | | | | | ✓ | ✓ | ✓ |
 | └ 查阅活动清单 | └ 查閱活動清單 | └ View Activity List | | | | | | | | | | ✓ | ✓ | ✓ |
 | └ 查阅事件报告 | └ 查閱事件報告 | └ View Incident Reports | | | | | | | | | | ✓ | ✓ | ✓ |
-| └ 新生迎新申请期管理 | └ 新生迎新申請期管理 | └ Orientation Application Period Management | | | | | | | | | | ✓ | | ✓ |
+| └ 设置申请窗口 | └ 設定申請窗口 | └ Set Application Window **〔更新〕**³ | | | | | | | | | | ✓ | | ✓ |
 | └ 查看出席 | └ 查看出席 | └ Attendance Records **〔更新〕** | | | | | | | | | ✓ | | | |
 | └ 管理报名 | └ 管理報名 | └ Manage Enrolment | | | | | | | | | | | | |
 | └ 管理推广可见性 | └ 管理推廣可見性 | └ Manage Promotion Visibility | | | | | | | | | | ✓ | | |
 | └ 查阅黑名单 | └ 查閱黑名單 | └ View Blacklist | | | | | | | | | | ✓ | | |
 | └ 审批人管理 | └ 審批人管理 | └ Reviewer Management **〔更新〕**¹ | | | | | | | | | | ✓ | | ✓ |
-| └ 组织类别申请期 | └ 組織類別申請期 | └ Group Type Application Period **〔新〕** | | | | | | | | | | ✓ | | ✓ |
-| └ 续期验证码 | └ 續期驗證碼 | └ Renew Verification Codes **〔新〕** | | | | | | | | | | ✓ | | ✓ |
-| └ 评审小组成员 | └ 評審小組成員 | └ Review Group Members **〔新〕**¹ | | | | | | | | | | ✓ | | ✓ |
+| └ 管理注册审议组 | └ 管理註冊審議組 | └ Manage Registration Groups **〔更新〕**¹ | | | | | | | | | | ✓ | | ✓ |
 
-> ¹ 表格以外的角色：「審批人管理」另授予 Registration Administrator（122）；「評審小組成員」另授予 Registration Administrator（122）與 Appeal Group Secretary（153）。兩者亦因此可見「管理中心」目錄。詳見 §1.15。
+> ¹ 表格以外的角色：「審批人管理」另授予 Review Group Secretary（122）；「管理註冊審議組」另授予 Review Group Secretary（122）與 Appeal Group Secretary（153）。兩者亦因此可見「管理中心」目錄。詳見 §1.15。
+>
+> ³ 「設定申請窗口」原為新生迎新申請期管理，2026-10 起同時設定學生組織的註冊及續期申請期與申訴期限（原「組織類別申請期」選單已併入）。原「續期驗證碼」選單已併入「查閱組織清單」：在已啟用／已停用組織的卡片按「續期驗證碼」開啟面板。
 
 ### 1.8 用户管理 / User Management / 用戶管理
 
@@ -277,50 +283,49 @@
 
 ### 1.15 學生組織註冊／續期／申訴流程角色（2026-09 修訂版）
 
-> 學生組織流程的處理權主要由流程指派決定（誰收到待辦就由誰處理），選單只決定能否進入相關管理頁。下表按 2026-09-28 修訂後的流程整理；續期申請沿用註冊流程。
+> 學生組織流程的處理權主要由流程指派決定（誰收到待辦就由誰處理），選單只決定能否進入相關管理頁。下表按 2026-09-28 修訂後的流程整理，角色名稱為 2026-10-14 起的正式名稱；續期申請沿用註冊流程。
 
 **註冊（含續期）**
 
 | 順序 | 環節 | 處理角色（正式名稱，ID） | 功能別名 | 說明 |
 |---:|---|---|---|---|
-| ① | 秘書檢查 | Registration Administrator（122） | Review Group Secretary／評審小組秘書 | 通過時須指定一名或多名 Checker 及 Supervisor；亦可退回申請人 |
-| ② | 初審 | Checker（142） | — | 由秘書指定，可多人並行；全部通過才進入下一步，任何一人退回即結束本輪 |
+| ① | 秘書檢查 | Review Group Secretary（122） | 註冊審議組秘書 | 通過時須指定一名或多名 Supervisor，Checker 為選填；亦可退回申請人 |
+| ② | 初審 | Checker（142） | 審查員 | 由秘書指定，可多人並行；全部通過才進入下一步，任何一人退回即結束本輪 |
 | ③ | 活動指導審核 | Supervisor（116） | 活動指導 | 由秘書指定，可多人並行，規則同上。**取代舊流程的 Registration Referrer（132）** |
-| ④ | 設定傳閱期 | Registration Administrator（122） | 評審小組秘書 | — |
-| ⑤ | 評審意見 | Registration Reviewer（123） | 評審小組成員 | 傳閱期內提交意見；秘書可發回重新收集（另起一輪） |
-| ⑥ | 秘書審閱 | Registration Administrator（122） | 評審小組秘書 | 草擬批准條件、跟進事項或拒絕／退回理由；可補充秘書意見 |
-| ⑦ | 主席決定 | Registration Endorser（138） | Review Group Chairperson／評審小組主席 | 秘書提交後主席待辦才解鎖；可退回秘書或退回申請人 |
+| ④ | 設定傳閱期 | Review Group Secretary（122） | 註冊審議組秘書 | — |
+| ⑤ | 評審意見 | Review Group Member（123） | 註冊審議組成員 | 傳閱期內提交意見；秘書可發回重新收集（另起一輪） |
+| ⑥ | 秘書審閱 | Review Group Secretary（122） | 註冊審議組秘書 | 必選擬定決策，草擬批核條款、跟進事項或拒絕理由；可補充秘書意見 |
+| ⑦ | 主席決定 | Review Group Chairperson（138） | 註冊審議組主席 | 意見收集開始時已收到唯讀待辦，秘書提交後才可處理；不能更改秘書的擬定決策；可提交終審、退回秘書或退回申請人（可選項目跟隨擬定決策） |
 | ⑧ | 最終審批 | Registration Approver（124）或 Registration Approver Delegate（134） | DSA／ADSA | 兩者決定權相同，任一人處理即可；可批准、拒絕或退回主席 |
-| ⑨ | 主席覆議 | Registration Endorser（138） | 評審小組主席 | 僅在最終審批退回主席時出現 |
+| ⑨ | 主席覆議 | Review Group Chairperson（138） | 註冊審議組主席 | 僅在最終審批退回主席時出現 |
 
 **申訴**
 
 | 順序 | 環節 | 處理角色（正式名稱，ID） | 功能別名 | 說明 |
 |---:|---|---|---|---|
-| ① | 秘書檢查 | **Appeal Group Secretary（153）〔新〕** | 申訴小組秘書 | 通過時設定傳閱期 |
-| ② | 評審意見 | Registration Appeal Reviewer（125） | 申訴小組成員 | — |
-| ③ | 秘書審閱 | Appeal Group Secretary（153） | 申訴小組秘書 | 原由 Registration Appeal Endorser（139）兼任，2026-09-28 起移交 153 |
-| ④ | 主席決定 | Registration Appeal Endorser（139） | Appeal Group Chairperson／申訴小組主席 | — |
-| ⑤ | 最終審批 | Registration Appeal Approver（126）或角色 135 | DSA／ADSA | 兩者決定權相同；可批准或拒絕，退回時只可退回主席（不可直接退回申請人） |
-| ⑥ | 主席覆議 | Registration Appeal Endorser（139） | 申訴小組主席 | — |
+| ① | 秘書檢查 | Appeal Group Secretary（153） | 申訴審議組秘書 | 通過時設定傳閱期 |
+| ② | 評審意見 | Appeal Group Member（125） | 申訴審議組成員 | — |
+| ③ | 秘書審閱 | Appeal Group Secretary（153） | 申訴審議組秘書 | 原由 Appeal Group Chairperson（139）兼任，2026-09-28 起移交 153 |
+| ④ | 主席決定 | Appeal Group Chairperson（139） | 申訴審議組主席 | 不能更改秘書的擬定決策 |
+| ⑤ | 最終審批 | Appeal Approver（126）（流程設定另列角色 135，見下註） | DSA／ADSA | 可批准或拒絕，退回時只可退回主席（不可直接退回申請人） |
+| ⑥ | 主席覆議 | Appeal Group Chairperson（139） | 申訴審議組主席 | — |
 
 **管理頁授權**
 
 | 選單 | 權限標識 | 授權角色 |
 |---|---|---|
-| 管理中心 > 審批人管理（更換未完成的 Checker／Supervisor 等） | `stugroup:reviewer-management:manage` | SAO Administrator、Registration Administrator（122）、SuperAdmin - Dev |
-| 管理中心 > 評審小組成員（維護評審小組／申訴小組成員） | `stugroup:review-group:manage` | SAO Administrator、Registration Administrator（122）、Appeal Group Secretary（153）、SuperAdmin - Dev |
-| 管理中心 > 續期驗證碼（簽發／撤銷驗證碼） | `stugroup:renew-code:manage` | SAO Administrator、SuperAdmin - Dev |
-| 同上頁：設定組織狀態（停用、恢復、解散） | `stugroup:group-standing:update` | SAO Administrator、SuperAdmin - Dev |
-| 管理中心 > 組織類別申請期（每個組織類別的新註冊申請起訖日） | `stugroup:group-type:query／create／update／delete` | SAO Administrator、SuperAdmin - Dev |
+| 管理中心 > 審批人管理（更換未完成的 Checker／Supervisor 等） | `stugroup:reviewer-management:manage` | SAO Administrator、Review Group Secretary（122）、SuperAdmin - Dev |
+| 管理中心 > 管理註冊審議組（維護審議組／申訴組的主席、秘書及成員） | `stugroup:review-group:manage` | SAO Administrator、Review Group Secretary（122）、Appeal Group Secretary（153）、SuperAdmin - Dev |
+| 管理中心 > 查閱組織清單 >「續期驗證碼」面板（簽發／撤銷驗證碼） | `stugroup:renew-code:manage` | SAO Administrator、SuperAdmin - Dev |
+| 同上：設定組織狀態（停用、恢復、解散）；另亦用於修改組織的託管單位及 ELAT 編號 | `stugroup:group-standing:update` | SAO Administrator、SuperAdmin - Dev |
+| 管理中心 > 設定申請窗口 >「學生組織：申訴期限」（查看／儲存） | `stugroup:group-type:query`／`update` | SAO Administrator、SuperAdmin - Dev |
 | 個人中心 > 我的社團（提交註冊、續期申請） | — | Student、Group Leader |
 
 > 註：
-> - **角色 135 的名稱與代碼待統一**：系統中 135 的正式名稱為「Registration Appeal Administrator」（代碼 `sg_app_admin`），流程設計文件則稱之為「Appeal Approver Delegate」（代碼 `sg_app_approver_secretary`）。流程按角色 **ID 135** 指派最終審批，所以功能不受影響；但在「角色管理」中按名稱或代碼查找時請留意。
-> - Registration Referrer（132）與 Registration Checker（136）只用於修訂前已啟動、仍按舊版流程運行的個案。
-> - 組織類別申請期只限制**新註冊**及其退回後的重新提交；續期申請不受此限。
-
----
+> - **角色 135 已於 2026-10-14 停用**（系統原名「Registration Appeal Administrator」，流程設計文件稱「Appeal Approver Delegate」），原持有人已轉為 Appeal Group Secretary（153）；申訴最終審批的流程設定仍列出 135 為候選角色，但已沒有持有人。
+> - Registration Referrer（132）與 Registration Checker（136）已於 2026-10-14 停用，原持有人分別轉為 Supervisor（116）及 Checker（142）。
+> - 「設定申請窗口」的註冊及續期申請期，分別限制**新註冊**及**續期**的提交（包括退回後的重新提交）；申請期的新增、修改、刪除與新生迎新申請期相同，不以權限標識把關（§2.1）。
+> - 學生組織申請的審批頁（申請詳情、申請文件、評審意見）只限申請人、申請表所列 Exco、持有學生組織審批角色的職員及 SAO Administrator 查看。
 
 ### 1.16 速讀 / Quick Reading
 
@@ -329,11 +334,11 @@
 - 「廢棄」一欄的舊審核選單仍綁定在多個角色上（包括 Student 可見「事件報告審核」），屬待清理項目。
 - **Activity Application Reviewer（149）** 在表中看起來很「窄」：除通用選單外，只在待辦／事件中心／審核中心見到 ✓——因為它是流程角色，真正的批准動作發生在流程待辦，與選單可見性無關。
 - **System Admin (OCIO)** 與 **SuperAdmin - Dev** 大致相同，差別在流程引擎管理及部分系統配置（OAuth／字典／郵件）。
-- 2026-09 起，學生組織相關的管理頁（審批人管理、評審小組成員、續期驗證碼、組織類別申請期）集中在「管理中心」，主要由 SAO Administrator 使用；評審小組秘書（122）與申訴小組秘書（153）只獲其職責所需的頁面。
+- 2026-09 起，學生組織相關的管理頁集中在「管理中心」（現為審批人管理、管理註冊審議組、查閱組織清單內的續期驗證碼面板、設定申請窗口），主要由 SAO Administrator 使用；註冊審議組秘書（122）與申訴審議組秘書（153）只獲其職責所需的頁面。
 - All 12 roles share the common menus (Home / For You / About).
 - **Group Leader (`sg_leader`) is the sole real business user of the Organiser Center.**
 - **Activity Application Reviewer (149)** has a narrow row because approval happens through workflow tasks, not menu visibility.
-- Since 2026-09 the student-organisation admin pages (Reviewer Management, Review Group Members, Renew Verification Codes, Group Type Application Period) live under the Admin Oversight Center.
+- Since 2026-09 the student-organisation admin pages live under the Admin Oversight Center (now Reviewer Management, Manage Registration Groups, the renewal-code panel of View Organisation List, and Set Application Window).
 
 ---
 
@@ -364,10 +369,10 @@
 | `activity:attendance:change:query`／`create`／`submit` **〔新〕** | 查看、建立、提交出席變更申請；其中 `submit` 用於撤回已提交的申請 | Student、Group Leader、Coordinator、Supervisor、SuperAdmin - Dev |
 | `activity:attendance:change:approve` **〔新〕** | 出席變更審批：Checker 檢查、Supervisor 推薦 | Checker、Supervisor、SuperAdmin - Dev（Checker 另獲 `query`） |
 | `stugroup:reviewer-management:manage` **〔新〕** | 審批人管理 | 見 §1.15 |
-| `stugroup:review-group:manage` **〔新〕** | 評審小組／申訴小組成員維護 | 見 §1.15 |
-| `stugroup:renew-code:manage` **〔新〕** | 簽發、撤銷續期驗證碼 | SAO Administrator、SuperAdmin - Dev |
-| `stugroup:group-standing:update` **〔新〕** | 設定組織狀態（停用、恢復、解散） | SAO Administrator、SuperAdmin - Dev |
-| `stugroup:group-type:query`／`create`／`update`／`delete` **〔新〕** | 組織類別申請期 | SAO Administrator、SuperAdmin - Dev |
+| `stugroup:review-group:manage` **〔新〕** | 管理註冊審議組（審議組／申訴組的主席、秘書及成員） | 見 §1.15 |
+| `stugroup:renew-code:manage` **〔新〕** | 簽發、撤銷續期驗證碼（查閱組織清單的「續期驗證碼」面板） | SAO Administrator、SuperAdmin - Dev |
+| `stugroup:group-standing:update` **〔新〕** | 設定組織狀態（停用、恢復、解散）；修改組織的託管單位及 ELAT 編號 | SAO Administrator、SuperAdmin - Dev |
+| `stugroup:group-type:query`／`create`／`update`／`delete` **〔新〕** | 組織類別資料；其中 `query`／`update` 亦用於「設定申請窗口」的學生組織申訴期限 | SAO Administrator、SuperAdmin - Dev |
 
 > 註：
 > - 活動報告除權限標識外，系統亦按「是否為該活動的建立人或籌委（OC）成員」核對可否查看及提交；審批則按流程指派核對。
