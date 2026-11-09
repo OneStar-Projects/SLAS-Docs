@@ -5,8 +5,6 @@
 > 文中角色稱呼一律採用系統角色的正式名稱（見 [roles-menus-permissions-matrix.md](roles-menus-permissions-matrix.md)）。
 > 步驟化的操作指引見 [activity-report-submission-guide.md](activity-report-submission-guide.md)。
 
-> 本文描述的是活動結束後的**總結報告**。翌日 / 兩週**事件報告**（R01 / R14）是另一套功能，入口、狀態與審批鏈完全獨立，見 [incident-report-guide.md](incident-report-guide.md)。
-
 ---
 
 ## 1. 流程概覽
