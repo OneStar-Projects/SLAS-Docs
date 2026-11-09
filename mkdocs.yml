@@ -85,9 +85,9 @@ nav:
   - 操作文檔:
       - 活動流程全流程 Demo 指南: activity-end-to-end-demo-guide.md
       - 學生組織流程全流程 Demo 指南: student-org-end-to-end-demo-guide.md
-      - 活動報告（活動總結報告）: activity-report-submission-guide.md
+      - 活動報告（問卷、起草、審批、ELAT 同步）: activity-report-submission-guide.md
       - 活動報名: activity-enrollment-guide.md
       - 活動出席: activity-attendance-guide.md
       - 活動推廣: activity-promotion-guide.md
-      - 事件報告 / 活動報告: activity-report-guide.md
+      - 事件報告（含翌日 / 兩週活動報告）: incident-report-guide.md
       - 活動成員導入 / 社團組織導入: import-modules-guide.md

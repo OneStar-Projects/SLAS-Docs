@@ -1,371 +1,862 @@
-# 活動報告（活動總結報告）
+# 活動報告（活動總結報告）操作手冊
 
-> 本文檔面向 Demo 執行人、UAT 測試人與業務培訓人員，目標是讓使用者**不依賴開發人員陪同**，也能完整走完填報 → OC 共簽 → Coordinator 分派 → Checker / Supervisor → 最終審批，以及出席記錄變更引發的報告修訂。
+> 本手冊面向**活動 OC（籌委會）**、**各審批角色**與 **SAO 管理員**，涵蓋活動總結報告的完整操作：參與者問卷 → 報告起草 → OC 聯署 → 審批 → ELAT 同步。讀完本手冊，使用者應可**不依賴開發人員陪同**完成整個流程。
 >
-> 內容以 **2026-10 的實際運作狀況（as-built）** 為準。
+> 內容以 **2026-11 的實際運作狀況（as-built）** 為準。截圖取自測試環境，畫面語言為英文；截圖中的活動、帳號與問卷名稱（如「6号-导入」、「S2-FIXTURE」）是測試資料，正式環境以實際名稱為準。
 >
-> 設計層面的環節條件、通知與需求對應見 [activity-report-submission-design.md](activity-report-submission-design.md)。
-> 角色稱呼以系統角色的正式名稱為準（見 [roles-menus-permissions-matrix.md](roles-menus-permissions-matrix.md)）。
->
-> **關於帳號與學號**：本文中的測試帳號、學號及姓名已部分遮蔽（如 `S1132***`、`1132****`），僅保留足以區分不同角色的前綴。實際演示帳號請向專案團隊索取內部測試清單。
+> 設計層面的環節條件與需求對應見 [activity-report-submission-design.md](activity-report-submission-design.md)；角色稱呼以系統角色的正式名稱為準（見 [roles-menus-permissions-matrix.md](roles-menus-permissions-matrix.md)）。
 
 > **⚠️ 先分清是哪一種「活動報告」。** 系統中同名的有兩套，入口、狀態、審批鏈完全不同：
 >
-> - **本文的活動報告**：活動結束後的**總結報告**，共 12 節表單（OC 名單、財務收支、出席、照片影片、聲明）。
-> - **翌日 / 兩週活動報告（R01 / R14）**：事件回報性質，見 [activity-report-guide.md](activity-report-guide.md)。
->
-> Demo / UAT 前務必先確認測試對象是哪一套。
+> - **本手冊的活動報告**：活動結束後的**總結報告**（OC 名單、財務收支、出席、照片影片、問卷結果、聲明）。
+> - **翌日 / 兩週活動報告（R01 / R14）**：事件回報性質，見 [incident-report-guide.md](incident-report-guide.md)。
 
 ---
 
-## 1. 模組概覽
+## 目錄
 
-### 1.1 業務目標
-
-由 Group Leader 代表全體 OC（活動籌備委員會）填寫活動總結報告——活動獲批准後即可開始起草，活動結束後提交——經全體 OC 共簽、Coordinator 分派角色、Checker 檢查（可選）、全體 Supervisor 推薦後，NSOA 活動再經 VPSLA 四環節、非 NSOA 活動由 Activity Application Reviewer 審批結案。
-
-報告獲批准後，如活動的出席記錄經審批變更，報告會進入「需要修訂」，須修訂、全體 OC 重新共簽並再次審批（§4.5）。
-
-### 1.2 觸發條件
-
-- **活動申請已獲批准**即可建立報告、填寫與儲存草稿（2026-09 起，不必等活動結束）。
-- **活動結束日期已過**才能「發起聯署」。活動未結束時按「發起聯署」會被拒絕，畫面提示「活動結束後方可填寫活動報告」——此提示措辭沿用舊版，實際上只限制發起聯署，草稿仍可繼續填寫與儲存。
-- 一個活動**只能有一份**報告，重複建立會被拒絕。
-- 能建立與填寫的是下列任一身分：該活動所屬**學生組織的組長**（Group Leader）、**該活動的建立人**、**該活動籌委會（OC）的成員**。此口徑逐步放寬而來——最初只認組長，2026-08 加入建立人，2026-09 再加入活動 OC 成員。下文為行文簡潔一律稱「Group Leader」。
-- 報告建立之後，**§3 OC 名單上的人**也能開啟報告詳情頁（供查看與共簽），但編輯與發起共簽仍限上述三種身分。
-
-### 1.3 報告狀態總覽
-
-| 狀態 | 業務含義 | Group Leader 後續操作 |
-|:--|:--|:--|
-| 未開始（Not Started） | **列表上的顯示狀態**，表示這個活動可以報告但還沒建立報告 | 點進去即自動建立草稿 |
-| 草稿（Draft） | 內容可自由編輯 | 存草稿 / 發起共簽 |
-| 共簽中（Pending Endorsement） | 等待全體 OC 共簽，**內容與名單鎖定** | 撤回共簽（回到草稿；修訂輪則回到「需要修訂」）；OC 成員逐一簽署 |
-| 已提交（Submitted） | 共簽完成、審批流程進行中 | 只能查看與追蹤進度 |
-| 已退回（Returned） | 被退回 | 修改後**重新發起一輪共簽**再提交 |
-| 已批准（Approved） | 審批通過 | — |
-| 需要修訂（Change Requested） | 出席記錄經審批變更，原出席依據已失效（§4.5） | 修訂後**重新發起一輪共簽**再提交 |
-
-> 畫面上的中文狀態標籤依次為：未開始、草稿、待聯署、審批中、已退回、已批准、需要修訂。「管理活動報告」列表可按狀態篩選，包括「需要修訂」。
-
-> 「未開始」只是列表上的呈現，不是報告的實際狀態——這個活動根本還沒有報告。
-
-### 1.4 與其他模組的關係
-
-報告的四塊內容是**從別的模組預載**進來的，不是手工從零填寫：
-
-| 報告章節 | 預載來源 |
-|:--|:--|
-| §3 OC 名單 | 活動成員中角色屬於 OC 的人，逐人補上課程編號 |
-| §4 活動目標 | 活動申請時填寫的「活動目標闡述」（2026-09 新增）；建立報告時帶入一次，之後重新開啟草稿不會覆蓋已編輯的內容 |
-| §7 財務收支 | 活動申請時的預算收入 / 支出行，作為「預計」欄；「實際」欄由填報人補 |
-| §9 出席 | 各活動日**已定稿的正式出席名單**（被排除者不列入）；所有活動日都未定稿時，改以舊方式組成：出席簽到記錄 ∪ 已批准報名 ∪ 已批准（或已建號）嘉賓 |
-
-§3、§7 的預載值可以增刪改，改動請在該行的**差異備註**欄說明；手工新增、且不是活動已登記 OC 的成員，差異備註**必填**。§9 不能手工修改——出席有誤須回到「管理出席」提出出席記錄變更申請（見 [activity-attendance-guide.md](activity-attendance-guide.md) §4.6）。
-
-> **請先定稿出席記錄再發起聯署。** 報告只採用已定稿活動日的正式名單；尚未定稿的活動日不會計入。發起聯署時，系統記錄本輪引用的各活動日名單版本，作為 OC 簽署與審批的依據。
-
----
-
-## 2. 角色與職責
-
-| 角色 | 在流程中的位置 | 可做的動作 | 可退回到 |
-|:--|:--|:--|:--|
-| Group Leader **／活動建立人／活動 OC 成員** | 流程外（發起人） | 建立/編輯報告、發起共簽、撤回共簽 | — |
-| OC 成員（活動成員，非系統角色） | 流程外（共簽） | 簽署（Endorse）；最後一位簽署時自動啟動流程 | — |
-| Coordinator | 分派（全體 Coordinator 共用待辦）；修訂輪原分派仍有效時跳過 | 分派（指定 Checker，確認 Supervisors）/ 退回 | **只能退回 Group Leader** |
-| Activity Application Checker | 檢查（指派給被選中的那一位） | 檢查通過 / 退回 | Coordinator、Group Leader |
-| Supervisor | 推薦（多人會簽） | 推薦 / 確認退回 | **只能退回 Group Leader** |
-| VPSLA Secretary | 選組傳閱、共識確認 | 選組傳閱（含催辦時點）、共識確認 / 退回 | 退回即重跑 Supervisor 輪次 |
-| VPSLA Members | 審閱（多人並行，由 Secretary 選定） | **只有「已審閱」一個動作** | — |
-| VPSLA Chairperson | 審批 | 批准 / 退回 | 退回給 VPSLA Secretary（共識環節） |
-| Activity Application Reviewer／Delegate | 審批（非 NSOA 專用） | 批准 / 退回 | 退回即重跑 Supervisor 輪次 |
-
-> **Checker 是可選的。** Coordinator 不指定 Checker 時，流程直接只建立 Supervisors 任務。
-> **所有退回都必須填寫審批意見**，未填寫時退回按鈕不可按。
-> **指派有校驗**：被選為 Checker 的人必須持有 Activity Application Checker 角色；Supervisors 名單畫面上已帶出該活動已存檔督導的**全量並設為唯讀**，Coordinator 只能確認、不能增刪（2026-08 起），系統仍保留「必須是已存檔督導子集」的校驗作為第二道防線。
+1. [概覽](#1-概覽)
+    - [1.1 整體流程](#11-整體流程)
+    - [1.2 角色與職責](#12-角色與職責)
+    - [1.3 報告狀態](#13-報告狀態)
+2. [參與者問卷](#2-參與者問卷)
+    - [2.1 進入問卷範本頁面（SAO）](#21-進入問卷範本頁面sao)
+    - [2.2 設定發送時間（SAO）](#22-設定發送時間sao)
+    - [2.3 建立問卷範本（SAO）](#23-建立問卷範本sao)
+    - [2.4 管理範本與設定預設（SAO）](#24-管理範本與設定預設sao)
+    - [2.5 為個別活動指定範本（SAO）](#25-為個別活動指定範本sao)
+    - [2.6 問卷發送規則](#26-問卷發送規則)
+    - [2.7 參與者填寫問卷](#27-參與者填寫問卷)
+3. [起草活動報告](#3-起草活動報告)
+    - [3.1 誰可以起草](#31-誰可以起草)
+    - [3.2 建立報告](#32-建立報告)
+    - [3.3 填寫報告各部分](#33-填寫報告各部分)
+    - [3.4 報告中的問卷結果](#34-報告中的問卷結果)
+4. [OC 聯署](#4-oc-聯署)
+    - [4.1 發起聯署](#41-發起聯署)
+    - [4.2 OC 簽署](#42-oc-簽署)
+    - [4.3 撤回聯署](#43-撤回聯署)
+    - [4.4 轉移起草權（SAO）](#44-轉移起草權sao)
+5. [審批](#5-審批)
+    - [5.1 審批流程圖](#51-審批流程圖)
+    - [5.2 從待辦進入審批頁](#52-從待辦進入審批頁)
+    - [5.3 Coordinator 分派](#53-coordinator-分派)
+    - [5.4 Checker 檢查](#54-checker-檢查)
+    - [5.5 Supervisor 推薦](#55-supervisor-推薦)
+    - [5.6 Activity Application Reviewer 審批（非 NSOA）](#56-activity-application-reviewer-審批非-nsoa)
+    - [5.7 VPSLA 審批（NSOA）](#57-vpsla-審批nsoa)
+    - [5.8 退回與重新提交](#58-退回與重新提交)
+    - [5.9 審批結果與通知](#59-審批結果與通知)
+    - [5.10 出席記錄變更引發的報告修訂](#510-出席記錄變更引發的報告修訂)
+6. [ELAT 同步](#6-elat-同步)
+    - [6.1 哪些活動會同步](#61-哪些活動會同步)
+    - [6.2 Supervisor 填寫 ELAT 資料](#62-supervisor-填寫-elat-資料)
+    - [6.3 同步時間與內容](#63-同步時間與內容)
+    - [6.4 SAO 管理 ELAT 同步](#64-sao-管理-elat-同步)
+    - [6.5 同步狀態](#65-同步狀態)
+7. [報告內容與入口](#7-報告內容與入口)
+8. [端到端 Demo 指南](#8-端到端-demo-指南)
+9. [邊界與已知限制](#9-邊界與已知限制)
+10. [常見問題](#10-常見問題)
 
 ---
 
-## 3. 流程圖
+## 1. 概覽
+
+### 1.1 整體流程
+
+活動獲批准後，活動 OC 即可起草報告；活動結束後，系統按 SAO 設定的時間向簽到者發送問卷。OC 填好報告後發起聯署，全體 OC 簽署後報告進入審批：Coordinator 分派、Checker 檢查（可選）、全體 Supervisor 推薦，再由 Activity Application Reviewer（非 NSOA）或 VPSLA（NSOA）批准。報告獲批准後，Supervisor 填寫的 ELAT 資料會在當晚同步到 ELAT。
 
 ```mermaid
 flowchart TD
-    A0[活動獲批准] --> A[Group Leader 填寫報告<br/>草稿]
-    A --> B[活動結束後發起共簽<br/>共簽中<br/>內容與名單鎖定]
-    B -- 撤回 --> A
-    B --> C{全體 OC 逐一簽署}
-    C -- 尚有人未簽 --> C
-    C -- 最後一位簽署 --> D[系統自動啟動審批<br/>已提交]
-    D --> AG{修訂輪且原分派仍有效?}
-    AG -- 否 --> E[Coordinator 分派<br/>指定 Checker 可選 + 確認 Supervisors]
-    AG -- 是：沿用原 Checker / Supervisors --> SUB
-    E -- 退回 --> RET([已退回<br/>退回 Group Leader])
-    E -- 分派 --> SUB
-    subgraph SUB [檢查 + 推薦（可重入）]
-      I[輪次初始化] --> G{有 Checker<br/>且尚未檢查?}
-      G -- 是 --> FORK((並行))
-      FORK --> CHK[Checker 檢查]
-      FORK --> SUP[Supervisors 推薦<br/>待辦在 Checker 完成前隱藏<br/>全員推薦才通過，一人退回即中止]
-      G -- 否 --> SUP
-      CHK -- 檢查通過 --> JOIN((匯合))
-      SUP --> JOIN
-    end
-    SUB -. 環節內退回 .-> RG{退回目標}
-    RG -- Coordinator（僅 Checker 可選） --> E
-    RG -- Group Leader --> RET
-    SUB --> NS{NSOA?}
-    NS -- 否 --> REV[Activity Application Reviewer<br/>或 Delegate 審批]
-    REV -- 批准 --> OK([已批准])
-    REV -- 退回 --> SUB
-    NS -- 是 --> VPS[VPSLA Secretary 選組傳閱<br/>設定催辦時點]
-    VPS -- 退回 --> SUB
-    VPS --> VPM[VPSLA Members 審閱<br/>多人並行，只有「已審閱」]
-    VPM --> VPC[VPSLA Secretary 共識確認]
-    VPC -- 退回 --> SUB
-    VPC -- 有共識 --> CH[VPSLA Chairperson 審批]
-    CH -- 批准 --> OK
-    CH -- 退回 --> VPC
-    OK -. 其後出席記錄經審批變更 .-> CR[需要修訂<br/>修訂後全體 OC 重新共簽] -.-> B
+    A["活動獲批准"] --> B["OC 起草報告<br/>草稿"]
+    A -.-> S1["活動結束後第 N 日<br/>系統向簽到者發送問卷"]
+    S1 -.-> S2["參與者匿名填寫"]
+    S2 -.->|"即時統計"| B
+    B --> C["活動結束後發起聯署<br/>待聯署・內容鎖定<br/>問卷統計凍結"]
+    C --> D["全體 OC 簽署"]
+    D --> E["審批中"]
+    E --> F["Coordinator 分派"]
+    F --> G["Checker 檢查（可選）"]
+    G --> H["全體 Supervisor 推薦<br/>Supervisor 填寫 ELAT 資料"]
+    H --> I{"NSOA?"}
+    I -->|"否"| J["Activity Application Reviewer 批准"]
+    I -->|"是"| K["VPSLA Secretary → Members 表態<br/>→ 共識 → Chairperson 批准"]
+    J --> L(["已批准"])
+    K --> L
+    L --> M["當晚 02:30 同步到 ELAT"]
 ```
 
-> **退回的兩種去向要分清：**
->
-> - 退到 **Group Leader**（「已退回」）＝本輪審批結束，報告回到可編輯狀態，**必須重新走一輪全員共簽**才能再次提交。
-> - 退到 **Coordinator / Supervisors** ＝審批仍在進行，報告狀態維持「已提交」，Group Leader 不需要（也不能）做任何事。
->
-> Reviewer、VPSLA 選組、VPSLA 共識三處的「退回」，去向都是**重跑 Supervisor 推薦輪次**，不是退給 Group Leader。Chairperson 的退回則是退給 VPSLA Secretary。
->
-> **Supervisor 的退回只有一個去向**（2026-09 調整）：一律退回 Group Leader、本輪審批結束。原先可選「退回 Checker」，但該路徑會令審批重新展開一輪檢查與推薦、流程始終不結束，報告因此永遠到不了「已退回」、申請人也收不到通知，故予以取消。
+### 1.2 角色與職責
+
+| 角色 | 可做的事 |
+|:--|:--|
+| 活動 OC（含活動建立人、所屬學生組織 Group Leader） | 起草及修改報告、發起及撤回聯署、簽署；查看問卷即時統計 |
+| 活動參與者（曾簽到者） | 匿名填寫問卷，每人一次 |
+| Coordinator | 分派 Checker 與 Supervisors，或退回學生 |
+| Activity Application Checker | 檢查通過，或退回 Coordinator / 學生 |
+| Supervisor | 推薦，或退回 Coordinator / 學生；修訂問卷 AI 總結；填寫 ELAT 資料 |
+| Activity Application Reviewer／Delegate | 批准或退回（非 NSOA） |
+| VPSLA Secretary | 選擇傳閱小組及投票截止時間；看投票結果後確認共識或退回（NSOA） |
+| VPSLA Members | 表態：Approve / Neutral / Return（NSOA） |
+| VPSLA Chairperson | 成員表態期間可唯讀查看報告；最終批准或退回（NSOA） |
+| SAO 管理員 | 設定問卷發送時間及範本；轉移報告起草權；管理 ELAT 同步 |
+
+### 1.3 報告狀態
+
+| 狀態（畫面標籤） | 意思 | OC 可做的事 |
+|:--|:--|:--|
+| Not Started（未開始） | 活動可報告，但尚未建立報告（列表上的顯示，不是報告的實際狀態） | Create Report |
+| Draft（草稿） | 可自由編輯 | 儲存草稿、發起聯署 |
+| Pending Endorsement（待聯署） | 等待全體 OC 簽署，**內容與名單鎖定** | 簽署、撤回聯署 |
+| Submitted（審批中） | 全體 OC 已簽署，審批進行中 | 查看、追蹤進度 |
+| Returned（已退回） | 被退回學生 | 修改後**重新發起聯署** |
+| Approved（已批准） | 審批通過 | 查看 |
+| Change Requested（需要修訂） | 出席記錄經審批變更，須修訂（見 [5.10](#510-出席記錄變更引發的報告修訂)） | 修改後**重新發起聯署** |
 
 ---
 
-## 4. 關鍵步驟詳述
+## 2. 參與者問卷
 
-### 4.1 建立與填寫（Group Leader）
+活動結束後，系統按 SAO 設定的時間，自動向**所有曾簽到的參與者**發送一份匿名問卷。問卷結果自動匯總到活動報告：
 
-入口：**組織者中心 → 管理活動報告**（`/organiser/ActivityReportManagement`）。列表把四個來源合併去重：「我擔任組長的學生組織」名下的活動、「我建立的活動」、「我在活動籌委會名單上的活動」，以及「我出現在某份報告 §3 OC 名單上的活動」；只列**已獲批准、且已發布 / 進行中 / 已完成**的活動。2026-09 起**不再要求活動已結束**，未結束的活動也會出現，報告入口按鈕不再鎖住。狀態為「未開始」的點擊後即自動建立草稿並帶入預載資料。
+- **選擇題與評分題**：系統統計每個選項的人數及百分比、評分分佈及平均分。
+- **文字題**：由 AI 生成英文總結；Supervisor 審批時可修訂。
 
-報告表單共 12 節，編號與紙本表格一致：
+本節 2.1–2.5 由 **SAO 管理員**操作；2.7 是參與者的操作；問卷結果在報告中的呈現見 [3.4](#34-報告中的問卷結果)。
 
-| # | 章節 | 說明 |
+### 2.1 進入問卷範本頁面（SAO）
+
+**步驟 1**：以 SAO 管理員身份登入，點選左側選單 **Management Centre**，再點 **Survey Templates**。
+
+![進入 Survey Templates](images/activity-survey/01-menu-management-centre.png)
+
+**步驟 2**：頁面上方一行是**發送時間設定**，下方是**問卷範本列表**，標有 **Default** 的是預設範本。
+
+![Survey Templates 頁面](images/activity-survey/02-survey-templates-page.png)
+
+### 2.2 設定發送時間（SAO）
+
+發送時間設定適用於**所有活動**：
+
+| 欄位 | 意思 | 可設定範圍 |
 |:--|:--|:--|
-| 01 | 活動名稱 | 預載活動標題 |
-| 02 | 主辦單位 | 預載活動主辦單位（英 / 繁 / 簡三語一併帶出，依當前介面語言取值）；沒有則取學生組織名稱 |
-| 03 | OC 名單 | 預載，可增刪改；手工新增的行**輸入學號即自動帶出英文姓名與課程編號**，不必手打；每行可勾選「現場負責人」「現場觀察員」，改動請填差異備註 |
-| 04 | 活動目標 | 預載自活動申請的「活動目標闡述」，可修改 |
-| 05 | 執行總結 | 文字 |
-| 06 | 觀察與檢討 | 文字 |
-| 07 | 財務收支 | 收入 / 支出兩張表，預計欄預載自預算，實際欄自填；**四項合計由系統依明細行自動重算** |
-| 08 | 建議事項 | 文字 |
-| 09 | 出席 | 讀取已定稿的正式出席名單，不能手工修改；可另外上傳出席附件 |
-| 10 | 照片 / 影片 | 上傳，分照片與影片兩類；**必須勾選**「本人確認已就提交的照片 / 短片取得相關人士的同意」，否則無法發起共簽 |
-| 11 | 聲明 | 真實性聲明全文；由**每位 OC 在簽署時**閱讀並確認 |
-| 12 | Supervisor 認可 | 唯讀，顯示流程中的推薦結果 |
+| **Send on day N after the activity ends** | 活動結束日之後第幾日發送。1 = 結束翌日；0 = 結束當日 | 0–30 |
+| **Send time** | 當日幾點發送 | 00:00–23:30，每 30 分鐘一格 |
+| **Open for (days)** | 發送後開放填寫多少日 | 1–60 |
 
-可編輯的狀態只有「草稿」、「已退回」與「需要修訂」。
+> 例：活動於 11 月 7 日結束，設定為「第 1 日、10:00、7 日」，問卷會於 **11 月 8 日 10:00** 發出，開放至 **11 月 15 日 10:00**。
 
-### 4.2 發起共簽與簽署（Group Leader + 全體 OC）
+**步驟 1**：修改需要調整的欄位。點 **Send time** 可從下拉清單選擇時間。
 
-- Group Leader 按「發起聯署」→ 畫面先擋一次 §10 媒體同意未勾選的情況，接著存檔草稿；系統再校驗：活動已獲批准**且已結束**、§10 媒體同意已勾選、OC 名單非空、**每位 OC 都有系統帳號**（沒有帳號的會嘗試自動建立；仍失敗則整單拒絕）、手工新增而非活動登記 OC 的成員已填寫差異備註。通過後系統快照本輪簽署人名單、**固定本輪引用的出席名單版本**、報告轉「共簽中」，並向全體 OC 發出站內通知（含直達簽署的連結）。
-- OC 簽署時，對話框顯示 §11 聲明全文，須勾選「我已審閱報告，並同意簽署本聲明」才能簽署。
-- 「共簽中」期間報告**內容與 OC 名單鎖定**，不可編輯。
-- Group Leader 可「撤回聯署」，本輪結束、已收集的簽署作廢（保留於歷史，不計入下一輪），報告回到「草稿」；修訂輪則回到「需要修訂」。
-- OC 成員逐一簽署；**最後一位簽署的瞬間**，系統即時把報告轉為「已提交」並啟動審批流程。
-- 流程的發起人記為**提交報告的 Group Leader**，不是觸發末簽的那位 OC 成員。
+![選擇發送時間](images/activity-survey/03-schedule-send-time-options.png)
 
-### 4.3 審批環節（各審批角色）
+**步驟 2**：修改後，右邊的 **Save** 按鈕會變為可按。下圖示範改為「結束後第 2 日 09:30 發送，開放 14 日」。
 
-所有審批角色都從**待辦**進入報告審批頁（`/bpm/activity-report-task`），頁面依當前任務顯示對應的操作區。凡可退回的環節，「審批意見」欄標示為必填，**未填寫時「退回」按鈕不可按**（伺服器端同樣拒絕空白退回意見）；推薦、批准等其他動作的意見可選填。
+![修改發送時間](images/activity-survey/04-schedule-changed.png)
 
-- **Coordinator**：選擇 Checker（可留空）、確認 Supervisors 名單（帶出該活動已存檔督導全量，**欄位唯讀、不能增刪**），送出分派；或退回 Group Leader。
-- **Checker**：檢查通過，或退回（選擇退回 Coordinator 還是 Group Leader）。
-- **Supervisor**：推薦，或確認退回（**唯一去向是 Group Leader**，本輪審批即結束）。
-  - ⚠️ **有 Checker 且 Checker 尚未完成時，Supervisor 的待辦不會出現**；Checker 送出檢查結果後自動現身，中間不需要任何補償動作。這是系統層強制的門檻，繞過畫面直接送出同樣會被拒絕。
-  - 會簽規則：**全員推薦**才算通過；**任一位確認退回**立即中止本輪會簽，其餘 Supervisor 的任務一併取消。
-- **VPSLA Secretary（選組）**：選擇傳閱小組並設定催辦提醒時點，兩者皆為必填；或退回。
-- **VPSLA Members**：只有「已審閱」一個動作，**沒有退回**。到了催辦時點，系統向尚未提交的成員發提醒，**但不會自動完成任務**，流程會一直等到全員提交。
-- **VPSLA Secretary（共識）**：確認有共識送交主席，或退回。
-- **VPSLA Chairperson**：批准（結案）或退回給 Secretary。
-- **Activity Application Reviewer / Delegate**（非 NSOA）：批准（結案）或退回。
+**步驟 3**：點 **Save**，畫面上方顯示「Save Successful」即已儲存。
 
-### 4.4 退回後重新提交
+![儲存成功](images/activity-survey/05-schedule-saved.png)
 
-流程以「退回 Group Leader」結束時：報告狀態轉「已退回」、記錄退回原因（頁面頂部紅色橫幅顯示），**且共簽狀態一併重置**。因此 Group Leader 修改完成後，必須**再次發起共簽、由全體 OC 重新簽署一輪**，才會啟動新一輪審批。歷次審批與其意見都保留，在報告詳情頁可以往回翻。
+!!! note "設定何時生效"
+    新設定只影響**尚未發送**的問卷；已發送的問卷按發送當時的設定計算截止時間。系統每 10 分鐘檢查一次，問卷會在設定時間後 10 分鐘內發出。
 
-### 4.5 出席記錄變更引發的報告修訂（2026-09 新增）
+### 2.3 建立問卷範本（SAO）
 
-活動日的出席名單定稿後，如需更正，由活動建立人 / OC 在「管理出席」提出**出席記錄變更申請**，經 Checker（如有）與全體 Supervisor 推薦後生效（見 [activity-attendance-guide.md](activity-attendance-guide.md) §4.6–§4.7）。變更生效後，報告按當時的狀態處理：
+**步驟 1**：點 **New template**，彈出「New survey template」視窗。視窗有 **Design**（編輯）及 **Preview**（預覽）兩個頁籤，新範本預先放入一道評分題。
 
-| 出席變更獲批時的報告狀態 | 會發生什麼 | Group Leader / OC 要做什麼 |
+![新增範本視窗](images/activity-survey/06-new-template-dialog.png)
+
+**步驟 2**：填寫範本資料。每一項都有**英文、繁體中文、簡體中文**三個輸入框，參與者看到與其介面語言相同的版本。
+
+- **Name**：範本名稱，三種語言必填。
+- **Introduction**：問卷開頭的說明文字，選填。
+- **Questions**：題目。每道題可選題型、勾選 **Required**（必答）。
+
+![填寫名稱、說明及第一道題](images/activity-survey/07-name-intro-first-question.png)
+
+**步驟 3**：點 **Add question**，選擇題型加入新題目。
+
+![選擇題型](images/activity-survey/08-add-question-types.png)
+
+| 題型 | 參與者如何作答 | 報告中如何呈現 |
 |:--|:--|:--|
-| 尚未建立報告 | 系統等待；建立報告時直接採用新名單 | 照常建立報告 |
-| 草稿 / 已退回 / 需要修訂 | 下一次發起聯署時採用新名單；OC 收到「活動報告需要修訂」通知 | 核對 §9 出席後照常發起聯署 |
-| 共簽中 | **本輪共簽終止**，已簽記錄只保留於歷史；報告轉「需要修訂」 | 核對修訂後重新發起聯署，**全體 OC 重新簽署** |
-| 審批中 | 審批**不會被打斷**；審批頁顯示「本輪報告提交後，出席記錄又有更新……」；本輪結束後系統接續 | 等待；如審批人退回，修訂時已採用新名單；如本輪獲批准，隨即進入下一行的情況 |
-| 已批准 | 開啟**報告修訂輪**，報告轉「需要修訂」；原已批准版本及記錄保持不變 | 修訂、發起聯署、全體 OC 重新簽署 |
+| **Single choice**（單選） | 選一個選項 | 每個選項的人數及百分比 |
+| **Multiple choice**（多選） | 可選多個選項 | 每個選項的人數及百分比 |
+| **Rating (1–5)**（評分） | 選 1 至 5 顆星 | 1–5 分的分佈及平均分 |
+| **Short text**（單行文字） | 輸入一行文字 | 作答人數；內容納入 AI 總結 |
+| **Long text**（多行文字） | 輸入多行文字 | 作答人數；內容納入 AI 總結 |
+
+**步驟 4**：完成所有題目。單選及多選題點 **Add option** 增加選項；每道題右上角可**上移**、**下移**或**刪除**；選項右邊的 **×** 可刪除選項。
+
+![完成題目](images/activity-survey/09-questions-filled.png)
+
+**步驟 5**：切換到 **Preview** 頁籤查看參與者看到的問卷，可點 **English / 繁體中文 / 简体中文** 切換語言逐一檢查。
+
+![英文預覽](images/activity-survey/10-preview-english.png)
+
+![繁體中文預覽](images/activity-survey/11-preview-traditional-chinese.png)
+
+**步驟 6**：點 **Save** 儲存，新範本出現在列表中。
+
+![範本已儲存](images/activity-survey/12-template-saved.png)
+
+!!! warning "儲存前系統會檢查"
+    - 名稱及每道題目都要填齊三種語言。
+    - 至少 1 道、最多 50 道題目。
+    - 單選及多選題至少 2 個、最多 20 個選項，每個選項都要填齊三種語言。
+
+    未填齊時，畫面上方會提示是哪一題、缺了甚麼。
+
+### 2.4 管理範本與設定預設（SAO）
+
+列表中每個範本的 **Operation** 欄：
+
+| 操作 | 作用 |
+|:--|:--|
+| **Edit** | 修改範本內容 |
+| **Copy** | 複製成一份新範本（不會成為預設） |
+| **Set as default** | 設為預設範本 |
+| **Delete** | 刪除範本 |
+
+所有活動預設使用**預設範本**，同一時間只有一份。
+
+**步驟 1**：在要設為預設的範本上點 **Set as default**。
+
+![Set as default 按鈕](images/activity-survey/13-set-as-default-button.png)
+
+**步驟 2**：該範本名稱旁顯示 **Default**，原來的預設範本恢復為普通範本。
+
+![新的預設範本](images/activity-survey/14-default-template.png)
+
+!!! note "預設範本的規則"
+    - 建立的**第一份範本**自動成為預設範本。
+    - 預設範本**不能刪除**；如需刪除，請先把另一份設為預設。
+    - 某活動已指定某份範本、而該活動問卷尚未發送時，該範本也不能刪除。
+    - 問卷發送時，系統把當時的範本內容複製給該活動使用。之後修改或刪除範本，**只影響之後發送的問卷**。
+
+### 2.5 為個別活動指定範本（SAO）
+
+如某個活動需要使用另一份範本，可在問卷發送**之前**單獨指定。
+
+**步驟 1**：點 **Management Centre → View Activity List**，在該活動一行的 **Actions** 欄點最右邊的問卷按鈕（滑鼠移上去顯示「Participant Survey」）。
+
+![活動列表的問卷按鈕](images/activity-survey/15-activity-list-survey-button.png)
+
+**步驟 2**：彈出「Participant Survey」視窗。「Default template (…)」表示跟隨預設範本，括號內是現時的預設範本名稱。
+
+![Participant Survey 視窗](images/activity-survey/16-activity-survey-dialog.png)
+
+**步驟 3**：點下拉框選擇範本。
+
+![選擇範本](images/activity-survey/17-activity-survey-options.png)
+
+**步驟 4**：選定後點 **Save**。
+
+![已選擇範本](images/activity-survey/18-activity-survey-selected.png)
+
+**步驟 5**：畫面上方顯示「Save Successful」即已儲存。如要改回跟隨預設範本，再次打開視窗選「Default template」並儲存。
+
+![儲存成功](images/activity-survey/19-activity-survey-saved.png)
+
+**問卷發送後**，不能再更換範本。此時再點問卷按鈕，視窗顯示實際發送的問卷（**Survey**）、發送時間（**Sent**）、截止時間（**Closes**）及作答人數 / 收件人數（**Responses**）。
+
+![問卷發送後的視窗](images/activity-survey/20-activity-survey-after-sending.png)
+
+若活動沒有任何人簽到，或發送時系統內沒有任何範本，問卷不會發出，視窗顯示「Not sent」及原因。
+
+### 2.6 問卷發送規則
+
+| 項目 | 規則 |
+|:--|:--|
+| 哪些活動會發送 | 已審批通過、未取消的活動，每個活動只發一份 |
+| 發送給誰 | 該活動**任何一節曾簽到**的參與者，包括 OC 成員。訪客沒有系統帳戶，不會收到 |
+| 何時發送 | 活動結束日後第 N 日的指定時間（見 [2.2](#22-設定發送時間sao)），於該時間後 10 分鐘內發出 |
+| 通知方式 | 每位收件人收到**一則站內信**及**一封電郵**，按其語言偏好顯示，內有「填寫問卷」按鈕。**不會發送提醒** |
+| 填寫期 | 發送後開放的日數，截止後不再接受作答 |
+| 匿名 | 系統只記錄「誰已作答」以防重複提交，**答案本身不與任何人關聯**；SAO、OC 及審批人都看不到誰答了甚麼 |
+| 補發 | 因系統維護等原因錯過發送時間，恢復後會補發；但到期超過 3 日的不會補發（例如功能上線前已結束的舊活動） |
+
+### 2.7 參與者填寫問卷
+
+**步驟 1**：參與者點站內信或電郵中的「填寫問卷」按鈕，以 SLAS 帳戶登入後進入問卷頁面。頁面顯示問卷名稱、活動名稱、說明、匿名提示及截止時間；紅色 **\*** 是必答題。
+
+![問卷填寫頁面](images/activity-survey/21-participant-form.png)
+
+**步驟 2**：作答後點 **Submit**。有必答題未答時，畫面提示「Please answer every required question」。
+
+**步驟 3**：提交成功後顯示感謝頁面。每人只能提交一次，之後再打開亦顯示此頁面。
+
+![提交成功](images/activity-survey/22-participant-submitted.png)
+
+!!! note "無法填寫的情況"
+    - **問卷已截止**：頁面顯示「This survey has closed」。
+    - **不是收件人**（例如沒有簽到）：頁面顯示「This survey is not available to you」。
+
+    ![非收件人](images/activity-survey/23-participant-not-recipient.png)
+
+---
+
+## 3. 起草活動報告
+
+### 3.1 誰可以起草
+
+以下任一身分都可建立、編輯報告，以及發起和撤回聯署：
+
+- 該活動**籌委會（OC）的成員**——活動申請時登記在 OC 名單上的學生；
+- 該活動的**建立人**；
+- 活動所屬學生組織的 **Group Leader**。
+
+報告建立後，報告 OC 名單上的人都能開啟報告（查看與簽署）。
+
+起草條件：
+
+- **活動申請已獲批准**即可建立報告、填寫與儲存草稿，不必等活動結束。
+- **活動結束日期已過**才能發起聯署。
+- 一個活動**只能有一份**報告。
+
+### 3.2 建立報告
+
+**步驟 1**：登入後點左側選單 **Organiser Centre → Manage Activity Reports**。列表顯示你可以報告的活動及報告狀態，可按活動名稱、報告狀態及活動日期篩選。
+
+![Manage Activity Reports 列表](images/activity-report/r01-manage-activity-reports.png)
+
+Action 欄按報告狀態顯示不同按鈕：
+
+| 報告狀態 | 按鈕 |
+|:--|:--|
+| Not Started | **Create Report** |
+| Draft | **Continue Editing** |
+| Returned / Change Requested | **Revise Report** |
+| 其他 | **View Report** |
+
+**步驟 2**：在狀態為「Not Started」的活動上點 **Create Report**，系統即建立草稿並帶入預載資料。
+
+![Create Report 按鈕](images/activity-report/r02-create-report-button.png)
+
+### 3.3 填寫報告各部分
+
+報告分為五個部分，頁面頂部的步驟條可快速跳到各部分。頁面底部固定顯示當前狀態及 **Save Draft**、**Start Endorsement** 按鈕。
+
+**Part 1 — Activity Information（活動資料）**
+
+活動名稱、主辦單位及 **OC 名單**由系統預載。OC 名單可增刪改：手工新增一行時**輸入學號即自動帶出英文姓名與課程編號**；每行可勾選「On-site Leader」「On-site Observer」。修改預載內容請在該行的 **Discrepancy Remark** 說明；手工新增、且不是活動已登記 OC 的成員，差異備註**必填**。
+
+![Part 1 活動資料](images/activity-report/r03-report-part1.png)
+
+**Part 2 — Content and Evaluation（內容與評估）**
+
+**活動目標**預載自活動申請時填寫的「活動目標闡述」，可修改；另填寫**執行總結**、**觀察與檢討**、**建議事項**。
+
+![Part 2 內容與評估](images/activity-report/r04-report-part2.png)
+
+**Part 3 — Finance Report（財務報告）**
+
+收入與支出兩張表：**預計**欄預載自活動申請的預算，**實際**欄由填報人填寫；四項合計由系統自動計算。
+
+![Part 3 財務報告](images/activity-report/r05-report-part3.png)
+
+**Part 4 — Activity Records（活動記錄）**
+
+- **出席**：讀取各活動日**已定稿的正式出席名單**，不能在報告中修改；出席有誤須回到「管理出席」提出出席記錄變更申請（見 [activity-attendance-guide.md](activity-attendance-guide.md)）。可另外上傳出席附件。
+- **照片 / 影片**：上傳後須勾選「本人確認已就提交的照片 / 短片取得相關人士的同意」，否則無法發起聯署。
+- **Participant Survey**：問卷結果，見 [3.4](#34-報告中的問卷結果)。
+
+![Part 4 活動記錄](images/activity-report/r06-report-part4.png)
+
+**Part 5 — Declaration and Endorsement（聲明與聯署）**
+
+顯示真實性聲明全文、OC 簽署進度，以及審批中 Supervisor 的推薦結果（唯讀）。聲明由**每位 OC 在簽署時**確認。
+
+![Part 5 聲明與聯署](images/activity-report/r07-report-part5.png)
+
+!!! tip "請先定稿出席記錄再發起聯署"
+    報告只採用**已定稿**活動日的正式出席名單；尚未定稿的活動日不會計入。所有活動日都未定稿時，系統改以簽到記錄、已批准報名及嘉賓組成出席名單。
+
+### 3.4 報告中的問卷結果
+
+問卷結果顯示在 Part 4 的「**Participant Survey**」區塊。問卷尚未發送時，區塊顯示問卷尚未發出。
+
+**起草時：即時統計**
+
+報告處於草稿、已退回或需要修訂時，顯示**即時統計**，即截至打開頁面時收到的所有答案；此時**沒有 AI 總結**。區塊頂部註明「as of（時間）, X of Y participants answered」。
+
+![起草時的即時統計](images/activity-survey/24-report-live-statistics.png)
+
+**發起聯署時：凍結統計並生成 AI 總結**
+
+1. **凍結統計**：以發起聯署那一刻的答案為準，之後才收到的答案不計入這一輪；報告被退回後重新發起聯署，會按當時的答案再凍結一次。
+2. **生成 AI 總結**：約一分鐘內，AI 把**文字題答案**整理成英文總結（主要意見、正面回饋、問題及建議），不引述原文、不包含可識別個人的資料。
+
+問卷仍在填寫期內也可以發起聯署，**不會被擋**；報告會註明統計時間及當時的作答人數。
+
+| AI 總結顯示 | 意思 |
+|:--|:--|
+| The summary is being generated… | 正在生成，稍後重新整理頁面 |
+| No participant wrote any comments. | 沒有人填寫文字題 |
+| The summary could not be generated. | 生成失敗，Supervisor 可重新生成 |
+
+**審批時：查看文字答案及修訂 AI 總結**
+
+審批人在報告審批頁可看到凍結的統計、AI 總結，以及底部的「**Written answers**」——所有匿名文字答案，按題目分組、隨機排序。OC 看不到這一部分。
+
+![審批時的總結及文字答案](images/activity-survey/25-report-summary-and-answers.png)
+
+**只有 Supervisor**（在 Supervisor 推薦步驟）可修訂 AI 總結：
+
+1. 點總結下方的 **Edit**，修改內容。
+2. 點 **Save**。報告顯示修訂後的內容，並註明「Revised by（修訂人）at（時間）」。
+
+![修訂後的總結](images/activity-survey/26-report-summary-revised.png)
+
+- 要恢復 AI 原文：再按 **Edit**，點 **Use AI version**。AI 原文一直保留，不會被覆蓋。
+- AI 總結生成失敗時，Supervisor 可點 **Generate again**。
+- 統計數字不能修改。
+
+---
+
+## 4. OC 聯署
+
+### 4.1 發起聯署
+
+報告填好後，在報告頁底部點 **Start Endorsement**。系統先儲存草稿，再檢查：
+
+- 活動已獲批准**且已結束**；
+- 已勾選照片 / 影片的同意聲明；
+- OC 名單不是空的，且每位 OC 都有系統帳號（沒有的會自動建立，仍失敗則整單拒絕）；
+- 手工新增、且不是活動已登記 OC 的成員已填寫差異備註。
+
+通過後，報告轉為「**Pending Endorsement**」，**內容與 OC 名單鎖定**；系統凍結問卷統計、固定本輪引用的出席名單版本，並向全體 OC 發出站內通知（含直達簽署的連結）。
+
+![待聯署的報告](images/activity-report/r23-pending-endorsement.png)
+
+### 4.2 OC 簽署
+
+**步驟 1**：OC 從站內通知或 Manage Activity Reports 進入報告，點底部的 **Review and Sign**。
+
+**步驟 2**：閱讀聲明全文，勾選「I have reviewed the report and agree to sign this declaration.」，點 **Sign Report**。
+
+![OC 簽署對話框](images/activity-report/r24-sign-dialog.png)
+
+**最後一位 OC 簽署後**，報告即時轉為「**Submitted**」並進入審批。流程的發起人記為發起聯署的人，不是最後簽署的那位。
+
+### 4.3 撤回聯署
+
+待聯署期間，起草人可點 **Withdraw** 撤回。已收集的簽署作廢（保留於歷史，不計入下一輪），報告回到「Draft」；修訂輪則回到「Change Requested」。
+
+### 4.4 轉移起草權（SAO）
+
+當所有起草人都無法繼續處理報告（例如已畢業或退學），SAO 管理員可把報告轉移給另一位學生。
+
+**步驟 1**：點 **Management Centre → View Activity List**，在該活動一行的 Actions 欄點 **Transfer Report Drafting** 按鈕。
+
+![Transfer Report Drafting 按鈕](images/activity-report/r38-transfer-button.png)
+
+**步驟 2**：填寫接手學生的學號（**Replacement student number**）及原因（**Reason**），點 **Transfer**。
+
+![Transfer Report Drafting 視窗](images/activity-report/r39-transfer-dialog.png)
+
+轉移後：
+
+- 接手學生加入活動及報告的 OC 名單，可繼續起草；
+- 報告內容保留；
+- 正在進行的聯署會被重置，須重新發起；
+- 操作人、原因、接手人及狀態變化記入操作日誌。
+
+---
+
+## 5. 審批
+
+### 5.1 審批流程圖
+
+```mermaid
+flowchart TD
+    D["全體 OC 簽署<br/>Submitted"] --> AG{"修訂輪且原分派仍有效?"}
+    AG -->|"否"| E["Coordinator 分派<br/>Checker 可多選 + Supervisors"]
+    AG -->|"是：沿用原 Checker / Supervisors"| SUB
+    E -->|"退回"| RET(["Returned<br/>退回學生"])
+    E -->|"分派"| SUB
+    subgraph SUB ["檢查 + 推薦"]
+      G{"有 Checker?"} -->|"是"| CHK["Checker 檢查<br/>任一位處理即生效"]
+      CHK -->|"檢查通過"| SUP
+      G -->|"否"| SUP["全體 Supervisor 推薦<br/>填寫 ELAT 資料"]
+    end
+    CHK -->|"退回 Coordinator"| E
+    SUP -->|"退回 Coordinator"| E
+    CHK -->|"退回學生"| RET
+    SUP -->|"退回學生"| RET
+    SUB --> NS{"NSOA?"}
+    NS -->|"否"| REV["Activity Application Reviewer<br/>或 Delegate"]
+    REV -->|"批准"| OK(["Approved"])
+    REV -->|"退回"| SUB
+    NS -->|"是"| VPS["VPSLA Secretary<br/>選組 + 投票截止時間"]
+    VPS -->|"退回"| SUB
+    VPS --> VPM["VPSLA Members 表態<br/>Approve / Neutral / Return<br/>Chairperson 可唯讀查看"]
+    VPM -->|"全員表態或截止"| VPC["VPSLA Secretary 共識"]
+    VPC -->|"退回"| SUB
+    VPC -->|"確認共識"| CH["VPSLA Chairperson"]
+    CH -->|"批准"| OK
+    CH -->|"退回"| VPC
+    OK -.->|"其後出席記錄經審批變更"| CR["Change Requested<br/>修訂後重新聯署"]
+```
+
+!!! note "退回的兩種去向"
+    - **退回學生**（畫面選項「Group Leaders」）：本輪審批結束，報告轉「Returned」，OC 修改後**必須重新發起聯署、全體 OC 重新簽署**。
+    - **退回 Coordinator**，以及 Reviewer、VPSLA Secretary 的退回（重跑檢查與推薦）：審批仍在進行，報告維持「Submitted」，OC 不需要做任何事。
+
+    **所有退回都必須填寫意見**，未填寫時退回按鈕不可按。
+
+### 5.2 從待辦進入審批頁
+
+**步驟 1**：審批人登入後點左側選單 **To-do List**，找到流程名稱為「Activity Report S…」（Activity Report Submission）的任務，點 **Handle**。
+
+![待辦列表](images/activity-report/r25-coordinator-todo-list.png)
+
+**步驟 2**：審批頁上方是報告全文（唯讀），下方是審批記錄及「**Action**」操作區。操作區按當前任務顯示不同按鈕。
+
+![報告審批頁](images/activity-report/r26-report-approval-page.png)
+
+### 5.3 Coordinator 分派
+
+操作區有 **Assign and Submit** 與 **Return** 兩個選項。
+
+![Coordinator 分派](images/activity-report/r27-coordinator-assign.png)
+
+**分派：**
+
+1. **Checker**：可選擇**一位或多位**持有 Activity Application Checker 角色的人；也可留空，流程直接進入 Supervisor 推薦。
+
+    ![選擇 Checker](images/activity-report/r28-coordinator-checker-options.png)
+
+2. **Activity Supervisors**：預先帶出活動已登記的督導，**可增刪**；新增的人必須持有 Supervisor 角色。至少保留一位。
+
+    ![選擇 Supervisors](images/activity-report/r29-coordinator-supervisor-options.png)
+
+3. 填寫意見（選填），點 **Assign and Submit**。
+
+!!! warning "已指定過 Checker 的報告不能留空"
+    報告被退回學生、修改後重新提交時，若之前的分派曾指定 Checker，Coordinator 表單會預填該 Checker，**不能留空**（可以更換）。
+
+**退回**：選 **Return**，填寫意見後提交，報告退回學生。
+
+### 5.4 Checker 檢查
+
+被指派的 Checker 從待辦進入審批頁，操作區有 **Confirm Checked** 與 **Return**。
+
+![Checker 確認檢查](images/activity-report/r30-checker-confirm.png)
+
+- **Confirm Checked**：檢查通過，Supervisor 的待辦隨即出現。
+- **Return**：在 **Return To** 選擇退回 **Coordinator**（重新分派，報告維持 Submitted）或 **Group Leaders**（退回學生），並填寫意見。
+
+![Checker 退回選項](images/activity-report/r20-checker-return-options.png)
+
+!!! note "多位 Checker"
+    指派多位 Checker 時，**第一位**處理（檢查通過或退回）的人即決定結果，其他人的檢查任務自動取消。
+
+    有 Checker 時，**Supervisor 的待辦要等檢查通過後才出現**。
+
+### 5.5 Supervisor 推薦
+
+Supervisor 的審批頁除報告全文外，還有兩個 Supervisor 專屬區塊：
+
+- **Participant Survey**：可修訂問卷 AI 總結（見 [3.4](#34-報告中的問卷結果)）。
+
+    ![Supervisor 看到的問卷區塊](images/activity-report/r31-supervisor-survey-section.png)
+
+- **ELAT Information**：適用 ELAT 的活動須填寫（見 [6.2](#62-supervisor-填寫-elat-資料)）。
+
+操作區有 **Recommend** 與 **Return**：
+
+- **Recommend**：填寫意見（選填）後點 **Recommend**。ELAT 資料會在推薦時一併儲存。
+
+    ![Supervisor 推薦](images/activity-report/r35-supervisor-recommend.png)
+
+- **Return**：在 **Return To** 選擇 **Coordinator** 或 **Group Leaders**，填寫意見後點 **Return**。
+
+    ![Supervisor 退回選項](images/activity-report/r34-supervisor-return-options.png)
+
+!!! note "多位 Supervisor"
+    **全體 Supervisor 都推薦**才算通過；任一位退回，本輪推薦即中止，其他 Supervisor 的任務一併取消。
+
+### 5.6 Activity Application Reviewer 審批（非 NSOA）
+
+非 NSOA 活動在全體 Supervisor 推薦後，交由 Activity Application Reviewer（或 Delegate）審批。
+
+![Reviewer 審批](images/activity-report/r36-reviewer-approve.png)
+
+- **Approve**：報告轉為「Approved」。
+- **Return**：填寫意見，退回重做檢查與推薦（報告維持 Submitted）。
+
+### 5.7 VPSLA 審批（NSOA）
+
+NSOA 活動在全體 Supervisor 推薦後，改由 VPSLA 審批：
+
+1. **VPSLA Secretary 選組**：選擇傳閱小組（**VPSLA Group**）並設定投票截止時間（**Voting Deadline**），兩者必填；或退回（重做檢查與推薦）。
+2. **VPSLA Members 表態**：小組成員並行表態，每人選 **Approve**、**Neutral** 或 **Return**（選 Return 須填寫意見）。
+    - Return 只是一票意見，**不會立即退回報告**，由 Secretary 看結果後決定。
+    - 到了投票截止時間，未表態的成員自動計為「**Neutral**（截止未表態）」，表態階段結束。
+    - 同一期間，所選小組的 **Chairperson** 收到「Activity Report Under VPSLA Review」通知，可**唯讀**查看報告及本輪表態，不參與投票。
+3. **VPSLA Secretary 共識**：全員表態或截止後，Secretary 看表態統計，選擇**確認共識**送交 Chairperson，或退回（重做檢查與推薦）。
+4. **VPSLA Chairperson 審批**：批准即結案；退回則回到 Secretary 共識環節。
+
+### 5.8 退回與重新提交
+
+報告被退回學生時，狀態轉為「**Returned**」，頁面頂部紅色橫幅顯示退回原因，表單恢復可編輯。
+
+![被退回的報告](images/activity-report/r21-returned-report.png)
+
+OC 修改後點 **Start Endorsement**，**全體 OC 必須重新簽署一輪**才會再次進入審批——上一輪的簽署不會沿用。歷次審批記錄及意見都保留，可在審批記錄中逐輪查看。
+
+### 5.9 審批結果與通知
+
+報告獲批准後，狀態轉為「**Approved**」。
+
+![已批准的報告](images/activity-report/r37-report-approved.png)
+
+| 事件 | 收到通知的人 |
+|:--|:--|
+| 發起聯署 | 全體 OC |
+| 進入某審批環節 | 該環節的審批人 |
+| 進入 VPSLA 表態 | 小組成員；Chairperson 收到唯讀查看通知 |
+| 退回、批准 | 原有收件人（學生 / OC），**加上本次審批中實際辦理過任務的人**；去重，並排除做出決定的人本人 |
+
+### 5.10 出席記錄變更引發的報告修訂
+
+出席名單定稿後如需更正，由活動建立人 / OC 在「管理出席」提出**出席記錄變更申請**，經審批生效（見 [activity-attendance-guide.md](activity-attendance-guide.md)）。變更生效後，報告按當時狀態處理：
+
+| 變更獲批時的報告狀態 | 結果 | OC 要做甚麼 |
+|:--|:--|:--|
+| 尚未建立報告 | 建立報告時直接採用新名單 | 照常建立 |
+| Draft / Returned / Change Requested | 下次發起聯署時採用新名單；OC 收到「活動報告需要修訂」通知 | 核對出席後照常發起聯署 |
+| Pending Endorsement | **本輪聯署終止**，報告轉「Change Requested」 | 修訂後重新發起聯署 |
+| Submitted | 審批**不被打斷**，審批頁提示出席已更新；本輪結束後系統接續處理 | 等待 |
+| Approved | 開啟**修訂輪**，報告轉「Change Requested」；原已批准版本保持不變 | 修訂、發起聯署、全體 OC 重新簽署 |
 
 **修訂輪的審批：**
 
-1. 報告頁顯示黃色橫幅「出席記錄已獲批准變更，請修訂活動報告」；列表狀態為「需要修訂」，操作按鈕為「修改報告」。
-2. Group Leader 核對 §9 出席（已是最新正式名單）及受影響的內容，存檔後發起聯署；**全體 OC 重新簽署**，上一輪簽署不能沿用。
-3. 最後一位 OC 簽署後啟動審批。若首次 Coordinator 分派的 Checker 與 Supervisors 仍然有效，**跳過 Coordinator**、直接沿用；Checker **必須重新檢查**，Supervisors 的待辦同樣在檢查完成前不出現。
-4. 若任何原分派人員已失效（不再持有 Checker 角色、帳號停用、已不是本活動督導員，或從未有分派記錄），改由 Coordinator 重新分派；Coordinator 審批頁會顯示「本次報告修訂需要重新確認審批人員」及原因，並預填仍有效的 Checker。
-5. 之後的 Supervisors 會簽、Reviewer 或 VPSLA 四環節與首次提交相同；退回規則亦相同（§3 下方說明）。修訂輪被退回 Group Leader 後再提交，仍屬同一修訂輪。
-6. 修訂輪的待辦類型顯示「活動報告（變更輪）」，審批頁標題旁有「報告修訂」標籤。
+1. 報告頁顯示黃色橫幅「出席記錄已獲批准變更，請修訂活動報告」，列表按鈕為 **Revise Report**。
+2. OC 修訂後發起聯署，**全體 OC 重新簽署**。
+3. 若原分派的 Checker 與 Supervisors 仍然有效，**跳過 Coordinator**，直接沿用；Checker **必須重新檢查**。
+4. 若任何原分派人員已失效（不再持有角色、帳號停用等），改由 Coordinator 重新分派，審批頁說明原因並預填仍有效的人選。
+5. 之後的推薦、審批及退回規則與首次提交相同。待辦類型顯示「活動報告（變更輪）」，審批頁標題旁有「報告修訂」標籤。
 
-> 「出席變更帶動報告修訂」在每個環境有一項開關，預設關閉；關閉期間報告不會轉入「需要修訂」。UAT 前請向系統管理員確認目標環境已啟用。
-
----
-
-## 5. 報告內容與入口
-
-### 5.1 報告保存的內容
-
-正文：活動名稱、主辦單位、活動目標、執行總結、觀察與檢討、建議事項、四項財務合計（收入 / 支出 × 預計 / 實際）、§11 聲明勾選、共簽狀態與輪次、提交人與提交時間、退回原因。
-
-明細：OC 名單快照（含「是否預載」標記與差異備註）、財務收支明細、照片與影片、分輪次的共簽記錄（含已撤回或被終止的輪次）、歷次審批與結果、每一輪發起聯署時引用的出席名單版本，以及修訂輪由哪一份出席記錄變更觸發。
-
-### 5.2 頁面入口
-
-| 頁面 | 路徑 | 使用者 |
-|:--|:--|:--|
-| 管理活動報告（列表） | `/organiser/ActivityReportManagement` | Group Leader |
-| 活動報告（填寫 / 簽署） | `/organiser/ActivityReport?activityId=…` | Group Leader、OC 成員 |
-| 活動報告審批 | 待辦點入 `/bpm/activity-report-task` | 各審批角色 |
-
-### 5.3 權限與菜單
-
-菜單「管理活動報告」掛在**組織者中心**下，預設授予 Group Leader 角色。功能權限分為五級，可按角色分別開放：查看、建立、儲存、共簽（發起 / 撤回 / 簽署）、審批。
+> 「出席變更帶動報告修訂」在每個環境有一項開關，預設關閉；關閉期間報告不會轉入「Change Requested」。使用前請向系統管理員確認已啟用。
 
 ---
 
-## 6. 端到端 Demo 指南
+## 6. ELAT 同步
 
-### 6.1 準備條件
+活動報告獲批准後，SLAS 把活動資料及學生出席時數同步到 ELAT（Experiential Learning Activity Transcript）。
 
-通用條件：
+### 6.1 哪些活動會同步
 
-1. 一個**已獲批准、已發布且已結束**的活動（未結束的活動可演示起草，但不能發起聯署），且滿足下列任一條：掛在測試帳號擔任組長的學生組織下、由測試帳號本人建立、或測試帳號在該活動的籌委會名單上——三者都能進報告列表。
-2. 該活動有 2 位以上 OC 成員（用來演示共簽），且都能登入。
-3. 該活動已存檔至少 1 位 Supervisor。
-4. 一個持有 Activity Application Checker 角色的帳號（演示可選 Checker 分支）。
-5. Coordinator 帳號一個。
-6. 非 NSOA 主線另需 Activity Application Reviewer 帳號；NSOA 主線另需 VPSLA Secretary、VPSLA 成員與主席帳號。
-7. 該活動各活動日的出席記錄**已定稿**（見 [activity-attendance-guide.md](activity-attendance-guide.md) §4.4），否則 §9 會以舊方式組成。演示 §6.6 修訂輪另需目標環境已啟用出席變更審批與報告修訂聯動。
+只有**適用 ELAT** 的活動會同步。是否適用，由 Supervisor 在**活動申請審批**時勾選「ELAT Category B Eligibility」決定。不適用的活動，報告審批頁不會出現 ELAT 區塊。
 
-### 6.1.1 測試環境（DEV）現成資料（2026-09-04 核對）
+### 6.2 Supervisor 填寫 ELAT 資料
 
-下表是 2026-09-04 核對時 DEV **可以直接拿來 Demo** 的資料。⚠️ 本次（2026-10）更新時未能重新連線核對，資料可能已被其他測試改動，Demo 前請先確認。
+Supervisor 在**報告的 Supervisor 推薦步驟**填寫審批頁上的「**ELAT Information**」區塊。區塊底部的「Not ready to sync. Missing:」列出尚欠的資料，以及同步狀態（Sync Status）。
 
-**演示活動——全庫唯一同時具備 OC 成員與已存檔 Supervisor 的已結束活動：**
+![ELAT Information（未填）](images/activity-report/r32-elat-information-empty.png)
 
-| 項目 | 值 |
+| 欄位 | 說明 |
 |:--|:--|
-| 活動編號 | `SLA-2526-00121` |
-| 活動名稱 | Enrolment form testing |
-| 活動日期 | 2026-08-08 ~ 2026-08-09（已結束），狀態「已完成」 |
-| 是否 NSOA | 否 → 走**非 NSOA / Reviewer** 主線（6.2、6.3） |
-| 建立人 = 報告填報人 | `S1138***`（姓名已隱去） |
-| OC 成員 | 1 位：同上帳號（姓名及學號已隱去）——**與建立人是同一人** |
-| 已存檔 Supervisor | 1 位：`hro-test-074`（Test Supervisor 1） |
-| 報告現況 | 已有一份草稿，共簽尚未發起（輪次 0），未啟動審批；財務、照片、共簽、審批記錄皆為空 |
+| **Activity Type (XX)** | GC / CP / PE / CC 四選一，決定 ELAT 活動編號中的類別碼 |
+| **Experience Type** | 經驗類型；畫面會顯示申請人當時的選擇供參考 |
+| **Activity Nature (start-up)** | 只在特定經驗類型出現 |
+| **Geographic Location** | 活動地點，預設 Hong Kong |
+| **Did participants interact virtually with non-local …** | 是否與境外人士線上互動 |
+| **Service Learning** | 是否屬服務學習 |
+| **GILOs** | 按活動類型自動勾選核心 GILO（不能取消），可再勾選其他 |
+| **Mode** | 活動形式，預設 Face-to-Face |
+| **Programme Name (English)** | 英文名稱，預設活動名稱 |
 
-**審批角色帳號**（各角色在 DEV 都只有一位持有人，不必挑）：
+![ELAT Information（已填）](images/activity-report/r33-elat-information-filled.png)
 
-| 角色 | 帳號 | 姓名 |
+填好後點 **Save** 儲存；點 **Recommend** 推薦時也會自動儲存。「Missing」清單按已儲存的內容計算，儲存後才會更新。
+
+!!! note "誰可以填寫"
+    該報告的 Supervisor（包括 Coordinator 新增的 Supervisor）在推薦步驟填寫；SAO 管理員可在 ELAT Sync 頁面修改（見 [6.4](#64-sao-管理-elat-同步)）。
+
+### 6.3 同步時間與內容
+
+- 報告**最終批准**時，系統把該活動標記為「Requested（待同步）」。
+- 系統於**每日 02:30** 自動同步待同步的活動，每次最多 200 個。
+- 同步內容：
+    - **活動編號**：以 SLAS 活動編號加上類別碼，例如 `SLA-2526-CC-0138`；主題加 `-001`，每個活動日一節加 `-NN`。
+    - **學生出席時數**：按出席記錄計算，向上取整至 0.25 小時，最少 0.5 小時。
+    - **主辦部門**：使用主辦單位的部門編號。
+- 沒有學號的出席者會被略過，區塊會列出這些人。
+
+### 6.4 SAO 管理 ELAT 同步
+
+**步驟 1**：SAO 管理員點 **Management Centre → ELAT Sync**。列表顯示所有適用 ELAT 的活動，以及資料是否齊全（**Complete / Incomplete**）、ELAT 同步狀態及最後同步時間；可按活動編號或名稱搜尋。
+
+![ELAT Sync 頁面](images/activity-report/r40-elat-sync-page.png)
+
+**步驟 2**：點 **Edit** 打開該活動的 ELAT 資料，欄位與 Supervisor 填寫的相同。
+
+![ELAT Sync 編輯視窗](images/activity-report/r41-elat-sync-dialog.png)
+
+- **Save and Request Sync**：儲存並標記為待同步，於當晚 02:30 同步。
+- **Sync Now**：儲存並立即同步。
+
+!!! warning "注意"
+    - **Save and Request Sync** 與 **Sync Now** 不檢查報告是否已批准，請只對已批准報告的活動使用。
+    - ELAT 處理中或已處理（見 6.5 中標示「鎖定」的狀態）的活動不能再修改或重新同步。
+    - 錯誤訊息只有英文。
+
+### 6.5 同步狀態
+
+| 狀態 | 意思 | 可否修改 |
 |:--|:--|:--|
-| Coordinator | `hro-test-071` | Test Coordinator |
-| Activity Application Checker | `hro-test-073` | Test Checker |
-| Supervisor（本活動已存檔的那位） | `hro-test-074` | Test Supervisor 1 |
-| Activity Application Reviewer | `hro-test-091` | Test Dean |
-| Delegate | `hro-test-092` | Test Delegate |
-| VPSLA Secretary | `hro-test-083` | Test VP Secretary |
-
-**VPSLA 傳閱小組**（兩組可選，Secretary 與 Chairperson 相同）：
-
-| 小組 | 成員 |
-|:--|:--|
-| 五人組 | Secretary `hro-test-083`、Chairperson `hro-test-089`、Members `hro-test-084` ~ `hro-test-088` |
-| 兩人組 | Secretary `hro-test-083`、Chairperson `hro-test-089`、Members `hro-test-084`、`hro-test-085` |
-
-**DEV 上的三個實測限制，排 Demo 前先知道：**
-
-- **Group Leader 入口在 DEV 走不通，要靠「活動建立人」或「活動 OC 成員」這兩條路。** DEV 上確實有被認定為組長的成員，但這些組織名下**一個已結束的已核准活動都沒有**；反過來，所有可報告活動所屬的組織**都沒有組長**。所以 §4.1 列表的四個來源裡，DEV 目前只有建立人與籌委會名單這兩條會出資料。要演示組長入口，得先給某個有已結束活動的學生組織補一位組長。
-  ⚠️ **UAT / PROD 是一個組長都判不出來，見 §7；2026-09 起籌委會成員也能進入口，該環境才不至於完全無人可用。**
-- **共簽只能演示單人。** `SLA-2526-00121` 只有 1 位 OC，而且就是填報人本人——按下「發起聯署」後，同一個帳號簽完那一筆即刻轉「已提交」，看不到「等其他人簽」的中間態。要演示多人共簽，需先在活動成員裡補至少 1 位有系統帳號的 OC。
-- **主線 C（NSOA）在 DEV 沒有可用活動。** DEV 上屬於 NSOA 的已結束活動（例如 `SLA-2526-0041`，OC 2 人）**一位已存檔 Supervisor 都沒有**，而 Coordinator 分派時 Supervisors 為空會被系統擋下，流程走不過第一關。要跑 6.4，必須先為某個 NSOA 活動存檔 Supervisor。
-
-### 6.2 主線 A — 非 NSOA 最短路徑
-
-> DEV 對照：填報人 `S1138***` → 活動 `SLA-2526-00121` → Coordinator `hro-test-071` → Supervisor `hro-test-074` → Reviewer `hro-test-091`。因該活動的報告草稿已存在，第 1 步進去看到的狀態是「草稿」而非「未開始」。
-
-1. Group Leader 登入 → 管理活動報告 → 找到該活動（狀態「未開始」）→ 點入，確認 OC 名單、活動目標、財務、出席四塊已自動帶出。
-2. 補齊 05–08 文字欄與 §7 實際金額，上傳 §10 照片並**勾選 §10 媒體同意**，存草稿。
-3. 按「發起聯署」→ 狀態轉「待聯署」（共簽中），表單變唯讀。
-4. 逐一用各 OC 帳號登入 → 從站內通知進入 → 閱讀 §11 聲明並勾選確認 → 簽署。最後一位簽署後狀態轉「審批中」（已提交）。
-5. Coordinator 登入 → 待辦 → **不指定 Checker**，確認 Supervisors（唯讀，核對帶出的督導無誤即可）→ 分派。
-6. Supervisor 登入 → 待辦 → 推薦（多位 Supervisor 需全部推薦）。
-7. Activity Application Reviewer 登入 → 待辦 → 批准 → 報告狀態「已批准」。
-
-### 6.3 主線 B — 含 Checker 的並行分支
-
-在 6.2 第 5 步改為**指定 Checker**（DEV 選 `hro-test-073`），然後驗證：
-
-- Checker 的待辦立即出現；**Supervisor 此時看不到待辦**（任務其實已建立，只是在檢查完成前不對 Supervisor 顯示）。待辦列表、任務計數與統計三處數字應一致。
-- Checker 送出「檢查通過」後，Supervisor 的待辦隨即出現，可正常推薦。
-
-### 6.4 主線 C — NSOA 全鏈
-
-活動為 NSOA 時，第 7 步改走：VPSLA Secretary 選組傳閱（設定催辦時點）→ VPSLA Members 逐一「已審閱」→ VPSLA Secretary 共識確認 → VPSLA Chairperson 批准 → 「已批准」。
-
-> DEV 對照：Secretary `hro-test-083` → 傳閱小組選**兩人組**（Members 最少，簽起來最快）→ Members `hro-test-084`、`hro-test-085` → 回到 `hro-test-083` 做共識 → Chairperson `hro-test-089` 批准。
-> ⚠️ 前提是**先找一個 NSOA 活動存檔 Supervisor**——見 6.1.1 第三條限制，DEV 現有的 NSOA 活動都缺 Supervisor，這條鏈目前起跑不了。
-
-### 6.5 旁支 — 退回與重新提交
-
-1. 在 Supervisor 環節選「退回 → Group Leader」。驗證：審批意見未填寫時「退回」按鈕不可按；填寫後才能提交。
-2. 驗證：報告狀態轉「已退回」，頁面頂部顯示退回原因，表單恢復可編輯。
-3. **重點驗證**：修改後必須重新按「發起聯署」，並由**全體 OC 再簽一輪**，才會啟動新一輪審批——舊的簽署記錄不會被沿用。
-4. 另可驗證流程內退回：在 **Checker** 環節選「退回 → Coordinator」，報告狀態維持「已提交」，Coordinator 重新收到分派任務。（Supervisor 沒有這種流程內退回，其退回一律結束流程。）
-
-### 6.6 主線 D — 出席記錄變更引發的報告修訂輪
-
-前提：6.2 或 6.3 已把報告走到「已批准」，且 Coordinator 當時曾指定 Checker；目標環境已啟用出席變更審批與報告修訂聯動。
-
-1. 活動建立人 / OC 在「管理出席」對某個已定稿活動日提出出席記錄變更申請，並由 Checker（如有）與全體 Supervisor 推薦至「已批准」（操作見 [activity-attendance-guide.md](activity-attendance-guide.md) §6.4）。
-2. 稍候後重新整理「管理活動報告」。驗證：報告狀態轉「需要修訂」；報告頁顯示「出席記錄已獲批准變更，請修訂活動報告」；OC 收到「活動報告需要修訂」通知；§9 已是新名單；原已批准輪次的審批記錄仍在。
-3. Group Leader 修訂後「發起聯署」，全體 OC 逐一重新簽署。驗證：上一輪簽署沒有被沿用。
-4. 最後一位 OC 簽署後，驗證：**沒有 Coordinator 任務**；原 Checker 收到待辦，標示「報告修訂」及「活動報告（變更輪）」；Supervisor 在 Checker 完成前看不到待辦。
-5. Checker 檢查通過 → Supervisors 推薦 → Reviewer（或 VPSLA 四環節）批准 → 報告回到「已批准」。
-6. 旁支：在步驟 1 之前停用原 Checker 帳號或移除其角色，重做步驟 1–4，驗證改由 Coordinator 分派，審批頁說明原因並預填仍有效的人選。
-7. 旁支：報告處於「待聯署」或「審批中」時完成一份出席變更，分別驗證 §4.5 表中對應的行為（共簽被終止並須重簽；審批不被打斷但顯示出席已更新的提示）。
+| Not synced | 尚未同步 | 可 |
+| Requested | 已請求同步，等待 ELAT 處理 | 可 |
+| Resync requested | 已同步過、再次請求同步 | 可 |
+| Release requested | ELAT 待發布 | 鎖定 |
+| Rejected | ELAT 已拒絕 | 鎖定 |
+| Released | ELAT 已發布 | 鎖定 |
+| In progress | ELAT 處理中 | 鎖定 |
+| Sync error | 同步出錯，**ELAT error** 欄顯示原因 | 可，修正後重新同步 |
 
 ---
 
-## 7. 邊界與已知限制
+## 7. 報告內容與入口
 
-- **PDF 匯出未實作**，屬長期需求，目前只能在系統內查看報告。
-- **活動未結束時按「發起聯署」的提示措辭不準確**：畫面顯示「活動結束後方可填寫活動報告」，實際上草稿可隨時填寫，只是聯署須待活動結束。
-- **報告修訂輪尚未有完整實跑記錄**：截至 2026-09 下旬，測試環境只實跑過「出席變更獲批 → 尚無報告 → 建立報告時承接」；「已批准報告 → 修訂輪 → 跳過 Coordinator → 重新審批」主路徑須在 UAT 覆蓋（§6.6）。
-- **報告修訂聯動依賴環境開關**（預設關閉）；未啟用的環境不會出現「需要修訂」。
+### 7.1 報告保存的內容
+
+- **正文**：活動名稱、主辦單位、活動目標、執行總結、觀察與檢討、建議事項、財務合計、聲明確認、聯署狀態與輪次、提交人與時間、退回原因。
+- **明細**：OC 名單（含差異備註）、財務明細、照片與影片、分輪次的聯署記錄（含撤回或終止的輪次）、歷次審批與意見、每輪引用的出席名單版本、問卷統計及 AI 總結（含 Supervisor 修訂版與 AI 原文）。
+
+### 7.2 頁面入口
+
+| 頁面 | 選單 | 使用者 |
+|:--|:--|:--|
+| 管理活動報告 | Organiser Centre → Manage Activity Reports | 活動 OC、建立人、Group Leader |
+| 活動報告（填寫 / 簽署） | 從上一頁或站內通知進入 | 活動 OC |
+| 報告審批 | To-do List → Handle | 各審批角色 |
+| 問卷範本 | Management Centre → Survey Templates | SAO 管理員 |
+| 活動問卷、轉移起草權 | Management Centre → View Activity List | SAO 管理員 |
+| ELAT 同步 | Management Centre → ELAT Sync | SAO 管理員 |
+| 問卷填寫 | 站內信 / 電郵中的「填寫問卷」按鈕 | 活動參與者 |
+
+---
+
+## 8. 端到端 Demo 指南
+
+### 8.1 準備條件
+
+1. 一個**已獲批准、已結束**、**適用 ELAT** 的活動，各活動日的出席記錄**已定稿**，且有簽到記錄。
+2. 該活動有 2 位以上有系統帳號的 OC（演示多人聯署）。
+3. 該活動已登記至少 1 位 Supervisor。
+4. Coordinator、Activity Application Checker 帳號各一。
+5. 非 NSOA 主線另需 Activity Application Reviewer 帳號；NSOA 主線另需 VPSLA Secretary、Members、Chairperson 帳號，以及一個 VPSLA 傳閱小組。
+6. SAO 管理員帳號，且 Survey Templates 已有預設範本。
+
+### 8.2 主線 A — 問卷 → 起草 → 非 NSOA 審批 → ELAT
+
+1. SAO 確認發送時間及預設範本（[2.2](#22-設定發送時間sao)、[2.4](#24-管理範本與設定預設sao)）。
+2. 到發送時間後，參與者從站內信填寫問卷（[2.7](#27-參與者填寫問卷)）。
+3. OC 在 Manage Activity Reports 建立報告，填寫五個部分；Part 4 可見問卷即時統計。
+4. 點 **Start Endorsement** → 狀態轉 Pending Endorsement；其餘 OC 逐一簽署 → 狀態轉 Submitted。驗證：Part 4 問卷統計已凍結，約一分鐘後出現 AI 總結。
+5. Coordinator 分派：**不選 Checker**，確認 Supervisors → **Assign and Submit**。
+6. Supervisor：修訂 AI 總結 → 填寫 ELAT Information → **Recommend**（多位 Supervisor 須全部推薦）。
+7. Reviewer → **Approve**。驗證：報告 Approved；ELAT Sync 頁面該活動為「Requested」。
+8. 翌日 02:30 後，驗證 ELAT 同步狀態已更新；或由 SAO 在 ELAT Sync 點 **Sync Now** 立即同步。
+
+### 8.3 主線 B — 含 Checker
+
+在 8.2 第 5 步選擇**一位或多位 Checker**，然後驗證：
+
+- Checker 的待辦立即出現，**Supervisor 此時看不到待辦**。
+- 任一位 Checker **Confirm Checked** 後，其他 Checker 的任務消失，Supervisor 的待辦出現。
+
+### 8.4 主線 C — NSOA（VPSLA）
+
+活動為 NSOA 時，8.2 第 7 步改為：
+
+1. VPSLA Secretary 選擇傳閱小組，設定投票截止時間。
+2. 各 Member 選 Approve / Neutral / Return；同時以 Chairperson 登入，驗證收到唯讀通知、可查看報告與表態。
+3. 讓一位 Member 不表態直到截止時間，驗證其被計為 Neutral（截止未表態）。
+4. Secretary 確認共識 → Chairperson **Approve** → 報告 Approved。
+
+### 8.5 旁支 — 退回與重新提交
+
+1. Checker 選 **Return → Coordinator**：報告維持 Submitted，Coordinator 重新收到分派任務。
+2. Supervisor 選 **Return → Coordinator**：同上。
+3. Supervisor 選 **Return → Group Leaders**：驗證未填意見時按鈕不可按；提交後報告轉 Returned，頁面頂部顯示退回原因。
+4. OC 修改後重新發起聯署，驗證**全體 OC 須重新簽署**；Coordinator 表單預填原 Checker 且不能留空。
+5. 驗證退回通知同時發給 OC 及此前辦理過任務的審批人。
+
+### 8.6 旁支 — 轉移起草權
+
+SAO 在 View Activity List 對一份待聯署的報告執行 **Transfer Report Drafting**，驗證：接手學生可開啟並編輯報告；原聯署已重置；報告內容保留。
+
+### 8.7 旁支 — 出席變更引發的修訂輪
+
+前提：報告已 Approved，目標環境已啟用出席變更與報告修訂聯動。
+
+1. 對某個已定稿活動日提出出席記錄變更並審批通過。
+2. 驗證：報告轉 Change Requested，顯示黃色修訂橫幅，Part 4 出席已是新名單。
+3. OC 修訂後重新聯署，驗證：**沒有 Coordinator 任務**，原 Checker 收到標示「報告修訂」的待辦。
+
+---
+
+## 9. 邊界與已知限制
+
+- **部分規則為暫定方案**：以下規則在客戶確認前先按建議實作，確認後可能調整——
+    - 非 OC 的建立人及 Group Leader 仍保留起草權；SAO 以「轉移起草權」處理起草人失去資格的情況；
+    - Supervisor 可退回 Coordinator 或學生，不能退回 Checker；內容未變的內部退回不強制 Checker 複查；
+    - 多位 Checker 時第一位處理即生效；Checker / Supervisor 只能選已持有相應角色的人；
+    - Coordinator 只能在分派環節調整人員，審批進行中不能增刪；
+    - VPSLA Member 的 Return 只是意見、由 Secretary 決定；截止未表態計為 Neutral；Chairperson 只唯讀查看；
+    - 退回 / 批准通知加上本次審批中實際辦理過任務的人。
+- **VPSLA（NSOA）分支尚未有完整的端到端實跑記錄**，UAT 應優先覆蓋 [8.4](#84-主線-c--nsoavpsla)。
+- **投票截止時間可設為過去的時間**，系統不會阻止；請 Secretary 設定合理的時間。
+- **ELAT**：
+    - Save and Request Sync 與 Sync Now 不檢查報告是否已批准；
+    - 錯誤訊息只有英文；
+    - 正式環境（PROD）尚未開放 ELAT Sync 頁面及每日同步。
+- **問卷**：
+    - 只發給有簽到記錄的人，訪客不會收到；
+    - 不發送提醒；
+    - 功能上線前已結束超過 3 日的活動不會補發。
+- **PDF 匯出未實作**，目前只能在系統內查看報告。
+- **活動未結束時發起聯署的提示措辭不準確**：畫面顯示「活動結束後方可填寫活動報告」，實際上草稿可隨時填寫，只是聯署須待活動結束。
 - **只有出席記錄變更會開啟修訂輪**；已批准報告的其他內容目前沒有自行發起修訂的途徑。
-- **2026-09 需求批註大部分尚未落實**（Supervisor 退回 Coordinator、多名 Checker、Coordinator 增刪 Supervisor、VPSLA 三種意見等），已落實的只有「獲批即可起草」與「名稱統一及活動目標預載」，詳見 [activity-report-submission-design.md](activity-report-submission-design.md) §8.4。
-- **VPSLA（NSOA）分支尚未有完整實跑記錄。** 截至 2026-08，測試環境的歷史任務裡分派、推薦、審批、檢查四個環節都有記錄，但 VPSLA 選組、Members 審閱、共識、主席四個環節的記錄數為 0——UAT 應優先覆蓋 6.4 與 6.5 兩節。2026-09-04 複查 DEV 的原因很直接：**沒有一個 NSOA 已結束活動存檔了 Supervisor**，流程卡在 Coordinator 分派，根本進不到 VPSLA 段（見 6.1.1）。
-- **UAT / PROD 上「Group Leader 入口」形同不存在。** 系統判定誰是組長，依據的是學生組織成員名單上登記的職位（主席 / 會長 / 組長），而客戶的兩個環境這項資料全部空白，**沒有任何一個人會被判為組長**。2026-09-04 三環境核對：
+- **報告修訂聯動依賴環境開關**（預設關閉）。
+- **聲明的簡體中文措辭待需求方確認**（涉及學生紀律處分與法律責任）。
 
-  | 環境 | 成員有登記職位 | 成員總數 |
-  |:--|--:|--:|
-  | DEV | 37（其中 21 筆命中組長判定） | 102 |
-  | **UAT** | **0** | 56 |
-  | **PROD** | **0** | 520 |
+---
 
-  後果：PROD 有 511 個帳號持有 Group Leader 角色、58 個學生組織、111 個已結束活動**全部**掛在組織下，但這 511 人開啟「管理活動報告」看不到任何靠組長身分帶出的活動。
-  成因：職位只有「學生組織**註冊流程**登記 ExCo 名單」這一條途徑會寫入，由職員在後台錄入或批次匯入的成員不會帶職位。DEV 的資料是測試帳號走註冊流程造的；PROD 的 58 個組織全部由 SAO 職員後台錄入，從未走過註冊流程。因此修復不能只做一次性資料回填，須同時補上後台錄入與匯入的登記途徑。
-  **2026-09 的緩解：**入口口徑已放寬到「活動建立人」與「活動籌委會成員」（見 §1.2），籌委會名單在活動申請時就填好、不依賴組織成員職位，因此 UAT / PROD 上仍有人能開啟報告。**但這是繞過而非修復**——組織成員職位仍然全部空白，凡是以「組長」為判定依據的其他功能（例如出席簽到的組長規則）依舊失效，根因待另案處理。
-- **Coordinator 在「活動沒有任何已存檔 Supervisor」時會走進死路**（低優先，PROD 當前不可達）：分派時 Supervisors 為空會被系統直接拒絕，而該欄位唯讀、只帶出已存檔督導，Coordinator 除了「退回 Group Leader」沒有別的出路，Group Leader 也無法事後補督導。2026-09-04 核對 PROD 的 111 個已結束活動**全部**都有已存檔督導，所以現階段觸發不到；DEV 則有不少活動缺督導（例如 6.1.1 提到的 NSOA 活動）。
-- **DEV 的報告資料量極小。** 2026-09-04 核對：81 個已結束的已核准活動，但全庫只有 1 份報告（草稿），共簽與審批記錄皆為空。Demo 前請先照 6.1.1 核對資料是否還在。
-- **VPSLA Members 沒有退回動作**，也不會因逾時被自動視為無異議；催辦時點只發提醒，流程會一直等到全員提交。這條逾時語義需求方尚未定義，待確認後才會調整。
-- **Coordinator 與 Supervisor 的退回都只有一個去向**（Group Leader），介面上不提供其他選項；Supervisor 的「退回 Checker」已於 2026-09 取消，原因見 §3 流程圖下方的說明。
-- **§11 聲明的簡體中文措辭待需求方確認**（涉及學生紀律處分與法律責任），目前為對照英文 / 繁體原文的譯本。§11 聲明由每位 OC 在簽署對話框中確認；發起聯署前須勾選的是 §10 的媒體同意。
-- 同名的「活動報告」有兩套，見本文開頭的提醒與 [activity-report-guide.md](activity-report-guide.md)。
+## 10. 常見問題
+
+**Q1：我是活動 OC，為甚麼在 Manage Activity Reports 看不到活動？**
+請確認：活動申請已獲批准；你在活動申請的 OC 名單上；左側選單有 **Organiser Centre → Manage Activity Reports**。
+
+**Q2：為甚麼按 Start Endorsement 被拒絕？**
+常見原因：活動尚未結束；未勾選照片 / 影片同意聲明；手工新增的 OC 未填寫差異備註；有 OC 無法建立系統帳號。
+
+**Q3：參與者沒有收到問卷？**
+依序檢查：活動是否已審批通過且未取消；參與者是否有簽到記錄；是否已到「結束後第 N 日 HH:mm」及之後 10 分鐘；在 View Activity List 打開該活動的問卷視窗，若顯示「Not sent」會註明原因。
+
+**Q4：可以看到某位參與者的問卷答案嗎？**
+不可以。問卷是匿名的，系統沒有記錄答案與參與者的對應關係。
+
+**Q5：問卷還沒截止，可以發起聯署嗎？**
+可以。統計以發起聯署那一刻為準，報告會註明當時的作答人數。
+
+**Q6：Supervisor 看不到待辦？**
+如 Coordinator 指定了 Checker，Supervisor 的待辦要等 Checker 檢查通過後才出現。
+
+**Q7：報告被退回 Coordinator，學生需要做甚麼嗎？**
+不需要。報告仍在審批中（Submitted），由 Coordinator 重新分派。只有退回「Group Leaders」時才需要學生修改並重新聯署。
+
+**Q8：VPSLA Member 選了 Return，報告會立即被退回嗎？**
+不會。Return 只是一票意見，由 Secretary 在共識環節看全體表態後決定。
+
+**Q9：報告批准後，ELAT 甚麼時候會有資料？**
+批准當晚 02:30 自動同步。需要立即同步時，SAO 可在 ELAT Sync 頁面點 **Sync Now**。
+
+**Q10：ELAT 同步失敗怎麼辦？**
+在 ELAT Sync 頁面打開該活動，查看 **ELAT error** 欄的原因及「Missing」清單，補齊資料後點 **Sync Now** 或 **Save and Request Sync**。

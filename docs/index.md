@@ -31,8 +31,8 @@
 | [activity-enrollment-guide.md](activity-enrollment-guide.md) | 學生報名 → 組織者推薦 → 主管審核 → 關閉報名 → 名冊審批 |
 | [activity-promotion-guide.md](activity-promotion-guide.md) | 活動推廣的提交、審核與上架；含「導入活動 vs 系統內發布活動」的差異提醒 |
 | [activity-attendance-guide.md](activity-attendance-guide.md) | 活動出席（QR 簽到、手動簽到、出席定稿），以及定稿後的出席變更申請與審批、版本記錄 |
-| [activity-report-submission-guide.md](activity-report-submission-guide.md) | 活動總結報告：填寫 → OC 共簽 → Coordinator 分派 → Checker／Supervisor → 最終審批 |
-| [activity-report-guide.md](activity-report-guide.md) | 事件報告，以及事件性質的翌日 / 兩週活動報告（R00 / R01 / R14）的提交與審核 |
+| [activity-report-submission-guide.md](activity-report-submission-guide.md) | 活動總結報告操作手冊：參與者問卷 → 起草 → OC 聯署 → Coordinator 分派 → Checker／Supervisor → 最終審批 → ELAT 同步 |
+| [incident-report-guide.md](incident-report-guide.md) | 事件報告，以及事件性質的翌日 / 兩週活動報告（R00 / R01 / R14）的提交與審核 |
 | [import-modules-guide.md](import-modules-guide.md) | 活動成員、社團組織的 Excel 批次導入 |
 | [student-org-end-to-end-demo-guide.md](student-org-end-to-end-demo-guide.md) | 學生組織註冊、Exco 認可、審批、申訴與續期全鏈路演練 |
 
