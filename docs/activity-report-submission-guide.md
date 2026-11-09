@@ -6,10 +6,7 @@
 >
 > 設計層面的環節條件與需求對應見 [activity-report-submission-design.md](activity-report-submission-design.md)；角色稱呼以系統角色的正式名稱為準（見 [roles-menus-permissions-matrix.md](roles-menus-permissions-matrix.md)）。
 
-> **⚠️ 先分清是哪一種「活動報告」。** 系統中同名的有兩套，入口、狀態、審批鏈完全不同：
->
-> - **本手冊的活動報告**：活動結束後的**總結報告**（OC 名單、財務收支、出席、照片影片、問卷結果、聲明）。
-> - **翌日 / 兩週活動報告（R01 / R14）**：事件回報性質，見 [incident-report-guide.md](incident-report-guide.md)。
+> 本手冊的「活動報告」指活動結束後的**總結報告**（OC 名單、財務收支、出席、照片影片、問卷結果、聲明）。翌日 / 兩週**事件報告**（R01 / R14）是另一套功能，見 [incident-report-guide.md](incident-report-guide.md)。
 
 ---
 
