@@ -194,8 +194,20 @@ flowchart TD
 | **Rating (1–5)**（評分） | 選 1 至 5 顆星 | 1–5 分的分佈及平均分 |
 | **Short text**（單行文字） | 輸入一行文字 | 作答人數；內容納入 AI 總結 |
 | **Long text**（多行文字） | 輸入多行文字 | 作答人數；內容納入 AI 總結 |
+| **Matrix**（矩陣，2026-11-16 起） | 多條陳述共用一套量表（例如「非常同意 … 非常不同意」），每條陳述選一格 | 陳述 × 量表的人數表，每格附百分比 |
+| **Section heading**（段落標題，2026-11-16 起） | 不用作答，只顯示標題或說明，例如「Part A. Objectives」 | 不出現在報告中 |
 
 **步驟 4**：完成所有題目。單選及多選題點 **Add option** 增加選項；每道題右上角可**上移**、**下移**或**刪除**；選項右邊的 **×** 可刪除選項。
+
+矩陣題分兩部分：上面的 **Statements** 填陳述（**Add statement** 增加），下面的 **Scale** 填量表選項（**Add scale point** 增加）。
+
+**步驟 4a（選用）**：每道題下方一行可以設定這道題**何時出現**。
+
+| 設定 | 作用 |
+|:--|:--|
+| **Ask for text**（選項旁的勾選框，單選及多選題） | 參與者選了這個選項後，下方出現文字框，例如「Others, please specify」。所填文字列入審批人看到的文字答案，並納入 AI 總結 |
+| **Always shown** 下拉框 | 選擇前面一道單選題，再選「is / is not」及某個選項：只有當參與者的答案符合時，這道題才出現。例如「只有角色**不是**新生參加者時才顯示」。被隱藏的必答題不用作答 |
+| **All activities** 下拉框 | 把這道題歸入某個 ELAT GILO。SAO 為活動選了 GILO 時（見 [2.5](#25-為個別活動指定範本sao)），只發送所選 GILO 的題目；沒有選 GILO 的活動發送全部題目 |
 
 ![完成題目](images/activity-survey/09-questions-filled.png)
 
@@ -211,8 +223,10 @@ flowchart TD
 
 !!! warning "儲存前系統會檢查"
     - 名稱及每道題目都要填齊三種語言。
-    - 至少 1 道、最多 50 道題目。
+    - 至少 1 道、最多 80 道題目（段落標題也計入上限，但不算作「至少 1 道」）。
     - 單選及多選題至少 2 個、最多 20 個選項，每個選項都要填齊三種語言。
+    - 矩陣題至少 1 條、最多 30 條陳述，量表至少 2 個、最多 20 個選項。
+    - 顯示條件只能引用**前面**一道**沒有歸入 GILO** 的單選題。
 
     未填齊時，畫面上方會提示是哪一題、缺了甚麼。
 
@@ -236,6 +250,21 @@ flowchart TD
 **步驟 2**：該範本名稱旁顯示 **Default**，原來的預設範本恢復為普通範本。
 
 ![新的預設範本](images/activity-survey/14-default-template.png)
+
+#### 預設範本：學生主導活動評估表格
+
+自 2026-11-16 起，預設範本是 SAO 提供的「**Evaluation Form for Student-led Activities**（學生主導活動評估表格）」，同樣適用於 ELAT 活動。內容：
+
+| 部分 | 題目 |
+|:--|:--|
+| 基本資料 | 你在活動中的角色（新生參加者 / 籌委會成員 / 非籌委會成員 / 其他，請註明）；你的就讀年級（1–5） |
+| Part A. Objectives | 4 條陳述，「非常同意 … 非常不同意」 |
+| Part B. Content & Arrangement | 5 條陳述，同一量表 |
+| Part C. GILOs | 每個 GILO 一道矩陣題，「Very Competent … Not competent at all」。**只發送 SAO 為該活動所選 GILO 的題目**；新生參加者不答這些題，改答固定的兩道：解決問題能力（首兩項）及社交能力（首兩項） |
+| Part D | 其他意見或建議（文字） |
+| Part E | 你如何得知這個活動（可多選，含「其他，請說明」） |
+
+活動名稱由系統自動顯示在問卷頁面頂部，不用參與者填寫。
 
 !!! note "預設範本的規則"
     - 建立的**第一份範本**自動成為預設範本。
@@ -262,6 +291,10 @@ flowchart TD
 **步驟 4**：選定後點 **Save**。
 
 ![已選擇範本](images/activity-survey/18-activity-survey-selected.png)
+
+**選擇 GILO（2026-11-16 起）**：同一視窗的 **GILOs** 一欄勾選這個活動涉及的 GILO，然後點 **Save**。問卷發送時，Part C 只包含所勾選 GILO 的題目，每個 GILO 的全部子項都會出現；一個都不勾則發送全部 GILO 的題目。GILO 必須在問卷發送前選好，發送後不能再改。
+
+![選擇 GILO](images/activity-survey/27-activity-survey-gilos.png)
 
 **步驟 5**：畫面上方顯示「Save Successful」即已儲存。如要改回跟隨預設範本，再次打開視窗選「Default template」並儲存。
 
@@ -291,7 +324,11 @@ flowchart TD
 
 ![問卷填寫頁面](images/activity-survey/21-participant-form.png)
 
-**步驟 2**：作答後點 **Submit**。有必答題未答時，畫面提示「Please answer every required question」。
+矩陣題每一行是一條陳述，在該行選一格；手機上每條陳述下方列出量表選項。部分題目會按前面的答案出現或隱藏，例如選「新生參加者」後，Part C 只顯示兩道固定題目。選了「其他，請註明」等選項後，下方會出現文字框。
+
+![矩陣題及條件題](images/activity-survey/28-participant-matrix.png)
+
+**步驟 2**：作答後點 **Submit**。有必答題未答時，畫面提示「Please answer every required question」；必答的矩陣題要每一行都選。
 
 **步驟 3**：提交成功後顯示感謝頁面。每人只能提交一次，之後再打開亦顯示此頁面。
 
@@ -390,6 +427,10 @@ Action 欄按報告狀態顯示不同按鈕：
 報告處於草稿、已退回或需要修訂時，顯示**即時統計**，即截至打開頁面時收到的所有答案；此時**沒有 AI 總結**。區塊頂部註明「as of（時間）, X of Y participants answered」。
 
 ![起草時的即時統計](images/activity-survey/24-report-live-statistics.png)
+
+矩陣題以表格顯示：每行一條陳述，每格是選該量表選項的人數及佔該行作答人數的百分比。
+
+![報告中的矩陣題統計](images/activity-survey/29-report-matrix.png)
 
 **發起聯署時：凍結統計並生成 AI 總結**
 
