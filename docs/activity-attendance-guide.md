@@ -4,7 +4,7 @@
 >
 > 內容以 **2026-11 的實際運作狀況（as-built）** 為準；與 2026-09 之前版本有出入之處已直接改寫，不另註記。
 > 角色稱呼以系統角色的正式名稱為準（見 [roles-menus-permissions-matrix.md](roles-menus-permissions-matrix.md)）。
-> **出席記錄的更正改為隨活動報告一併審批**（按 2026-11-19 客戶意見）：不再設獨立的出席記錄變更審批。§1.2、§3.2、§4.5–§4.9、§5.2、§6.4–§6.5 描述的是這一新安排，**系統尚未實作**，待客戶確認後開發；其餘章節仍為現行做法。報告一方的處理見 [activity-report-submission-guide.md](activity-report-submission-guide.md) §5.10。
+> **出席記錄的更正隨活動報告一併審批**（按 2026-11-19 客戶意見，2026-11-26 上線）：不再設獨立的出席記錄變更審批。報告一方的處理見 [activity-report-submission-guide.md](activity-report-submission-guide.md) §5.10。
 
 ---
 
